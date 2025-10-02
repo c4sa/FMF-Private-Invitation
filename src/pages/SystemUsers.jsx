@@ -27,7 +27,6 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import ProtectedRoute from "../components/common/ProtectedRoute";
-import { sendNewUserRequestEmail } from "@/api/functions";
 import { format } from "date-fns";
 import { useToast } from "../components/common/Toast";
 import { supabase } from "../lib/supabase";
@@ -67,14 +66,6 @@ export default function SystemUsers() {
   const [showStatusDialog, setShowStatusDialog] = useState(false);
   const [userToDelete, setUserToDelete] = useState(null);
   const [userToToggle, setUserToToggle] = useState(null);
-  const [showAddUserRequestDialog, setShowAddUserRequestDialog] = useState(false);
-  const [newUserRequestData, setNewUserRequestData] = useState({
-    full_name: '',
-    email: '',
-    company_name: '',
-    system_role: 'User'
-  });
-  const [isSendingUserRequest, setIsSendingUserRequest] = useState(false);
   
   // New system user creation
   const [showCreateUserDialog, setShowCreateUserDialog] = useState(false);
@@ -380,28 +371,6 @@ export default function SystemUsers() {
     }
   };
 
-  const handleRequestNewUser = async () => {
-    if (!newUserRequestData.full_name || !newUserRequestData.email || !newUserRequestData.company_name) {
-      toast({ title: "Missing Information", description: "Please provide full name, email, and company name.", variant: "destructive" });
-      return;
-    }
-    setIsSendingUserRequest(true);
-    try {
-      await sendNewUserRequestEmail({
-        newUserFullName: newUserRequestData.full_name,
-        newUserEmail: newUserRequestData.email,
-        newUserCompany: newUserRequestData.company_name,
-        newUserType: newUserRequestData.system_role
-      });
-      toast({ title: "Request Sent", description: "Your request to add a new user is being processed.", variant: "success" });
-      setShowAddUserRequestDialog(false);
-      setNewUserRequestData({ full_name: '', email: '', company_name: '', system_role: 'User' });
-    } catch (error) {
-      console.error("Failed to send new user request:", error);
-      toast({ title: "Error", description: "Failed to send your request. Please try again.", variant: "destructive" });
-    }
-    setIsSendingUserRequest(false);
-  };
 
   const handleCreateUser = async () => {
     if (!newUserData.full_name || !newUserData.email || !newUserData.password || !newUserData.company_name) {
@@ -582,95 +551,14 @@ export default function SystemUsers() {
             </div>
             {currentUser && (currentUser.role === 'admin' || currentUser.system_role === 'Admin' || currentUser.system_role === 'Super User') && (
               <div className="flex items-center gap-3">
-                {(currentUser.role === 'admin' || currentUser.system_role === 'Admin') && (
-                  <Link to={createPageUrl("PartnershipTypes")}>
-                    <Button variant="outline">
-                        <Users className="w-4 h-4 mr-2" />
-                        Manage Partnership Types
-                    </Button>
-                  </Link>
-                )}
                 <Button className="bg-green-600 hover:bg-green-700" onClick={() => setShowCreateUserDialog(true)}>
                   <UserPlus className="w-4 h-4 mr-2" />
                   Create User
-                </Button>
-                <Button className="bg-blue-600 hover:bg-blue-700" onClick={() => setShowAddUserRequestDialog(true)}>
-                  <UserPlus className="w-4 h-4 mr-2" />
-                  Request New User
                 </Button>
               </div>
             )}
           </div>
 
-          {/* New User Request Dialog */}
-          <Dialog open={showAddUserRequestDialog} onOpenChange={setShowAddUserRequestDialog}>
-            <DialogContent className="max-w-md">
-              <DialogHeader>
-                <DialogTitle>Request New System User</DialogTitle>
-                <DialogDescription>
-                  This will send a request to the administrator to create and invite a new user.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div>
-                  <Label htmlFor="new_user_full_name">Full Name</Label>
-                  <Input
-                    id="new_user_full_name"
-                    placeholder="Enter the full name of the new user"
-                    value={newUserRequestData.full_name}
-                    onChange={(e) => setNewUserRequestData(prev => ({ ...prev, full_name: e.target.value }))}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="new_user_email">Email</Label>
-                  <Input
-                    id="new_user_email"
-                    type="email"
-                    placeholder="Enter the email for invitation"
-                    value={newUserRequestData.email}
-                    onChange={(e) => setNewUserRequestData(prev => ({ ...prev, email: e.target.value }))}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="new_user_company">Company Name</Label>
-                  <Input
-                    id="new_user_company"
-                    placeholder="Enter the company name"
-                    value={newUserRequestData.company_name}
-                    onChange={(e) => setNewUserRequestData(prev => ({ ...prev, company_name: e.target.value }))}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="new_user_type">System User Type</Label>
-                  <Select value={newUserRequestData.system_role} onValueChange={(value) => setNewUserRequestData(prev => ({ ...prev, system_role: value }))}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select user type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {getSystemUserTypesForDropdown().map(type => (
-                         <SelectItem key={type} value={type}>{type}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="flex justify-end gap-3">
-                <Button variant="outline" onClick={() => setShowAddUserRequestDialog(false)}>
-                  Cancel
-                </Button>
-                <Button onClick={handleRequestNewUser} disabled={isSendingUserRequest}>
-                  {isSendingUserRequest ? (
-                    <div className="flex items-center gap-2">
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
-                      Sending...
-                    </div>
-                  ) : (
-                    "Send Request"
-                  )}
-                </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
 
           {/* Delete Confirmation Dialog */}
           <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
