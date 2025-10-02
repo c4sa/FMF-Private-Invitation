@@ -7,9 +7,11 @@
     "dev": "vite",
     "dev:server": "node server.js",
     "dev:full": "concurrently \"pnpm run dev:server\" \"pnpm run dev\"",
+    "dev:serverless": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "start": "vite preview"
   },
   "dependencies": {
     "@hookform/resolvers": "^4.1.2",

@@ -2,12 +2,21 @@
   "functions": {
     "api/send-email.js": {
       "runtime": "nodejs18.x"
+    },
+    "api/update-password.js": {
+      "runtime": "nodejs18.x"
+    },
+    "api/health.js": {
+      "runtime": "nodejs18.x"
     }
   },
   "rewrites": [
     {
-      "source": "/api/(.*)",
-      "destination": "/api/$1"
+      "source": "/((?!api/).*)",
+      "destination": "/index.html"
     }
-  ]
+  ],
+  "buildCommand": "pnpm run build",
+  "outputDirectory": "dist",
+  "installCommand": "pnpm install"
 }
