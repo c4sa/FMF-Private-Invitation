@@ -30,6 +30,9 @@ import ProtectedRoute from "../components/common/ProtectedRoute";
 import { sendNewUserRequestEmail } from "@/api/functions";
 import { format } from "date-fns";
 import { useToast } from "../components/common/Toast";
+import { supabase } from "../lib/supabase";
+import { createUserProfile } from "../api/supabaseFunctions";
+import { emailService } from "../lib/resend";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 
@@ -72,6 +75,21 @@ export default function SystemUsers() {
     system_role: 'User'
   });
   const [isSendingUserRequest, setIsSendingUserRequest] = useState(false);
+  
+  // New system user creation
+  const [showCreateUserDialog, setShowCreateUserDialog] = useState(false);
+  const [newUserData, setNewUserData] = useState({
+    full_name: '',
+    email: '',
+    password: '',
+    company_name: '',
+    system_role: 'User',
+    user_type: 'N/A',
+    mobile: '',
+    registration_slots: attendeeTypes.reduce((acc, type) => ({...acc, [type]: 0}), {}),
+    account_status: 'active'
+  });
+  const [isCreatingUser, setIsCreatingUser] = useState(false);
   const { toast } = useToast();
 
   const loadData = useCallback(async () => {
@@ -385,6 +403,115 @@ export default function SystemUsers() {
     setIsSendingUserRequest(false);
   };
 
+  const handleCreateUser = async () => {
+    if (!newUserData.full_name || !newUserData.email || !newUserData.password || !newUserData.company_name) {
+      toast({ title: "Missing Information", description: "Please provide full name, email, password, and company name.", variant: "destructive" });
+      return;
+    }
+    
+    setIsCreatingUser(true);
+    try {
+      // Create user in Supabase Auth using signup
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: newUserData.email,
+        password: newUserData.password,
+        options: {
+          data: {
+            full_name: newUserData.full_name,
+            company_name: newUserData.company_name
+          }
+        }
+      });
+
+      if (authError) {
+        throw authError;
+      }
+
+      if (!authData.user) {
+        throw new Error('Failed to create user account');
+      }
+
+      // Create user profile in users table
+      const userProfileData = {
+        email: newUserData.email,
+        full_name: newUserData.full_name,
+        preferred_name: newUserData.full_name,
+        company_name: newUserData.company_name,
+        user_type: 'system_user',
+        system_role: newUserData.system_role,
+        account_status: newUserData.account_status,
+        registration_slots: newUserData.registration_slots,
+        mobile: newUserData.mobile
+      };
+
+      await createUserProfile(authData.user.id, userProfileData);
+
+      // Send welcome email to the new user
+      try {
+        const emailSubject = "Welcome to Future Minerals Forum - System Access";
+        const emailHtml = `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <h2 style="color: #1e40af; margin-bottom: 20px;">Welcome to Future Minerals Forum</h2>
+            <p>Dear ${newUserData.full_name},</p>
+            <p>Your system access has been created for the Future Minerals Forum platform.</p>
+            <p><strong>Your Account Details:</strong></p>
+            <ul style="list-style: none; padding: 0;">
+              <li><strong>Name:</strong> ${newUserData.full_name}</li>
+              <li><strong>Email:</strong> ${newUserData.email}</li>
+              <li><strong>Company:</strong> ${newUserData.company_name}</li>
+              <li><strong>Role:</strong> ${newUserData.system_role}</li>
+            </ul>
+            <p>You can now log in to the system using your email and the password that was set for you.</p>
+            <p>If you have any questions, please don't hesitate to reach out to us.</p>
+            <p>Best regards,<br>Future Minerals Forum Team</p>
+          </div>
+        `;
+        
+        await emailService.send({
+          to: newUserData.email,
+          subject: emailSubject,
+          html: emailHtml
+        });
+      } catch (emailError) {
+        console.error('Failed to send welcome email:', emailError);
+        // Don't fail the user creation if email fails
+      }
+
+      // Reload data and close dialog
+      await loadData();
+      setShowCreateUserDialog(false);
+      resetNewUserForm();
+
+      toast({
+        title: "Success",
+        description: "System user created successfully and welcome email sent!",
+        variant: "success",
+      });
+    } catch (error) {
+      console.error("Error creating user:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create user. Please try again.",
+        variant: "destructive",
+      });
+    }
+    setIsCreatingUser(false);
+  };
+
+  const resetNewUserForm = () => {
+    setNewUserData({
+      full_name: '',
+      email: '',
+      password: '',
+      company_name: '',
+      system_role: 'User',
+      user_type: 'N/A',
+      mobile: '',
+      registration_slots: attendeeTypes.reduce((acc, type) => ({...acc, [type]: 0}), {}),
+      account_status: 'active'
+    });
+  };
+
   const getTotalSlots = (slots) => {
     return Object.values(slots || {}).reduce((sum, count) => sum + (count || 0), 0);
   };
@@ -463,6 +590,10 @@ export default function SystemUsers() {
                     </Button>
                   </Link>
                 )}
+                <Button className="bg-green-600 hover:bg-green-700" onClick={() => setShowCreateUserDialog(true)}>
+                  <UserPlus className="w-4 h-4 mr-2" />
+                  Create User
+                </Button>
                 <Button className="bg-blue-600 hover:bg-blue-700" onClick={() => setShowAddUserRequestDialog(true)}>
                   <UserPlus className="w-4 h-4 mr-2" />
                   Request New User
@@ -576,6 +707,148 @@ export default function SystemUsers() {
                 </Button>
                 <Button onClick={handleToggleAccountStatus}>
                   {userToToggle?.account_status === 'active' ? 'Deactivate' : 'Activate'}
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          {/* Create User Dialog */}
+          <Dialog open={showCreateUserDialog} onOpenChange={setShowCreateUserDialog}>
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Create New System User</DialogTitle>
+                <DialogDescription>
+                  Create a new system user with authentication credentials.
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="space-y-6 py-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="new_user_full_name">Full Name *</Label>
+                    <Input
+                      id="new_user_full_name"
+                      placeholder="Enter full name"
+                      value={newUserData.full_name}
+                      onChange={(e) => setNewUserData(prev => ({ ...prev, full_name: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="new_user_email">Email *</Label>
+                    <Input
+                      id="new_user_email"
+                      type="email"
+                      placeholder="Enter email address"
+                      value={newUserData.email}
+                      onChange={(e) => setNewUserData(prev => ({ ...prev, email: e.target.value }))}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="new_user_password">Password *</Label>
+                    <Input
+                      id="new_user_password"
+                      type="password"
+                      placeholder="Enter password"
+                      value={newUserData.password}
+                      onChange={(e) => setNewUserData(prev => ({ ...prev, password: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="new_user_company">Company Name *</Label>
+                    <Input
+                      id="new_user_company"
+                      placeholder="Enter company name"
+                      value={newUserData.company_name}
+                      onChange={(e) => setNewUserData(prev => ({ ...prev, company_name: e.target.value }))}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="new_user_system_role">System Role</Label>
+                    <Select value={newUserData.system_role} onValueChange={(value) => setNewUserData(prev => ({ ...prev, system_role: value }))}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select system role" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {getSystemUserTypesForDropdown().map(type => (
+                          <SelectItem key={type} value={type}>{type}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label htmlFor="new_user_mobile">Mobile Number</Label>
+                    <Input
+                      id="new_user_mobile"
+                      placeholder="Enter mobile number"
+                      value={newUserData.mobile}
+                      onChange={(e) => setNewUserData(prev => ({ ...prev, mobile: e.target.value }))}
+                    />
+                  </div>
+                </div>
+
+                {newUserData.system_role === 'User' && (
+                  <div>
+                    <Label htmlFor="new_user_type">Partnership Type</Label>
+                    <Select value={newUserData.user_type} onValueChange={(value) => setNewUserData(prev => ({ ...prev, user_type: value }))}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select partnership type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="N/A">N/A</SelectItem>
+                        {partnerTypes.map(type => (
+                          <SelectItem key={type.id} value={type.name}>{type.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                {newUserData.system_role === 'User' && (
+                  <div>
+                    <Label className="text-base font-semibold mb-4 block">Registration Slots</Label>
+                    <div className="grid grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg">
+                      {attendeeTypes.map((type) => (
+                        <div key={type} className="flex items-center justify-between">
+                          <Label className="text-sm">{type}</Label>
+                          <Input
+                            type="number"
+                            min="0"
+                            className="w-20"
+                            value={newUserData.registration_slots[type] || 0}
+                            onChange={(e) => setNewUserData(prev => ({
+                              ...prev,
+                              registration_slots: {
+                                ...prev.registration_slots,
+                                [type]: parseInt(e.target.value) || 0
+                              }
+                            }))}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex justify-end gap-3">
+                <Button variant="outline" onClick={() => { setShowCreateUserDialog(false); resetNewUserForm(); }}>
+                  Cancel
+                </Button>
+                <Button onClick={handleCreateUser} disabled={isCreatingUser} className="bg-green-600 hover:bg-green-700">
+                  {isCreatingUser ? (
+                    <div className="flex items-center gap-2">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                      Creating...
+                    </div>
+                  ) : (
+                    "Create User"
+                  )}
                 </Button>
               </div>
             </DialogContent>
