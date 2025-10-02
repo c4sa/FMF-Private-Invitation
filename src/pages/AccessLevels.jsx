@@ -19,10 +19,10 @@ import {
 } from "lucide-react";
 
 const attendeeTypeConfig = {
-  "VIP": { icon: Crown, color: "bg-purple-500", bgColor: "bg-purple-50 border-purple-200" },
-  "Partner": { icon: Handshake, color: "bg-pink-500", bgColor: "bg-pink-50 border-pink-200" },
-  "Exhibitor": { icon: Monitor, color: "bg-cyan-500", bgColor: "bg-cyan-50 border-cyan-200" },
-  "Media": { icon: FileText, color: "bg-yellow-500", bgColor: "bg-yellow-50 border-yellow-200" }
+  "VIP": { icon: Crown, color: "bg-purple-500", bgColor: "bg-white border-gray-200" },
+  "Partner": { icon: Handshake, color: "bg-pink-500", bgColor: "bg-white border-gray-200" },
+  "Exhibitor": { icon: Monitor, color: "bg-cyan-500", bgColor: "bg-white border-gray-200" },
+  "Media": { icon: FileText, color: "bg-yellow-500", bgColor: "bg-white border-gray-200" }
 };
 
 const attendeeTypes = ["VIP", "Partner", "Exhibitor", "Media"];
@@ -155,7 +155,9 @@ export default function AccessLevels() {
                       <span className="text-sm text-gray-600">Used: {usedSlots}/{totalSlots}</span>
                       <span className="text-xl font-bold text-green-600">{remainingSlots}</span>
                     </div>
-                    <p className="text-right text-sm font-semibold text-gray-600">Available</p>
+                    <p className={`text-right text-sm font-semibold ${remainingSlots > 0 ? 'text-gray-600' : 'text-red-600'}`}>
+                      {remainingSlots > 0 ? 'Available' : 'Unavailable'}
+                    </p>
                   </CardContent>
                 </Card>
               );

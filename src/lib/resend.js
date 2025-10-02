@@ -246,7 +246,16 @@ export const emailService = {
             <p><strong>Email:</strong> ${newUserData.email}</p>
             <p><strong>Password:</strong> ${newUserData.password}</p>
             <p><strong>Company:</strong> ${newUserData.company_name}</p>
-            <p><strong>User Type:</strong> ${newUserData.System_user_type}</p>
+            <p><strong>System User Type:</strong> ${newUserData.system_role}</p>
+            ${newUserData.user_type && newUserData.user_type !== 'N/A' ? `<p><strong>Sponsor/Partner Type:</strong> ${newUserData.user_type}</p>` : ''}
+            ${newUserData.registration_slots && Object.keys(newUserData.registration_slots).length > 0 ? `
+              <div style="margin-top: 15px;">
+                <h4 style="margin: 0 0 10px 0; color: #1f2937;">Registration Slots:</h4>
+                ${Object.entries(newUserData.registration_slots).map(([type, slots]) => 
+                  `<p style="margin: 5px 0;"><strong>${type}:</strong> ${slots}</p>`
+                ).join('')}
+              </div>
+            ` : ''}
           </div>
           
           <p style="margin-bottom: 20px;">Please review and approve this user request in the system.</p>
@@ -276,8 +285,17 @@ export const emailService = {
             <p><strong>Full Name:</strong> ${newUserData.full_name}</p>
             <p><strong>Email:</strong> ${newUserData.email}</p>
             <p><strong>Company:</strong> ${newUserData.company_name}</p>
-            <p><strong>User Type:</strong> ${newUserData.System_user_type}</p>
+            <p><strong>System User Type:</strong> ${newUserData.system_role}</p>
+            ${newUserData.user_type && newUserData.user_type !== 'N/A' ? `<p><strong>Sponsor/Partner Type:</strong> ${newUserData.user_type}</p>` : ''}
             <p><strong>Password:</strong> ${newUserData.password}</p>
+            ${newUserData.registration_slots && Object.keys(newUserData.registration_slots).length > 0 ? `
+              <div style="margin-top: 15px;">
+                <h4 style="margin: 0 0 10px 0; color: #1f2937;">Registration Slots:</h4>
+                ${Object.entries(newUserData.registration_slots).map(([type, slots]) => 
+                  `<p style="margin: 5px 0;"><strong>${type}:</strong> ${slots}</p>`
+                ).join('')}
+              </div>
+            ` : ''}
           </div>
           
           <div style="background: #fef3c7; padding: 15px; margin: 20px 0; border-radius: 8px; border-left: 4px solid #f59e0b;">

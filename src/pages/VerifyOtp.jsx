@@ -117,16 +117,20 @@ export default function VerifyOTP() {
 
   if (success) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-md w-full space-y-8">
-          <div className="text-center">
-            <h1 className="text-3xl font-bold text-gray-900">Future Minerals Forum</h1>
-            <p className="mt-2 text-sm text-gray-600">Private Invitation System</p>
-          </div>
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-md w-full">
+          <Card className="bg-white shadow-lg rounded-lg">
+            <CardContent className="p-8">
+              {/* Logo */}
+              <div className="flex justify-center mb-6">
+                <img 
+                  src="https://xpuhnbeoczxxmzmjronk.supabase.co/storage/v1/object/public/system-assets/logo.jpeg" 
+                  alt="Future Minerals Forum Logo" 
+                  className="w-16 h-16 object-contain"
+                />
+              </div>
 
-          <Card>
-            <CardContent className="pt-6">
-              <div className="space-y-4 text-center">
+              <div className="space-y-6 text-center">
                 <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto">
                   <Check className="w-8 h-8 text-green-600" />
                 </div>
@@ -145,31 +149,34 @@ export default function VerifyOTP() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
-        <div className="text-center">
-          <h1 className="text-3xl font-bold text-gray-900">Future Minerals Forum</h1>
-          <p className="mt-2 text-sm text-gray-600">Private Invitation System</p>
-        </div>
+    <div className="min-h-screen bg-gray-100 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md w-full">
+        <Card className="bg-white shadow-lg rounded-lg">
+          <CardContent className="p-8">
+            {/* Logo */}
+            <div className="flex justify-center mb-6">
+              <img 
+                src="https://xpuhnbeoczxxmzmjronk.supabase.co/storage/v1/object/public/system-assets/logo.jpeg" 
+                alt="Future Minerals Forum Logo" 
+                className="w-16 h-16 object-contain"
+              />
+            </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-center">{getTitle()}</CardTitle>
-            <CardDescription className="text-center">
-              {getDescription()}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleVerifyOTP} className="space-y-4">
+            {/* Title and Subtitle */}
+            <div className="text-center mb-8">
+              <h1 className="text-2xl font-bold text-gray-900 mb-2">{getTitle()}</h1>
+              <p className="text-sm text-gray-500">{getDescription()}</p>
+            </div>
+            <form onSubmit={handleVerifyOTP} className="space-y-6">
               {error && (
-                <div className="flex items-center space-x-2 text-red-600 text-sm">
+                <div className="flex items-center space-x-2 text-red-600 text-sm bg-red-50 p-3 rounded-md">
                   <AlertCircle className="h-4 w-4" />
                   <span>{error}</span>
                 </div>
               )}
 
               <div className="space-y-2">
-                <Label htmlFor="otp">Verification Code</Label>
+                <Label htmlFor="otp" className="text-sm font-medium text-gray-700">Verification Code</Label>
                 <Input
                   id="otp"
                   type="text"
@@ -177,7 +184,7 @@ export default function VerifyOTP() {
                   value={otp}
                   onChange={(e) => setOtp(e.target.value)}
                   maxLength={6}
-                  className="text-center text-lg tracking-widest"
+                  className="text-center text-lg tracking-widest h-12 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
                   required
                 />
                 <p className="text-sm text-gray-500">
@@ -185,37 +192,35 @@ export default function VerifyOTP() {
                 </p>
               </div>
 
-              <div className="space-y-3">
-                <Button
-                  type="submit"
-                  className="w-full"
-                  disabled={isLoading || otp.length !== 6}
-                >
-                  <Shield className="w-4 h-4 mr-2" />
-                  {isLoading ? 'Verifying...' : 'Verify Code'}
-                </Button>
+              <Button
+                type="submit"
+                className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-md"
+                disabled={isLoading || otp.length !== 6}
+              >
+                <Shield className="w-4 h-4 mr-2" />
+                {isLoading ? 'Verifying...' : 'Verify Code'}
+              </Button>
 
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full"
-                  onClick={handleResendOTP}
-                  disabled={isLoading}
-                >
-                  <Mail className="w-4 h-4 mr-2" />
-                  Resend Code
-                </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full h-12"
+                onClick={handleResendOTP}
+                disabled={isLoading}
+              >
+                <Mail className="w-4 h-4 mr-2" />
+                Resend Code
+              </Button>
 
-                <Button
-                  type="button"
-                  variant="ghost"
-                  className="w-full"
-                  onClick={() => navigate(-1)}
-                >
-                  <ArrowLeft className="w-4 h-4 mr-2" />
-                  Go Back
-                </Button>
-              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                className="w-full h-12"
+                onClick={() => navigate(-1)}
+              >
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Go Back
+              </Button>
             </form>
           </CardContent>
         </Card>

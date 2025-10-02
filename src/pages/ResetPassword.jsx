@@ -6,7 +6,9 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { ArrowLeft, Lock, Eye, EyeOff, Mail, Shield, AlertCircle } from 'lucide-react';
 import { sendOTP, verifyOTP } from '@/api/functions';
+import { User } from '@/api/entities';
 import { supabase } from '@/lib/supabase';
+import { useToast } from '../components/common/Toast';
 
 export default function ResetPassword() {
   const navigate = useNavigate();
@@ -22,6 +24,7 @@ export default function ResetPassword() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [step, setStep] = useState('email'); // 'email', 'otp', 'password', 'success'
+  const { toast } = useToast();
 
   const handleInputChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -34,6 +37,20 @@ export default function ResetPassword() {
     setError('');
 
     try {
+      // First check if the email exists in the users table
+      const users = await User.filter({ email: formData.email });
+      
+      if (users.length === 0) {
+        toast({
+          title: "Email Not Found",
+          description: "This email address is not registered in our system.",
+          variant: "destructive",
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      // If email exists, send the OTP
       await sendOTP(formData.email, 'password_reset', null, 'User');
       setStep('otp');
     } catch (err) {
@@ -133,40 +150,45 @@ export default function ResetPassword() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
-        <div className="text-center">
-          <h1 className="text-3xl font-bold text-gray-900">Future Minerals Forum</h1>
-          <p className="mt-2 text-sm text-gray-600">Private Invitation System</p>
-        </div>
+    <div className="min-h-screen bg-gray-100 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md w-full">
+        <Card className="bg-white shadow-lg rounded-lg">
+          <CardContent className="p-8">
+            {/* Logo */}
+            <div className="flex justify-center mb-6">
+              <img 
+                src="https://xpuhnbeoczxxmzmjronk.supabase.co/storage/v1/object/public/system-assets/logo.jpeg" 
+                alt="Future Minerals Forum Logo" 
+                className="w-16 h-16 object-contain"
+              />
+            </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-center">
-              {step === 'email' && 'Reset Password'}
-              {step === 'otp' && 'Verify Email'}
-              {step === 'password' && 'Set New Password'}
-              {step === 'success' && 'Password Reset'}
-            </CardTitle>
-            <CardDescription className="text-center">
-              {step === 'email' && 'Enter your email to receive a verification code'}
-              {step === 'otp' && 'Enter the verification code sent to your email'}
-              {step === 'password' && 'Create a new password for your account'}
-              {step === 'success' && 'Your password has been reset successfully'}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
+            {/* Title and Subtitle */}
+            <div className="text-center mb-8">
+              <h1 className="text-2xl font-bold text-gray-900 mb-2">
+                {step === 'email' && 'Reset Password'}
+                {step === 'otp' && 'Verify Email'}
+                {step === 'password' && 'Set New Password'}
+                {step === 'success' && 'Password Reset'}
+              </h1>
+              <p className="text-sm text-gray-500">
+                {step === 'email' && 'Enter your email to receive a verification code'}
+                {step === 'otp' && 'Enter the verification code sent to your email'}
+                {step === 'password' && 'Create a new password for your account'}
+                {step === 'success' && 'Your password has been reset successfully'}
+              </p>
+            </div>
             {step === 'email' && (
-              <form onSubmit={handleSendOTP} className="space-y-4">
+              <form onSubmit={handleSendOTP} className="space-y-6">
                 {error && (
-                  <div className="flex items-center space-x-2 text-red-600 text-sm">
+                  <div className="flex items-center space-x-2 text-red-600 text-sm bg-red-50 p-3 rounded-md">
                     <AlertCircle className="h-4 w-4" />
                     <span>{error}</span>
                   </div>
                 )}
 
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email Address</Label>
+                  <Label htmlFor="email" className="text-sm font-medium text-gray-700">Email Address</Label>
                   <div className="relative">
                     <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                     <Input
@@ -175,45 +197,43 @@ export default function ResetPassword() {
                       placeholder="Enter your email"
                       value={formData.email}
                       onChange={(e) => handleInputChange('email', e.target.value)}
-                      className="pl-10"
+                      className="pl-10 h-12 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
                       required
                     />
                   </div>
                 </div>
 
-                <div className="space-y-3">
-                  <Button
-                    type="submit"
-                    className="w-full"
-                    disabled={isLoading}
-                  >
-                    <Shield className="w-4 h-4 mr-2" />
-                    {isLoading ? 'Sending Code...' : 'Send Verification Code'}
-                  </Button>
+                <Button
+                  type="submit"
+                  className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-md"
+                  disabled={isLoading}
+                >
+                  <Shield className="w-4 h-4 mr-2" />
+                  {isLoading ? 'Sending Code...' : 'Send Verification Code'}
+                </Button>
 
-                  <div className="text-center">
-                    <p className="text-sm text-gray-600">
-                      Remember your password?{' '}
-                      <Link to="/login" className="text-blue-600 hover:text-blue-500">
-                        Sign in
-                      </Link>
-                    </p>
-                  </div>
+                <div className="flex justify-center items-center text-sm">
+                  <p className="text-gray-600">
+                    Remember your password?{' '}
+                    <Link to="/login" className="text-blue-600 hover:text-blue-500 font-medium">
+                      Sign in
+                    </Link>
+                  </p>
                 </div>
               </form>
             )}
 
             {step === 'otp' && (
-              <form onSubmit={handleVerifyOTP} className="space-y-4">
+              <form onSubmit={handleVerifyOTP} className="space-y-6">
                 {error && (
-                  <div className="flex items-center space-x-2 text-red-600 text-sm">
+                  <div className="flex items-center space-x-2 text-red-600 text-sm bg-red-50 p-3 rounded-md">
                     <AlertCircle className="h-4 w-4" />
                     <span>{error}</span>
                   </div>
                 )}
 
                 <div className="space-y-2">
-                  <Label htmlFor="otp">Verification Code</Label>
+                  <Label htmlFor="otp" className="text-sm font-medium text-gray-700">Verification Code</Label>
                   <Input
                     id="otp"
                     type="text"
@@ -221,7 +241,7 @@ export default function ResetPassword() {
                     value={formData.otp}
                     onChange={(e) => handleInputChange('otp', e.target.value)}
                     maxLength={6}
-                    className="text-center text-lg tracking-widest"
+                    className="text-center text-lg tracking-widest h-12 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
                     required
                   />
                   <p className="text-sm text-gray-500">
@@ -229,39 +249,38 @@ export default function ResetPassword() {
                   </p>
                 </div>
 
-                <div className="space-y-3">
-                  <Button
-                    type="submit"
-                    className="w-full"
-                    disabled={isLoading || formData.otp.length !== 6}
-                  >
-                    {isLoading ? 'Verifying...' : 'Verify Code'}
-                  </Button>
+                <Button
+                  type="submit"
+                  className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-md"
+                  disabled={isLoading || formData.otp.length !== 6}
+                >
+                  <Shield className="w-4 h-4 mr-2" />
+                  {isLoading ? 'Verifying...' : 'Verify Code'}
+                </Button>
 
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full"
-                    onClick={resetForm}
-                  >
-                    <ArrowLeft className="w-4 h-4 mr-2" />
-                    Back to Email
-                  </Button>
-                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full h-12"
+                  onClick={resetForm}
+                >
+                  <ArrowLeft className="w-4 h-4 mr-2" />
+                  Back to Email
+                </Button>
               </form>
             )}
 
             {step === 'password' && (
-              <form onSubmit={handleResetPassword} className="space-y-4">
+              <form onSubmit={handleResetPassword} className="space-y-6">
                 {error && (
-                  <div className="flex items-center space-x-2 text-red-600 text-sm">
+                  <div className="flex items-center space-x-2 text-red-600 text-sm bg-red-50 p-3 rounded-md">
                     <AlertCircle className="h-4 w-4" />
                     <span>{error}</span>
                   </div>
                 )}
 
                 <div className="space-y-2">
-                  <Label htmlFor="password">New Password</Label>
+                  <Label htmlFor="password" className="text-sm font-medium text-gray-700">New Password</Label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                     <Input
@@ -270,7 +289,7 @@ export default function ResetPassword() {
                       placeholder="Enter new password"
                       value={formData.password}
                       onChange={(e) => handleInputChange('password', e.target.value)}
-                      className="pl-10 pr-10"
+                      className="pl-10 pr-10 h-12 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
                       required
                       minLength={8}
                     />
@@ -285,7 +304,7 @@ export default function ResetPassword() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="confirmPassword">Confirm New Password</Label>
+                  <Label htmlFor="confirmPassword" className="text-sm font-medium text-gray-700">Confirm New Password</Label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                     <Input
@@ -294,7 +313,7 @@ export default function ResetPassword() {
                       placeholder="Confirm new password"
                       value={formData.confirmPassword}
                       onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
-                      className="pl-10 pr-10"
+                      className="pl-10 pr-10 h-12 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
                       required
                     />
                     <button
@@ -307,30 +326,28 @@ export default function ResetPassword() {
                   </div>
                 </div>
 
-                <div className="space-y-3">
-                  <Button
-                    type="submit"
-                    className="w-full"
-                    disabled={isLoading}
-                  >
-                    {isLoading ? 'Resetting Password...' : 'Reset Password'}
-                  </Button>
+                <Button
+                  type="submit"
+                  className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-md"
+                  disabled={isLoading}
+                >
+                  {isLoading ? 'Resetting Password...' : 'Reset Password'}
+                </Button>
 
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full"
-                    onClick={resetForm}
-                  >
-                    <ArrowLeft className="w-4 h-4 mr-2" />
-                    Start Over
-                  </Button>
-                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full h-12"
+                  onClick={resetForm}
+                >
+                  <ArrowLeft className="w-4 h-4 mr-2" />
+                  Start Over
+                </Button>
               </form>
             )}
 
             {step === 'success' && (
-              <div className="space-y-4 text-center">
+              <div className="space-y-6 text-center">
                 <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto">
                   <Shield className="w-8 h-8 text-green-600" />
                 </div>
@@ -340,14 +357,12 @@ export default function ResetPassword() {
                     Your password has been reset. You can now sign in with your new password.
                   </p>
                 </div>
-                <div className="space-y-3">
-                  <Button
-                    onClick={() => navigate('/login')}
-                    className="w-full"
-                  >
-                    Go to Sign In
-                  </Button>
-                </div>
+                <Button
+                  onClick={() => navigate('/login')}
+                  className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-md"
+                >
+                  Go to Sign In
+                </Button>
               </div>
             )}
           </CardContent>

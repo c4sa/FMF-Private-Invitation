@@ -85,7 +85,7 @@ export const sendPasswordResetInstructions = async ({ email, resetUrl }) => {
   }
 }
 
-export const sendNewUserRequestEmail = async ({ newUserFullName, newUserEmail, newUserPassword, newUserCompany, newUserType }) => {
+export const sendNewUserRequestEmail = async ({ newUserFullName, newUserEmail, newUserPassword, newUserCompany, newUserType, newUserSponsorType, newUserRegistrationSlots }) => {
   try {
     // Get admin users to send the request to
     const admins = await User.filter({ system_role: 'Admin' })
@@ -99,7 +99,9 @@ export const sendNewUserRequestEmail = async ({ newUserFullName, newUserEmail, n
       email: newUserEmail,
       password: newUserPassword,
       company_name: newUserCompany,
-      System_user_type: newUserType
+      system_role: newUserType,
+      user_type: newUserSponsorType || 'N/A',
+      registration_slots: newUserRegistrationSlots || {}
     }
     
     // Send to all admins

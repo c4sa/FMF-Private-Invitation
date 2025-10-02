@@ -469,14 +469,31 @@ export default function RegistrationPage() {
           // Don't show error to user as update was successful
         }
       } else {
+        // Auto-approve for regular users, keep pending for Admin/Super User
+        const isAdminUser = currentUser?.role === 'admin' || currentUser?.system_role === 'Admin' || currentUser?.system_role === 'Super User';
+        const attendeeStatus = isAdminUser ? 'pending' : 'approved';
+        
         await Attendee.create({
           ...payload,
-          status: 'pending',
+          status: attendeeStatus,
           registration_method: 'manual',
           registered_by: currentUser?.id,
         });
 
-        // The welcome email will now be sent when the admin approves the registration
+        // Send welcome email for auto-approved attendees
+        if (attendeeStatus === 'approved') {
+          try {
+            await sendWelcomeEmail({ 
+              attendeeData: {
+                ...payload,
+                id: 'new' // Will be updated after creation
+              }
+            });
+          } catch (emailError) {
+            console.error("Failed to send welcome email:", emailError);
+            // Don't show error to user as registration was successful
+          }
+        }
         
         if (!isAdminUser && currentUser) {
           const newUsedSlots = {
@@ -495,7 +512,7 @@ export default function RegistrationPage() {
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
               <h2 style="color: #1e40af; margin-bottom: 20px;">Registration Confirmation</h2>
               <p>Dear ${formData.title} ${formData.first_name} ${formData.last_name},</p>
-              <p>Thank you for registering for the Future Minerals Forum. Your registration has been successfully submitted and is currently pending review.</p>
+              <p>Thank you for registering for the Future Minerals Forum. Your registration has been successfully submitted${attendeeStatus === 'approved' ? ' and approved' : ' and is currently pending review'}.</p>
               <p><strong>Registration Details:</strong></p>
               <ul style="list-style: none; padding: 0;">
                 <li><strong>Name:</strong> ${formData.title} ${formData.first_name} ${formData.last_name}</li>
@@ -504,7 +521,7 @@ export default function RegistrationPage() {
                 <li><strong>Job Title:</strong> ${formData.job_title}</li>
                 <li><strong>Attendee Type:</strong> ${formData.attendee_type}</li>
               </ul>
-              <p>We will review your registration and contact you with further details. If you have any questions, please don't hesitate to reach out to us.</p>
+              <p>${attendeeStatus === 'approved' ? 'You will receive a welcome email with further details shortly.' : 'We will review your registration and contact you with further details.'} If you have any questions, please don't hesitate to reach out to us.</p>
               <p>Best regards,<br>Future Minerals Forum Team</p>
             </div>
           `;

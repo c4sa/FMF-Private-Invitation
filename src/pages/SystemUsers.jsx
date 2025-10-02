@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useCallback } from "react";
-import { User, PartnershipType } from "@/api/entities";
+import { User, PartnershipType, Notification } from "@/api/entities";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,7 +14,6 @@ import {
   Edit3,
   Trash2,
   Shield,
-  Users,
   Power,
   PowerOff,
   Clock
@@ -30,8 +29,6 @@ import ProtectedRoute from "../components/common/ProtectedRoute";
 import { sendNewUserRequestEmail } from "@/api/functions";
 import { format } from "date-fns";
 import { useToast } from "../components/common/Toast";
-import { Link } from "react-router-dom";
-import { createPageUrl } from "@/utils";
 
 
 const attendeeTypes = ["VIP", "Partner", "Exhibitor", "Media"];
@@ -70,7 +67,9 @@ export default function SystemUsers() {
     email: '',
     password: '',
     company_name: '',
-    system_role: 'User'
+    system_role: 'User',
+    user_type: 'N/A',
+    registration_slots: attendeeTypes.reduce((acc, type) => ({...acc, [type]: 0}), {})
   });
   const [isSendingUserRequest, setIsSendingUserRequest] = useState(false);
   const { toast } = useToast();
@@ -178,8 +177,47 @@ export default function SystemUsers() {
     });
   };
 
+  const handleNewUserRequestDataChange = (field, value) => {
+    setNewUserRequestData(prev => {
+      const newData = { ...prev, [field]: value };
+      
+      // Auto-fill registration slots when user_type changes
+      if (field === 'user_type' && value && value !== 'N/A') {
+        const selectedPartnerType = partnerTypes.find(p => p.name === value);
+        if (selectedPartnerType) {
+          newData.registration_slots = {
+            VIP: selectedPartnerType.slots_vip || 0,
+            Partner: selectedPartnerType.slots_partner || 0,
+            Exhibitor: selectedPartnerType.slots_exhibitor || 0,
+            Media: selectedPartnerType.slots_media || 0,
+          };
+        }
+      } else if (field === 'user_type' && value === 'N/A') {
+        // Reset slots to 0 when N/A is selected
+        newData.registration_slots = {
+          VIP: 0,
+          Partner: 0,
+          Exhibitor: 0,
+          Media: 0,
+        };
+      }
+      
+      return newData;
+    });
+  };
+
   const handleSlotChange = (attendeeType, value) => {
     setFormData(prev => ({
+      ...prev,
+      registration_slots: {
+        ...prev.registration_slots,
+        [attendeeType]: parseInt(value) || 0
+      }
+    }));
+  };
+
+  const handleNewUserSlotChange = (attendeeType, value) => {
+    setNewUserRequestData(prev => ({
       ...prev,
       registration_slots: {
         ...prev.registration_slots,
@@ -271,6 +309,16 @@ export default function SystemUsers() {
     if (!userToDelete) return;
 
     try {
+      // First, delete all notifications associated with this user
+      await Notification.filter({ user_id: userToDelete.id }).then(notifications => {
+        if (notifications.length > 0) {
+          return Promise.all(notifications.map(notification => 
+            Notification.delete(notification.id)
+          ));
+        }
+      });
+
+      // Then delete the user
       await User.delete(userToDelete.id);
       loadData();
       setShowDeleteDialog(false);
@@ -375,11 +423,13 @@ export default function SystemUsers() {
         newUserEmail: newUserRequestData.email,
         newUserPassword: newUserRequestData.password,
         newUserCompany: newUserRequestData.company_name,
-        newUserType: newUserRequestData.system_role
+        newUserType: newUserRequestData.system_role,
+        newUserSponsorType: newUserRequestData.user_type,
+        newUserRegistrationSlots: newUserRequestData.registration_slots
       });
       toast({ title: "Request Sent", description: "Your request to add a new user is being processed.", variant: "success" });
       setShowAddUserRequestDialog(false);
-      setNewUserRequestData({ full_name: '', email: '', password: '', company_name: '', system_role: 'User' });
+      setNewUserRequestData({ full_name: '', email: '', password: '', company_name: '', system_role: 'User', user_type: 'N/A', registration_slots: attendeeTypes.reduce((acc, type) => ({...acc, [type]: 0}), {}) });
     } catch (error) {
       console.error("Failed to send new user request:", error);
       toast({ title: "Error", description: "Failed to send your request. Please try again.", variant: "destructive" });
@@ -457,14 +507,6 @@ export default function SystemUsers() {
             </div>
             {currentUser && (currentUser.role === 'admin' || currentUser.system_role === 'Admin' || currentUser.system_role === 'Super User') && (
               <div className="flex items-center gap-3">
-                {(currentUser.role === 'admin' || currentUser.system_role === 'Admin') && (
-                  <Link to={createPageUrl("PartnershipTypes")}>
-                    <Button variant="outline">
-                        <Users className="w-4 h-4 mr-2" />
-                        Manage Partnership Types
-                    </Button>
-                  </Link>
-                )}
                 <Button className="bg-blue-600 hover:bg-blue-700" onClick={() => setShowAddUserRequestDialog(true)}>
                   <UserPlus className="w-4 h-4 mr-2" />
                   Request New User
@@ -523,7 +565,7 @@ export default function SystemUsers() {
                 </div>
                 <div>
                   <Label htmlFor="new_user_type">System User Type</Label>
-                  <Select value={newUserRequestData.system_role} onValueChange={(value) => setNewUserRequestData(prev => ({ ...prev, system_role: value }))}>
+                  <Select value={newUserRequestData.system_role} onValueChange={(value) => handleNewUserRequestDataChange('system_role', value)}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select user type" />
                     </SelectTrigger>
@@ -534,6 +576,57 @@ export default function SystemUsers() {
                     </SelectContent>
                   </Select>
                 </div>
+
+                {newUserRequestData.system_role === 'User' && (
+                  <div>
+                    <Label htmlFor="new_user_sponsor_type">User Type (Sponsor/Partner)</Label>
+                    <Select value={newUserRequestData.user_type} onValueChange={(value) => handleNewUserRequestDataChange('user_type', value)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select user sponsor/partner type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="N/A">N/A</SelectItem>
+                        {partnerTypes.map(type => (
+                          <SelectItem key={type.id} value={type.name}>{type.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                {newUserRequestData.system_role === 'User' && (
+                  <div>
+                    <Label className="text-base font-semibold mb-4 block">Registration Slots</Label>
+                    <div className="grid grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg">
+                      {attendeeTypes.map((type) => (
+                        <div key={type} className="flex items-center justify-between">
+                          <Label className="text-sm">{type}</Label>
+                          <Input
+                            type="number"
+                            min="0"
+                            className="w-20"
+                            value={newUserRequestData.registration_slots[type] || 0}
+                            onChange={(e) => handleNewUserSlotChange(type, e.target.value)}
+                            disabled={newUserRequestData.user_type !== 'N/A'}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                    {newUserRequestData.user_type !== 'N/A' && (
+                      <p className="text-sm text-gray-500 mt-2">
+                        Slots are automatically determined by the selected Partnership Type.
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {(newUserRequestData.system_role === 'Admin' || newUserRequestData.system_role === 'Super User') && (
+                  <div className="p-4 bg-gray-50 rounded-lg">
+                    <p className="text-sm text-gray-700">
+                      Admins and Super Users have unlimited registration slots.
+                    </p>
+                  </div>
+                )}
               </div>
               <div className="flex justify-end gap-3">
                 <Button variant="outline" onClick={() => setShowAddUserRequestDialog(false)}>
@@ -741,7 +834,7 @@ export default function SystemUsers() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Users className="w-5 h-5" />
+                <UserPlus className="w-5 h-5" />
                 System Users ({users.length})
               </CardTitle>
             </CardHeader>
@@ -795,8 +888,8 @@ export default function SystemUsers() {
                               </div>
                             </TableCell>
                             <TableCell>
-                              <Badge className={user.System_user_type === 'Admin' ? 'bg-red-100 text-red-800' : (user.System_user_type === 'Super User' ? 'bg-yellow-100 text-yellow-800' : 'bg-blue-100 text-blue-800')}>
-                                <Shield className="w-3 h-3 mr-1" />{user.System_user_type}
+                              <Badge className={user.system_role === 'Admin' ? 'bg-red-100 text-red-800' : (user.system_role === 'Super User' ? 'bg-yellow-100 text-yellow-800' : 'bg-blue-100 text-blue-800')}>
+                                <Shield className="w-3 h-3 mr-1" />{user.system_role}
                               </Badge>
                             </TableCell>
                             <TableCell>
@@ -825,7 +918,7 @@ export default function SystemUsers() {
                               </div>
                             </TableCell>
                             <TableCell>
-                                {user.System_user_type === 'Admin' || user.System_user_type === 'Super User' ? (
+                                {user.system_role === 'Admin' || user.system_role === 'Super User' ? (
                                     <span className="font-semibold text-lg">∞</span>
                                 ) : (
                                     <span className={`font-semibold ${availableSlots > 0 ? 'text-green-600' : 'text-red-600'}`}>
@@ -857,7 +950,7 @@ export default function SystemUsers() {
                                       {isActive ? <PowerOff className="w-4 h-4" /> : <Power className="w-4 h-4" />}
                                     </Button>
                                   )}
-                                  {currentUser.System_user_type === 'Admin' && user.id !== currentUser.id && (
+                                  {currentUser.system_role === 'Admin' && user.id !== currentUser.id && (
                                     <Button
                                       size="sm"
                                       variant="outline"

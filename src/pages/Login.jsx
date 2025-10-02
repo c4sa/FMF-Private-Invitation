@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { ArrowLeft, Mail, Lock, AlertCircle } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { User } from '@/api/entities';
 
 export default function Login() {
   const navigate = useNavigate();
@@ -38,6 +39,16 @@ export default function Login() {
       }
 
       if (data.user) {
+        // Update last_login_date in the users table
+        try {
+          await User.update(data.user.id, {
+            last_login_date: new Date().toISOString()
+          });
+        } catch (updateError) {
+          console.error('Error updating last login date:', updateError);
+          // Don't block login if this fails
+        }
+        
         navigate('/Dashboard');
       }
     } catch (err) {
@@ -63,11 +74,11 @@ export default function Login() {
           <CardContent className="p-8">
             {/* Logo */}
             <div className="flex justify-center mb-6">
-              <div className="w-16 h-16 bg-gradient-to-br from-blue-500 via-teal-500 to-green-500 rounded-full flex items-center justify-center">
-                <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center">
-                  <div className="w-4 h-4 bg-gradient-to-br from-blue-500 to-teal-500 rounded-full"></div>
-                </div>
-              </div>
+              <img 
+                src="https://xpuhnbeoczxxmzmjronk.supabase.co/storage/v1/object/public/system-assets/logo.jpeg" 
+                alt="Future Minerals Forum Logo" 
+                className="w-16 h-16 object-contain"
+              />
             </div>
 
             {/* Title and Subtitle */}
