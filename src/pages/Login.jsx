@@ -136,9 +136,9 @@ export default function Login() {
                   Forgot password?
                 </Link>
                 <div className="text-gray-600">
-                  Need an account?{' '}
+                 
                   <Link to="/signup" className="text-gray-800 hover:text-gray-900 font-medium">
-                    Sign up
+                    
                   </Link>
                 </div>
               </div>
