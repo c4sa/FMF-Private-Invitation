@@ -25,6 +25,7 @@ import { countryCodes } from "../components/registration/countryCodes";
 import { countries } from "../components/registration/countries"; // New import for comprehensive country list
 import { useToast } from "../components/common/Toast";
 import { handleDuplicateEmailError, getGenericErrorMessage } from "../utils/errorHandling";
+import { emailService } from "../lib/resend";
 
 const titles = ["Mr.", "Ms.", "Miss.", "Mrs.", "Dr.", "H.E.", "Hon.", "H.R.H.", "H.H.", "Prof.", "Eng."];
 
@@ -418,6 +419,38 @@ export default function PublicRegistrationPage() {
         if (result.success) {
           setSubmissionSuccess(true);
           toast({ title: "Update Successful", description: "Your registration has been updated and is pending review.", variant: "success" });
+          
+          // Send update confirmation email
+          try {
+            const emailSubject = "Registration Update Confirmation - Future Minerals Forum";
+            const emailHtml = `
+              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+                <h2 style="color: #1e40af; margin-bottom: 20px;">Registration Update Confirmation</h2>
+                <p>Dear ${formData.title} ${formData.first_name} ${formData.last_name},</p>
+                <p>Your registration for the Future Minerals Forum has been successfully updated and is currently pending review.</p>
+                <p><strong>Updated Registration Details:</strong></p>
+                <ul style="list-style: none; padding: 0;">
+                  <li><strong>Name:</strong> ${formData.title} ${formData.first_name} ${formData.last_name}</li>
+                  <li><strong>Email:</strong> ${formData.email}</li>
+                  <li><strong>Organization:</strong> ${formData.organization}</li>
+                  <li><strong>Job Title:</strong> ${formData.job_title}</li>
+                </ul>
+                <p>We will review your updated registration and contact you with further details. If you have any questions, please don't hesitate to reach out to us.</p>
+                <p>Best regards,<br>Future Minerals Forum Team</p>
+              </div>
+            `;
+            
+            await emailService.send({
+              to: formData.email,
+              subject: emailSubject,
+              html: emailHtml
+            });
+            
+            console.log('Update confirmation email sent successfully');
+          } catch (emailError) {
+            console.error('Failed to send update confirmation email:', emailError);
+            // Don't show error to user as update was successful
+          }
         } else {
           const errMsg = result.error || "Failed to update registration. Please try again.";
           setSubmissionError(errMsg);
@@ -438,6 +471,38 @@ export default function PublicRegistrationPage() {
         if (result.success) {
           setSubmissionSuccess(true);
           toast({ title: "Registration Submitted", description: "Your registration has been submitted and is pending review.", variant: "success" });
+          
+          // Send confirmation email
+          try {
+            const emailSubject = "Registration Confirmation - Future Minerals Forum";
+            const emailHtml = `
+              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+                <h2 style="color: #1e40af; margin-bottom: 20px;">Registration Confirmation</h2>
+                <p>Dear ${formData.title} ${formData.first_name} ${formData.last_name},</p>
+                <p>Thank you for registering for the Future Minerals Forum. Your registration has been successfully submitted and is currently pending review.</p>
+                <p><strong>Registration Details:</strong></p>
+                <ul style="list-style: none; padding: 0;">
+                  <li><strong>Name:</strong> ${formData.title} ${formData.first_name} ${formData.last_name}</li>
+                  <li><strong>Email:</strong> ${formData.email}</li>
+                  <li><strong>Organization:</strong> ${formData.organization}</li>
+                  <li><strong>Job Title:</strong> ${formData.job_title}</li>
+                </ul>
+                <p>We will review your registration and contact you with further details. If you have any questions, please don't hesitate to reach out to us.</p>
+                <p>Best regards,<br>Future Minerals Forum Team</p>
+              </div>
+            `;
+            
+            await emailService.send({
+              to: formData.email,
+              subject: emailSubject,
+              html: emailHtml
+            });
+            
+            console.log('Confirmation email sent successfully');
+          } catch (emailError) {
+            console.error('Failed to send confirmation email:', emailError);
+            // Don't show error to user as registration was successful
+          }
         } else {
           const errMsg = result.error || "An unexpected error occurred. Please try again.";
           if (errMsg.includes("already registered")) {
