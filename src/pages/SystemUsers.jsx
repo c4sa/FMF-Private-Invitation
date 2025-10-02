@@ -32,6 +32,7 @@ import { format } from "date-fns";
 import { useToast } from "../components/common/Toast";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
+import { emailService } from "../lib/resend";
 
 
 const attendeeTypes = ["VIP", "Partner", "Exhibitor", "Media"];
@@ -233,6 +234,81 @@ export default function SystemUsers() {
       loadData();
       setShowEditDialog(false);
       resetForm();
+
+      // Send email notifications
+      try {
+        // Email to the user whose account was updated
+        const userEmailSubject = "Account Update Notification - Future Minerals Forum";
+        const userEmailHtml = `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <h2 style="color: #1e40af; margin-bottom: 20px;">Account Update Notification</h2>
+            <p>Dear ${formData.preferred_name || editingUser.email},</p>
+            <p>Your account has been updated by an administrator. Here are the details of the changes:</p>
+            <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin: 20px 0;">
+              <h3 style="color: #1e40af; margin-bottom: 10px;">Updated Information:</h3>
+              <ul style="list-style: none; padding: 0;">
+                <li><strong>Name:</strong> ${formData.preferred_name || 'Not changed'}</li>
+                <li><strong>Company:</strong> ${formData.company_name || 'Not changed'}</li>
+                <li><strong>System Role:</strong> ${formData.system_role}</li>
+                <li><strong>Account Status:</strong> ${formData.account_status}</li>
+                ${formData.password ? '<li><strong>Password:</strong> Updated</li>' : ''}
+              </ul>
+            </div>
+            <p>If you have any questions about these changes, please contact the administrator.</p>
+            <p>Best regards,<br>Future Minerals Forum Team</p>
+          </div>
+        `;
+
+        await emailService.send({
+          to: editingUser.email,
+          subject: userEmailSubject,
+          html: userEmailHtml
+        });
+
+        // Email to admins about the user update
+        const adminEmailSubject = "System User Updated - Future Minerals Forum";
+        const adminEmailHtml = `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <h2 style="color: #1e40af; margin-bottom: 20px;">System User Updated</h2>
+            <p>A system user has been updated by ${currentUser?.preferred_name || currentUser?.email}.</p>
+            <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin: 20px 0;">
+              <h3 style="color: #1e40af; margin-bottom: 10px;">User Details:</h3>
+              <ul style="list-style: none; padding: 0;">
+                <li><strong>User Email:</strong> ${editingUser.email}</li>
+                <li><strong>Name:</strong> ${formData.preferred_name || editingUser.preferred_name}</li>
+                <li><strong>Company:</strong> ${formData.company_name || editingUser.company_name}</li>
+                <li><strong>System Role:</strong> ${formData.system_role}</li>
+                <li><strong>Account Status:</strong> ${formData.account_status}</li>
+                <li><strong>Updated By:</strong> ${currentUser?.preferred_name || currentUser?.email}</li>
+                <li><strong>Updated At:</strong> ${new Date().toLocaleString()}</li>
+              </ul>
+            </div>
+            <p>This is an automated notification for administrative purposes.</p>
+            <p>Best regards,<br>Future Minerals Forum System</p>
+          </div>
+        `;
+
+        // Get admin emails (you might want to get this from your user list)
+        const adminUsers = users.filter(user => 
+          user.system_role === 'Admin' || user.system_role === 'Super User'
+        );
+        
+        // Send email to all admins
+        for (const admin of adminUsers) {
+          if (admin.email !== currentUser?.email) { // Don't send to the person who made the change
+            await emailService.send({
+              to: admin.email,
+              subject: adminEmailSubject,
+              html: adminEmailHtml
+            });
+          }
+        }
+
+        console.log('Email notifications sent successfully');
+      } catch (emailError) {
+        console.error('Failed to send email notifications:', emailError);
+        // Don't show error to user as the main operation was successful
+      }
 
       toast({
         title: "Success",
