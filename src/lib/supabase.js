@@ -4,6 +4,14 @@ import { createClient } from '@supabase/supabase-js'
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://your-project.supabase.co'
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'your-anon-key'
 
+// Debug environment variables in production
+console.log('🔍 Supabase Configuration Debug:');
+console.log('Environment:', import.meta.env.MODE);
+console.log('Supabase URL:', supabaseUrl);
+console.log('Supabase Key (first 20 chars):', supabaseAnonKey.substring(0, 20) + '...');
+console.log('Is URL default?', supabaseUrl === 'https://your-project.supabase.co');
+console.log('Is Key default?', supabaseAnonKey === 'your-anon-key');
+
 // Validate environment variables
 if (!supabaseUrl || supabaseUrl === 'https://your-project.supabase.co') {
   console.error('❌ VITE_SUPABASE_URL is not set or is using default value');
