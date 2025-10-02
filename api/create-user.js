@@ -27,7 +27,15 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
+    // Debug environment variables
+    console.log('Environment check:');
+    console.log('VITE_SUPABASE_URL exists:', !!process.env.VITE_SUPABASE_URL);
+    console.log('VITE_SERVICE_ROLE_KEY exists:', !!process.env.VITE_SERVICE_ROLE_KEY);
+    console.log('VITE_SUPABASE_URL value:', process.env.VITE_SUPABASE_URL ? 'Set' : 'Not set');
+    console.log('VITE_SERVICE_ROLE_KEY value:', process.env.VITE_SERVICE_ROLE_KEY ? 'Set' : 'Not set');
+
     // Create user in Supabase Auth using admin API
+    console.log('Creating user with email:', email);
     const { data: authData, error: authError } = await supabase.auth.admin.createUser({
       email: email,
       password: password,
@@ -40,7 +48,8 @@ export default async function handler(req, res) {
 
     if (authError) {
       console.error('Auth creation error:', authError);
-      return res.status(400).json({ error: authError.message });
+      console.error('Error details:', JSON.stringify(authError, null, 2));
+      return res.status(400).json({ error: authError.message || 'Failed to create user' });
     }
 
     if (!authData.user) {
