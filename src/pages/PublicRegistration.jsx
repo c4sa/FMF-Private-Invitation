@@ -282,7 +282,7 @@ export default function PublicRegistrationPage() {
   useEffect(() => {
     if (submissionSuccess) {
       const timer = setTimeout(() => {
-        window.location.href = 'https://app.futuremineralsforum.com.sa';
+        window.location.href = 'https://fmf-private-invitation-hotf.vercel.app/login';
       }, 3000); // Redirect after 3 seconds
       return () => clearTimeout(timer); // Cleanup timer on unmount or if submissionSuccess changes
     }

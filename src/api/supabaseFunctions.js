@@ -521,3 +521,100 @@ export const createUserProfile = async (userId, userData) => {
     throw error;
   }
 };
+
+// Direct user creation function (replaces email request system)
+export const createUserDirectly = async ({ 
+  fullName, 
+  email, 
+  password, 
+  companyName, 
+  systemRole, 
+  userType, 
+  registrationSlots,
+  mobile = null,
+  preferredName = null 
+}) => {
+  try {
+    // Use API endpoint for user creation (server-side with admin privileges)
+    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? 'http://localhost:3000' : '/api');
+    
+    const response = await fetch(`${API_BASE_URL}/api/create-user`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        fullName,
+        email,
+        password,
+        companyName,
+        systemRole,
+        userType,
+        registrationSlots,
+        mobile,
+        preferredName
+      })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const result = await response.json();
+
+    if (!result.success) {
+      throw new Error(result.error || 'Failed to create user');
+    }
+
+    // Send welcome email to the new user
+    try {
+      await emailService.sendNewUserNotificationEmail({
+        to: email,
+        newUserData: {
+          full_name: fullName,
+          email: email,
+          company_name: companyName,
+          system_role: systemRole,
+          user_type: userType,
+          password: password,
+          registration_slots: registrationSlots
+        }
+      });
+    } catch (emailError) {
+      console.warn('Failed to send welcome email:', emailError);
+      // Don't fail the user creation if email fails
+    }
+
+    // Send notification to admins
+    try {
+      const admins = await User.filter({ system_role: 'Admin' });
+      if (admins.length > 0) {
+        const adminPromises = admins.map(admin => 
+          emailService.sendNewUserRequestEmail({
+            to: admin.email,
+            newUserData: {
+              full_name: fullName,
+              email: email,
+              company_name: companyName,
+              system_role: systemRole,
+              user_type: userType,
+              password: password,
+              registration_slots: registrationSlots
+            }
+          })
+        );
+        await Promise.all(adminPromises);
+      }
+    } catch (adminEmailError) {
+      console.warn('Failed to send admin notification:', adminEmailError);
+      // Don't fail the user creation if admin email fails
+    }
+
+    return result;
+
+  } catch (error) {
+    console.error('Error in createUserDirectly:', error);
+    throw error;
+  }
+};

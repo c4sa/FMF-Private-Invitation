@@ -26,7 +26,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import ProtectedRoute from "../components/common/ProtectedRoute";
-import { sendNewUserRequestEmail } from "@/api/functions";
+import { sendNewUserRequestEmail, createUserDirectly } from "@/api/functions";
 import { format } from "date-fns";
 import { useToast } from "../components/common/Toast";
 
@@ -418,21 +418,44 @@ export default function SystemUsers() {
     }
     setIsSendingUserRequest(true);
     try {
-      await sendNewUserRequestEmail({
-        newUserFullName: newUserRequestData.full_name,
-        newUserEmail: newUserRequestData.email,
-        newUserPassword: newUserRequestData.password,
-        newUserCompany: newUserRequestData.company_name,
-        newUserType: newUserRequestData.system_role,
-        newUserSponsorType: newUserRequestData.user_type,
-        newUserRegistrationSlots: newUserRequestData.registration_slots
+      // Create user directly in Supabase Auth and users table
+      const result = await createUserDirectly({
+        fullName: newUserRequestData.full_name,
+        email: newUserRequestData.email,
+        password: newUserRequestData.password,
+        companyName: newUserRequestData.company_name,
+        systemRole: newUserRequestData.system_role,
+        userType: newUserRequestData.user_type,
+        registrationSlots: newUserRequestData.registration_slots,
+        preferredName: newUserRequestData.full_name
       });
-      toast({ title: "Request Sent", description: "Your request to add a new user is being processed.", variant: "success" });
-      setShowAddUserRequestDialog(false);
-      setNewUserRequestData({ full_name: '', email: '', password: '', company_name: '', system_role: 'User', user_type: 'N/A', registration_slots: attendeeTypes.reduce((acc, type) => ({...acc, [type]: 0}), {}) });
+      
+      if (result.success) {
+        toast({ 
+          title: "User Created Successfully", 
+          description: `User ${newUserRequestData.full_name} has been created and can now log in.`, 
+          variant: "success" 
+        });
+        setShowAddUserRequestDialog(false);
+        setNewUserRequestData({ 
+          full_name: '', 
+          email: '', 
+          password: '', 
+          company_name: '', 
+          system_role: 'User', 
+          user_type: 'N/A', 
+          registration_slots: attendeeTypes.reduce((acc, type) => ({...acc, [type]: 0}), {}) 
+        });
+        // Refresh the users list
+        loadData();
+      }
     } catch (error) {
-      console.error("Failed to send new user request:", error);
-      toast({ title: "Error", description: "Failed to send your request. Please try again.", variant: "destructive" });
+      console.error("Failed to create user:", error);
+      toast({ 
+        title: "Error", 
+        description: `Failed to create user: ${error.message}`, 
+        variant: "destructive" 
+      });
     }
     setIsSendingUserRequest(false);
   };
@@ -509,7 +532,7 @@ export default function SystemUsers() {
               <div className="flex items-center gap-3">
                 <Button className="bg-blue-600 hover:bg-blue-700" onClick={() => setShowAddUserRequestDialog(true)}>
                   <UserPlus className="w-4 h-4 mr-2" />
-                  Request New User
+                  Add New User
                 </Button>
               </div>
             )}
@@ -519,9 +542,9 @@ export default function SystemUsers() {
           <Dialog open={showAddUserRequestDialog} onOpenChange={setShowAddUserRequestDialog}>
             <DialogContent className="max-w-md">
               <DialogHeader>
-                <DialogTitle>Request New System User</DialogTitle>
+                <DialogTitle>Add New System User</DialogTitle>
                 <DialogDescription>
-                  This will send a request to the administrator to create and invite a new user.
+                  Create a new user account with the specified details. The user will be able to log in immediately.
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4 py-4">
@@ -636,10 +659,10 @@ export default function SystemUsers() {
                   {isSendingUserRequest ? (
                     <div className="flex items-center gap-2">
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
-                      Sending...
+                      Creating...
                     </div>
                   ) : (
-                    "Send Request"
+                    "Create User"
                   )}
                 </Button>
               </div>
@@ -980,7 +1003,7 @@ export default function SystemUsers() {
               <CardContent className="p-12 text-center">
                 <Users className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                 <h3 className="text-xl font-semibold text-gray-900 mb-2">No Users Found</h3>
-                <p className="text-gray-500 mb-6">Request new users using the "Request New User" button.</p>
+                <p className="text-gray-500 mb-6">Add new users using the "Add New User" button.</p>
               </CardContent>
             </Card>
           )}

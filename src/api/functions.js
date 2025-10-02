@@ -19,7 +19,8 @@ import {
   verifyOTP,
   sendOTPEmail,
   sendOTP,
-  createUserProfile
+  createUserProfile,
+  createUserDirectly
 } from './supabaseFunctions.js';
 
 // Export all functions
@@ -44,7 +45,8 @@ export {
   verifyOTP,
   sendOTPEmail,
   sendOTP,
-  createUserProfile
+  createUserProfile,
+  createUserDirectly
 };
   
   
