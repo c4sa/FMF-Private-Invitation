@@ -286,7 +286,7 @@ export default function Attendees() {
       let emailBody = `
         <div style="max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
           <div style="background: #ffffff; padding: 20px; border-bottom: 1px solid #e5e7eb;">
-            <img src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68c956d6c6a36ced0b9be9eb/38539828a_image.png" alt="Future Minerals Forum" style="height: 60px; width: auto;" />
+            <img src="https://xpuhnbeoczxxmzmjronk.supabase.co/storage/v1/object/public/system-assets/logo.jpeg" alt="Future Minerals Forum" style="height: 60px; width: auto;" />
           </div>
           <div style="background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%); padding: 30px; text-align: center;">
             <h1 style="color: white; margin: 0; font-size: 28px; font-weight: bold;">Registration Modification Required</h1>

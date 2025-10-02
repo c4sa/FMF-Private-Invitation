@@ -157,7 +157,7 @@ export const emailService = {
     return `
       <div style="max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
         <div style="background: #ffffff; padding: 20px; border-bottom: 1px solid #e5e7eb;">
-          <img src="https://your-domain.com/logo.png" alt="Future Minerals Forum" style="height: 60px; width: auto;" />
+          <img src="https://xpuhnbeoczxxmzmjronk.supabase.co/storage/v1/object/public/system-assets/logo.jpeg" alt="Future Minerals Forum" style="height: 60px; width: auto;" />
         </div>
         <div style="background: linear-gradient(135deg, #059669 0%, #10b981 100%); padding: 30px; text-align: center;">
           <h1 style="color: white; margin: 0; font-size: 28px; font-weight: bold;">Registration Approved!</h1>
@@ -179,7 +179,7 @@ export const emailService = {
     return `
       <div style="max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
         <div style="background: #ffffff; padding: 20px; border-bottom: 1px solid #e5e7eb;">
-          <img src="https://your-domain.com/logo.png" alt="Future Minerals Forum" style="height: 60px; width: auto;" />
+          <img src="https://xpuhnbeoczxxmzmjronk.supabase.co/storage/v1/object/public/system-assets/logo.jpeg" alt="Future Minerals Forum" style="height: 60px; width: auto;" />
         </div>
         <div style="background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%); padding: 30px; text-align: center;">
           <h1 style="color: white; margin: 0; font-size: 28px; font-weight: bold;">You're Invited!</h1>
@@ -204,7 +204,7 @@ export const emailService = {
     return `
       <div style="max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
         <div style="background: #ffffff; padding: 20px; border-bottom: 1px solid #e5e7eb;">
-          <img src="https://your-domain.com/logo.png" alt="Future Minerals Forum" style="height: 60px; width: auto;" />
+          <img src="https://xpuhnbeoczxxmzmjronk.supabase.co/storage/v1/object/public/system-assets/logo.jpeg" alt="Future Minerals Forum" style="height: 60px; width: auto;" />
         </div>
         <div style="background: linear-gradient(135deg, #7c3aed 0%, #8b5cf6 100%); padding: 30px; text-align: center;">
           <h1 style="color: white; margin: 0; font-size: 28px; font-weight: bold;">Password Reset</h1>
@@ -230,7 +230,7 @@ export const emailService = {
     return `
       <div style="max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
         <div style="background: #ffffff; padding: 20px; border-bottom: 1px solid #e5e7eb;">
-          <img src="https://your-domain.com/logo.png" alt="Future Minerals Forum" style="height: 60px; width: auto;" />
+          <img src="https://xpuhnbeoczxxmzmjronk.supabase.co/storage/v1/object/public/system-assets/logo.jpeg" alt="Future Minerals Forum" style="height: 60px; width: auto;" />
         </div>
         <div style="background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%); padding: 30px; text-align: center;">
           <h1 style="color: white; margin: 0; font-size: 28px; font-weight: bold;">New User Request</h1>
@@ -270,7 +270,7 @@ export const emailService = {
     return `
       <div style="max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
         <div style="background: #ffffff; padding: 20px; border-bottom: 1px solid #e5e7eb;">
-          <img src="https://your-domain.com/logo.png" alt="Future Minerals Forum" style="height: 60px; width: auto;" />
+          <img src="https://xpuhnbeoczxxmzmjronk.supabase.co/storage/v1/object/public/system-assets/logo.jpeg" alt="Future Minerals Forum" style="height: 60px; width: auto;" />
         </div>
         <div style="background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%); padding: 30px; text-align: center;">
           <h1 style="color: white; margin: 0; font-size: 28px; font-weight: bold;">System Access Requested</h1>
