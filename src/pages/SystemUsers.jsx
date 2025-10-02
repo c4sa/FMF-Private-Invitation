@@ -380,25 +380,26 @@ export default function SystemUsers() {
     
     setIsCreatingUser(true);
     try {
-      // Create user in Supabase Auth using signup
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: newUserData.email,
-        password: newUserData.password,
-        options: {
-          data: {
-            full_name: newUserData.full_name,
-            company_name: newUserData.company_name
-          }
-        }
+      // Create user using serverless function to avoid auto-signin
+      const response = await fetch('/api/create-user', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: newUserData.email,
+          password: newUserData.password,
+          full_name: newUserData.full_name,
+          company_name: newUserData.company_name
+        })
       });
 
-      if (authError) {
-        throw authError;
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to create user account');
       }
 
-      if (!authData.user) {
-        throw new Error('Failed to create user account');
-      }
+      const authData = await response.json();
 
       // Create user profile in users table
       const userProfileData = {
