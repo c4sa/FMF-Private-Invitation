@@ -28,6 +28,7 @@ import { countries } from "../components/registration/countries";
 import ProtectedRoute from "../components/common/ProtectedRoute";
 import { useToast } from "../components/common/Toast";
 import { handleDuplicateEmailError, getGenericErrorMessage } from "../utils/errorHandling";
+import { emailService } from "../lib/resend";
 
 const attendeeTypes = [
   "VIP", "Partner", "Exhibitor", "Media"
@@ -434,6 +435,39 @@ export default function RegistrationPage() {
       if (editingId) {
         await Attendee.update(editingId, payload);
         setSubmissionSuccess(true);
+        
+        // Send update confirmation email
+        try {
+          const emailSubject = "Registration Update Confirmation - Future Minerals Forum";
+          const emailHtml = `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+              <h2 style="color: #1e40af; margin-bottom: 20px;">Registration Update Confirmation</h2>
+              <p>Dear ${formData.title} ${formData.first_name} ${formData.last_name},</p>
+              <p>Your registration for the Future Minerals Forum has been successfully updated and is currently pending review.</p>
+              <p><strong>Updated Registration Details:</strong></p>
+              <ul style="list-style: none; padding: 0;">
+                <li><strong>Name:</strong> ${formData.title} ${formData.first_name} ${formData.last_name}</li>
+                <li><strong>Email:</strong> ${formData.email}</li>
+                <li><strong>Organization:</strong> ${formData.organization}</li>
+                <li><strong>Job Title:</strong> ${formData.job_title}</li>
+                <li><strong>Attendee Type:</strong> ${formData.attendee_type}</li>
+              </ul>
+              <p>We will review your updated registration and contact you with further details. If you have any questions, please don't hesitate to reach out to us.</p>
+              <p>Best regards,<br>Future Minerals Forum Team</p>
+            </div>
+          `;
+          
+          await emailService.send({
+            to: formData.email,
+            subject: emailSubject,
+            html: emailHtml
+          });
+          
+          console.log('Update confirmation email sent successfully');
+        } catch (emailError) {
+          console.error('Failed to send update confirmation email:', emailError);
+          // Don't show error to user as update was successful
+        }
       } else {
         await Attendee.create({
           ...payload,
@@ -453,6 +487,39 @@ export default function RegistrationPage() {
           await loadCurrentUser();
         }
         setSubmissionSuccess(true);
+        
+        // Send registration confirmation email
+        try {
+          const emailSubject = "Registration Confirmation - Future Minerals Forum";
+          const emailHtml = `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+              <h2 style="color: #1e40af; margin-bottom: 20px;">Registration Confirmation</h2>
+              <p>Dear ${formData.title} ${formData.first_name} ${formData.last_name},</p>
+              <p>Thank you for registering for the Future Minerals Forum. Your registration has been successfully submitted and is currently pending review.</p>
+              <p><strong>Registration Details:</strong></p>
+              <ul style="list-style: none; padding: 0;">
+                <li><strong>Name:</strong> ${formData.title} ${formData.first_name} ${formData.last_name}</li>
+                <li><strong>Email:</strong> ${formData.email}</li>
+                <li><strong>Organization:</strong> ${formData.organization}</li>
+                <li><strong>Job Title:</strong> ${formData.job_title}</li>
+                <li><strong>Attendee Type:</strong> ${formData.attendee_type}</li>
+              </ul>
+              <p>We will review your registration and contact you with further details. If you have any questions, please don't hesitate to reach out to us.</p>
+              <p>Best regards,<br>Future Minerals Forum Team</p>
+            </div>
+          `;
+          
+          await emailService.send({
+            to: formData.email,
+            subject: emailSubject,
+            html: emailHtml
+          });
+          
+          console.log('Registration confirmation email sent successfully');
+        } catch (emailError) {
+          console.error('Failed to send registration confirmation email:', emailError);
+          // Don't show error to user as registration was successful
+        }
       }
       
     } catch (error) {
