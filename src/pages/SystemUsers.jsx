@@ -551,9 +551,9 @@ export default function SystemUsers() {
             </div>
             {currentUser && (currentUser.role === 'admin' || currentUser.system_role === 'Admin' || currentUser.system_role === 'Super User') && (
               <div className="flex items-center gap-3">
-                <Button className="bg-green-600 hover:bg-green-700" onClick={() => setShowCreateUserDialog(true)}>
+                <Button className="bg-blue-600 hover:bg-blue-700" onClick={() => setShowCreateUserDialog(true)}>
                   <UserPlus className="w-4 h-4 mr-2" />
-                  Create User
+                  Request User
                 </Button>
               </div>
             )}
@@ -604,9 +604,9 @@ export default function SystemUsers() {
           <Dialog open={showCreateUserDialog} onOpenChange={setShowCreateUserDialog}>
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
-                <DialogTitle>Create New System User</DialogTitle>
+                <DialogTitle>Request New System User</DialogTitle>
                 <DialogDescription>
-                  Create a new system user with authentication credentials.
+                  Request a new system user with authentication credentials.
                 </DialogDescription>
               </DialogHeader>
 
@@ -728,14 +728,14 @@ export default function SystemUsers() {
                 <Button variant="outline" onClick={() => { setShowCreateUserDialog(false); resetNewUserForm(); }}>
                   Cancel
                 </Button>
-                <Button onClick={handleCreateUser} disabled={isCreatingUser} className="bg-green-600 hover:bg-green-700">
+                <Button onClick={handleCreateUser} disabled={isCreatingUser} className="bg-blue-600 hover:bg-blue-700">
                   {isCreatingUser ? (
                     <div className="flex items-center gap-2">
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
-                      Creating...
+                      Requesting...
                     </div>
                   ) : (
-                    "Create User"
+                    "Request User"
                   )}
                 </Button>
               </div>
