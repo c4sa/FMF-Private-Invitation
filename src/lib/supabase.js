@@ -1,8 +1,16 @@
 import { createClient } from '@supabase/supabase-js'
 
-// Supabase configuration
+// Supabase configuration with better error handling
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://your-project.supabase.co'
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'your-anon-key'
+
+// Validate environment variables
+if (!supabaseUrl || supabaseUrl === 'https://your-project.supabase.co') {
+  console.error('❌ VITE_SUPABASE_URL is not set or is using default value');
+}
+if (!supabaseAnonKey || supabaseAnonKey === 'your-anon-key') {
+  console.error('❌ VITE_SUPABASE_ANON_KEY is not set or is using default value');
+}
 
 // Create Supabase client
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {

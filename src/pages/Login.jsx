@@ -41,7 +41,16 @@ export default function Login() {
         navigate('/Dashboard');
       }
     } catch (err) {
-      setError('An unexpected error occurred. Please try again.');
+      console.error('Login error:', err);
+      
+      // Provide more specific error messages based on the error type
+      if (err.message.includes('Failed to fetch') || err.message.includes('ERR_CONNECTION_CLOSED')) {
+        setError('Connection failed. Please check your internet connection and try again.');
+      } else if (err.message.includes('Invalid login credentials')) {
+        setError('Invalid email or password. Please try again.');
+      } else {
+        setError('An unexpected error occurred. Please try again.');
+      }
     } finally {
       setIsLoading(false);
     }
