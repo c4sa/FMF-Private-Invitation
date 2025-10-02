@@ -54,6 +54,7 @@ export default function SystemUsers() {
     preferred_name: '',
     company_name: '',
     email: '',
+    password: '',
     system_role: 'User',
     user_type: 'N/A',
     mobile: '',
@@ -139,6 +140,7 @@ export default function SystemUsers() {
       preferred_name: '',
       company_name: '',
       email: '',
+      password: '',
       system_role: 'User',
       user_type: 'N/A',
       mobile: '',
@@ -203,6 +205,11 @@ export default function SystemUsers() {
         account_status: formData.account_status || 'active'
       };
 
+      // Include password only if it's provided
+      if (formData.password && formData.password.trim() !== '') {
+        userData.password = formData.password;
+      }
+
       // ** AUTO-POPULATE SLOTS FROM PARTNERSHIP TYPE **
       // Only apply if the user is a 'User' type and has a specific partnership type selected
       if (formData.system_role === 'User' && formData.user_type && formData.user_type !== 'N/A') {
@@ -252,6 +259,7 @@ export default function SystemUsers() {
       preferred_name: user.preferred_name || '',
       company_name: user.company_name || '',
       email: user.email || '',
+      password: '', // Password field is always empty for security
       system_role: user.system_role || 'User',
       user_type: user.user_type || 'N/A',
       mobile: user.mobile || '',
@@ -628,6 +636,21 @@ export default function SystemUsers() {
                     disabled
                     className="bg-gray-100"
                   />
+                </div>
+
+                <div>
+                  <Label htmlFor="password">Password</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    value={formData.password}
+                    onChange={(e) => handleInputChange('password', e.target.value)}
+                    placeholder="Enter new password (leave empty to keep current password)"
+                    className="bg-white"
+                  />
+                  <p className="text-sm text-gray-500 mt-1">
+                    Leave empty to keep the current password unchanged
+                  </p>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
