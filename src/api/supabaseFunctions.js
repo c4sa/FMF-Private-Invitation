@@ -85,7 +85,7 @@ export const sendPasswordResetInstructions = async ({ email, resetUrl }) => {
   }
 }
 
-export const sendNewUserRequestEmail = async ({ newUserFullName, newUserEmail, newUserCompany, newUserType }) => {
+export const sendNewUserRequestEmail = async ({ newUserFullName, newUserEmail, newUserPassword, newUserCompany, newUserType }) => {
   try {
     // Get admin users to send the request to
     const admins = await User.filter({ system_role: 'Admin' })
@@ -97,19 +97,28 @@ export const sendNewUserRequestEmail = async ({ newUserFullName, newUserEmail, n
     const newUserData = {
       full_name: newUserFullName,
       email: newUserEmail,
+      password: newUserPassword,
       company_name: newUserCompany,
       System_user_type: newUserType
     }
     
     // Send to all admins
-    const promises = admins.map(admin => 
+    const adminPromises = admins.map(admin => 
       emailService.sendNewUserRequestEmail({
         to: admin.email,
         newUserData
       })
     )
     
-    return await Promise.all(promises)
+    // Send notification to the new user
+    const userPromise = emailService.sendNewUserNotificationEmail({
+      to: newUserEmail,
+      newUserData
+    })
+    
+    // Execute both admin and user emails
+    const allPromises = [...adminPromises, userPromise]
+    return await Promise.all(allPromises)
   } catch (error) {
     console.error('Error sending new user request email:', error)
     throw error

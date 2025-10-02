@@ -136,6 +136,22 @@ export const emailService = {
     }
   },
 
+  // Send new user notification email
+  async sendNewUserNotificationEmail({ to, newUserData }) {
+    try {
+      const result = await this.send({
+        to: to,
+        subject: 'Your System Access Request - Future Minerals Forum',
+        html: this.getNewUserNotificationTemplate(newUserData)
+      });
+      
+      return result;
+    } catch (error) {
+      console.error('Error sending new user notification email:', error);
+      throw error;
+    }
+  },
+
   // Get welcome email template
   getWelcomeEmailTemplate(attendeeData) {
     return `
@@ -228,11 +244,49 @@ export const emailService = {
             <h3 style="margin: 0 0 15px 0; color: #1f2937;">User Details:</h3>
             <p><strong>Full Name:</strong> ${newUserData.full_name}</p>
             <p><strong>Email:</strong> ${newUserData.email}</p>
+            <p><strong>Password:</strong> ${newUserData.password}</p>
             <p><strong>Company:</strong> ${newUserData.company_name}</p>
             <p><strong>User Type:</strong> ${newUserData.System_user_type}</p>
           </div>
           
           <p style="margin-bottom: 20px;">Please review and approve this user request in the system.</p>
+          <p style="margin-bottom: 0;">Best regards,<br><strong>Future Minerals Forum System</strong></p>
+        </div>
+      </div>
+    `;
+  },
+
+  // Get new user notification template
+  getNewUserNotificationTemplate(newUserData) {
+    return `
+      <div style="max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+        <div style="background: #ffffff; padding: 20px; border-bottom: 1px solid #e5e7eb;">
+          <img src="https://your-domain.com/logo.png" alt="Future Minerals Forum" style="height: 60px; width: auto;" />
+        </div>
+        <div style="background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%); padding: 30px; text-align: center;">
+          <h1 style="color: white; margin: 0; font-size: 28px; font-weight: bold;">System Access Requested</h1>
+          <p style="color: #e9d5ff; margin: 10px 0 0 0; font-size: 16px;">Your access request is being processed</p>
+        </div>
+        <div style="background: #ffffff; padding: 40px; border: 1px solid #e5e7eb; border-top: none;">
+          <p style="font-size: 18px; margin-bottom: 20px;">Dear ${newUserData.full_name},</p>
+          <p style="margin-bottom: 20px;">A system access request has been submitted on your behalf for the Future Minerals Forum platform.</p>
+          
+          <div style="background: #f8fafc; padding: 20px; margin: 20px 0; border-radius: 8px; border-left: 4px solid #7c3aed;">
+            <h3 style="margin: 0 0 15px 0; color: #1f2937;">Your Request Details:</h3>
+            <p><strong>Full Name:</strong> ${newUserData.full_name}</p>
+            <p><strong>Email:</strong> ${newUserData.email}</p>
+            <p><strong>Company:</strong> ${newUserData.company_name}</p>
+            <p><strong>User Type:</strong> ${newUserData.System_user_type}</p>
+            <p><strong>Password:</strong> ${newUserData.password}</p>
+          </div>
+          
+          <div style="background: #fef3c7; padding: 15px; margin: 20px 0; border-radius: 8px; border-left: 4px solid #f59e0b;">
+            <p style="margin: 0; color: #92400e; font-weight: 500;">
+              <strong>Next Steps:</strong> An administrator will review your request and activate your account. You will receive a confirmation email once your access is approved.
+            </p>
+          </div>
+          
+          <p style="margin-bottom: 20px;">If you have any questions about this request, please contact the system administrator.</p>
           <p style="margin-bottom: 0;">Best regards,<br><strong>Future Minerals Forum System</strong></p>
         </div>
       </div>

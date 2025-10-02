@@ -32,7 +32,6 @@ import { format } from "date-fns";
 import { useToast } from "../components/common/Toast";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { emailService } from "../lib/resend";
 
 
 const attendeeTypes = ["VIP", "Partner", "Exhibitor", "Media"];
@@ -55,7 +54,6 @@ export default function SystemUsers() {
     preferred_name: '',
     company_name: '',
     email: '',
-    password: '',
     system_role: 'User',
     user_type: 'N/A',
     mobile: '',
@@ -70,6 +68,7 @@ export default function SystemUsers() {
   const [newUserRequestData, setNewUserRequestData] = useState({
     full_name: '',
     email: '',
+    password: '',
     company_name: '',
     system_role: 'User'
   });
@@ -141,7 +140,6 @@ export default function SystemUsers() {
       preferred_name: '',
       company_name: '',
       email: '',
-      password: '',
       system_role: 'User',
       user_type: 'N/A',
       mobile: '',
@@ -206,11 +204,6 @@ export default function SystemUsers() {
         account_status: formData.account_status || 'active'
       };
 
-      // Include password only if it's provided
-      if (formData.password && formData.password.trim() !== '') {
-        userData.password = formData.password;
-      }
-
       // ** AUTO-POPULATE SLOTS FROM PARTNERSHIP TYPE **
       // Only apply if the user is a 'User' type and has a specific partnership type selected
       if (formData.system_role === 'User' && formData.user_type && formData.user_type !== 'N/A') {
@@ -234,81 +227,6 @@ export default function SystemUsers() {
       loadData();
       setShowEditDialog(false);
       resetForm();
-
-      // Send email notifications
-      try {
-        // Email to the user whose account was updated
-        const userEmailSubject = "Account Update Notification - Future Minerals Forum";
-        const userEmailHtml = `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-            <h2 style="color: #1e40af; margin-bottom: 20px;">Account Update Notification</h2>
-            <p>Dear ${formData.preferred_name || editingUser.email},</p>
-            <p>Your account has been updated by an administrator. Here are the details of the changes:</p>
-            <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin: 20px 0;">
-              <h3 style="color: #1e40af; margin-bottom: 10px;">Updated Information:</h3>
-              <ul style="list-style: none; padding: 0;">
-                <li><strong>Name:</strong> ${formData.preferred_name || 'Not changed'}</li>
-                <li><strong>Company:</strong> ${formData.company_name || 'Not changed'}</li>
-                <li><strong>System Role:</strong> ${formData.system_role}</li>
-                <li><strong>Account Status:</strong> ${formData.account_status}</li>
-                ${formData.password ? '<li><strong>Password:</strong> Updated</li>' : ''}
-              </ul>
-            </div>
-            <p>If you have any questions about these changes, please contact the administrator.</p>
-            <p>Best regards,<br>Future Minerals Forum Team</p>
-          </div>
-        `;
-
-        await emailService.send({
-          to: editingUser.email,
-          subject: userEmailSubject,
-          html: userEmailHtml
-        });
-
-        // Email to admins about the user update
-        const adminEmailSubject = "System User Updated - Future Minerals Forum";
-        const adminEmailHtml = `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-            <h2 style="color: #1e40af; margin-bottom: 20px;">System User Updated</h2>
-            <p>A system user has been updated by ${currentUser?.preferred_name || currentUser?.email}.</p>
-            <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin: 20px 0;">
-              <h3 style="color: #1e40af; margin-bottom: 10px;">User Details:</h3>
-              <ul style="list-style: none; padding: 0;">
-                <li><strong>User Email:</strong> ${editingUser.email}</li>
-                <li><strong>Name:</strong> ${formData.preferred_name || editingUser.preferred_name}</li>
-                <li><strong>Company:</strong> ${formData.company_name || editingUser.company_name}</li>
-                <li><strong>System Role:</strong> ${formData.system_role}</li>
-                <li><strong>Account Status:</strong> ${formData.account_status}</li>
-                <li><strong>Updated By:</strong> ${currentUser?.preferred_name || currentUser?.email}</li>
-                <li><strong>Updated At:</strong> ${new Date().toLocaleString()}</li>
-              </ul>
-            </div>
-            <p>This is an automated notification for administrative purposes.</p>
-            <p>Best regards,<br>Future Minerals Forum System</p>
-          </div>
-        `;
-
-        // Get admin emails (you might want to get this from your user list)
-        const adminUsers = users.filter(user => 
-          user.system_role === 'Admin' || user.system_role === 'Super User'
-        );
-        
-        // Send email to all admins
-        for (const admin of adminUsers) {
-          if (admin.email !== currentUser?.email) { // Don't send to the person who made the change
-            await emailService.send({
-              to: admin.email,
-              subject: adminEmailSubject,
-              html: adminEmailHtml
-            });
-          }
-        }
-
-        console.log('Email notifications sent successfully');
-      } catch (emailError) {
-        console.error('Failed to send email notifications:', emailError);
-        // Don't show error to user as the main operation was successful
-      }
 
       toast({
         title: "Success",
@@ -335,7 +253,6 @@ export default function SystemUsers() {
       preferred_name: user.preferred_name || '',
       company_name: user.company_name || '',
       email: user.email || '',
-      password: '', // Password field is always empty for security
       system_role: user.system_role || 'User',
       user_type: user.user_type || 'N/A',
       mobile: user.mobile || '',
@@ -447,8 +364,8 @@ export default function SystemUsers() {
   };
 
   const handleRequestNewUser = async () => {
-    if (!newUserRequestData.full_name || !newUserRequestData.email || !newUserRequestData.company_name) {
-      toast({ title: "Missing Information", description: "Please provide full name, email, and company name.", variant: "destructive" });
+    if (!newUserRequestData.full_name || !newUserRequestData.email || !newUserRequestData.password || !newUserRequestData.company_name) {
+      toast({ title: "Missing Information", description: "Please provide full name, email, password, and company name.", variant: "destructive" });
       return;
     }
     setIsSendingUserRequest(true);
@@ -456,12 +373,13 @@ export default function SystemUsers() {
       await sendNewUserRequestEmail({
         newUserFullName: newUserRequestData.full_name,
         newUserEmail: newUserRequestData.email,
+        newUserPassword: newUserRequestData.password,
         newUserCompany: newUserRequestData.company_name,
         newUserType: newUserRequestData.system_role
       });
       toast({ title: "Request Sent", description: "Your request to add a new user is being processed.", variant: "success" });
       setShowAddUserRequestDialog(false);
-      setNewUserRequestData({ full_name: '', email: '', company_name: '', system_role: 'User' });
+      setNewUserRequestData({ full_name: '', email: '', password: '', company_name: '', system_role: 'User' });
     } catch (error) {
       console.error("Failed to send new user request:", error);
       toast({ title: "Error", description: "Failed to send your request. Please try again.", variant: "destructive" });
@@ -582,6 +500,16 @@ export default function SystemUsers() {
                     placeholder="Enter the email for invitation"
                     value={newUserRequestData.email}
                     onChange={(e) => setNewUserRequestData(prev => ({ ...prev, email: e.target.value }))}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="new_user_password">Password</Label>
+                  <Input
+                    id="new_user_password"
+                    type="password"
+                    placeholder="Enter the password for the new user"
+                    value={newUserRequestData.password}
+                    onChange={(e) => setNewUserRequestData(prev => ({ ...prev, password: e.target.value }))}
                   />
                 </div>
                 <div>
@@ -712,21 +640,6 @@ export default function SystemUsers() {
                     disabled
                     className="bg-gray-100"
                   />
-                </div>
-
-                <div>
-                  <Label htmlFor="password">Password</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    value={formData.password}
-                    onChange={(e) => handleInputChange('password', e.target.value)}
-                    placeholder="Enter new password (leave empty to keep current password)"
-                    className="bg-white"
-                  />
-                  <p className="text-sm text-gray-500 mt-1">
-                    Leave empty to keep the current password unchanged
-                  </p>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
