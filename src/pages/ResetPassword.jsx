@@ -84,7 +84,7 @@ export default function ResetPassword() {
       // Since we've already verified the OTP, we can directly update the password
       // We'll use our server-side API endpoint to update the password
       
-      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
+      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? 'http://localhost:3000' : '');
       
       const response = await fetch(`${API_BASE_URL}/api/update-password`, {
         method: 'POST',
@@ -116,7 +116,7 @@ export default function ResetPassword() {
       
     } catch (err) {
       if (err.message.includes('Failed to fetch') || err.message.includes('404')) {
-        setError('Development server not running. Please start the server with "pnpm run dev:full"');
+        setError('API endpoint not available. Please check your connection and try again.');
       } else {
         setError('An unexpected error occurred. Please try again.');
       }
