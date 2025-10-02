@@ -1,13 +1,13 @@
 {
   "functions": {
     "api/send-email.js": {
-      "runtime": "nodejs18.x"
+      "runtime": "@vercel/node@3.0.0"
     },
     "api/update-password.js": {
-      "runtime": "nodejs18.x"
+      "runtime": "@vercel/node@3.0.0"
     },
     "api/health.js": {
-      "runtime": "nodejs18.x"
+      "runtime": "@vercel/node@3.0.0"
     }
   },
   "rewrites": [
