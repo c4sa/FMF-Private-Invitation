@@ -868,7 +868,7 @@ export default function SystemUsers() {
                     <TableRow className="bg-gray-50">
                       <TableHead>User</TableHead>
                       <TableHead>System Type</TableHead>
-                      <TableHead>Sponsor/Partner Type</TableHead>
+                      {users.some(user => user.system_role === 'User') && <TableHead>Sponsor/Partner Type</TableHead>}
                       <TableHead>Status</TableHead>
                       <TableHead>Last Login</TableHead>
                       <TableHead>Slots (Avail/Total)</TableHead>
@@ -879,7 +879,7 @@ export default function SystemUsers() {
                     {isLoading ? (
                       Array(3).fill(0).map((_, i) => (
                         <TableRow key={i}>
-                          <TableCell colSpan={7} className="h-16">
+                          <TableCell colSpan={users.some(user => user.system_role === 'User') ? 7 : 6} className="h-16">
                             <div className="flex items-center justify-center">
                               <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
                             </div>
@@ -915,13 +915,19 @@ export default function SystemUsers() {
                                 <Shield className="w-3 h-3 mr-1" />{user.system_role}
                               </Badge>
                             </TableCell>
-                            <TableCell>
-                                {user.user_type && user.user_type !== 'N/A' ? (
+                            {users.some(u => u.system_role === 'User') && (
+                              <TableCell>
+                                {user.system_role === 'User' ? (
+                                  user.user_type && user.user_type !== 'N/A' ? (
                                     <Badge variant="outline">{user.user_type}</Badge>
-                                ) : (
+                                  ) : (
                                     <span className="text-gray-400">N/A</span>
+                                  )
+                                ) : (
+                                  <span className="text-gray-400">-</span>
                                 )}
-                            </TableCell>
+                              </TableCell>
+                            )}
                             <TableCell>
                               <Badge className={isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}>
                                 {isActive ? (
