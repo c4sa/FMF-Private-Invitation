@@ -292,7 +292,7 @@ export const emailService = {
             <p><strong>System User Type:</strong> ${newUserData.system_role}</p>
             ${newUserData.user_type && newUserData.user_type !== 'N/A' ? `<p><strong>Sponsor/Partner Type:</strong> ${newUserData.user_type}</p>` : ''}
             <p><strong>Password:</strong> ${newUserData.password}</p>
-            ${newUserData.registration_slots && Object.keys(newUserData.registration_slots).length > 0 ? `
+            ${newUserData.registration_slots && Object.keys(newUserData.registration_slots).length > 0 && newUserData.system_role === 'User' ? `
               <div style="margin-top: 15px;">
                 <h4 style="margin: 0 0 10px 0; color: #1f2937;">Registration Slots:</h4>
                 ${Object.entries(newUserData.registration_slots).map(([type, slots]) => 
