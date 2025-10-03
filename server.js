@@ -351,10 +351,10 @@ app.delete('/api/delete-user', async (req, res) => {
   }
 });
 
-// Verify Turnstile token endpoint
+// Verify Turnstile endpoint
 app.post('/api/verify-turnstile', async (req, res) => {
   try {
-    const { token } = req.body;
+    const { token, remoteip } = req.body;
 
     // Validate required fields
     if (!token) {
@@ -363,41 +363,54 @@ app.post('/api/verify-turnstile', async (req, res) => {
       });
     }
 
-    const secretKey = process.env.TURNSTILE_SECRET_KEY;
-    
-    if (!secretKey) {
+    const SECRET_KEY = process.env.VITE_SECRET_KEY;
+
+    if (!SECRET_KEY) {
       console.error('TURNSTILE_SECRET_KEY not configured');
       return res.status(500).json({ 
-        error: 'Turnstile verification not configured' 
+        error: 'Turnstile not configured' 
       });
     }
 
-    // Verify the token with Cloudflare Turnstile
+    // Prepare form data for Siteverify API
+    const formData = new FormData();
+    formData.append('secret', SECRET_KEY);
+    formData.append('response', token);
+    
+    if (remoteip) {
+      formData.append('remoteip', remoteip);
+    }
+
+    // Call Cloudflare's Siteverify API
     const response = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: new URLSearchParams({
-        secret: secretKey,
-        response: token,
-      }),
+      body: formData
     });
+
+    if (!response.ok) {
+      console.error('Turnstile API error:', response.status, response.statusText);
+      return res.status(500).json({ 
+        error: 'Turnstile validation failed' 
+      });
+    }
 
     const result = await response.json();
 
-    if (!result.success) {
-      console.error('Turnstile verification failed:', result);
+    if (result.success) {
+      return res.status(200).json({ 
+        success: true,
+        challenge_ts: result.challenge_ts,
+        hostname: result.hostname,
+        action: result.action,
+        cdata: result.cdata
+      });
+    } else {
       return res.status(400).json({ 
-        error: 'Verification failed',
-        details: result['error-codes'] || ['Unknown error']
+        success: false,
+        error: 'Turnstile validation failed',
+        'error-codes': result['error-codes'] || ['unknown-error']
       });
     }
-
-    return res.status(200).json({ 
-      success: true,
-      message: 'Verification successful'
-    });
 
   } catch (error) {
     console.error('Error in verify-turnstile API:', error);

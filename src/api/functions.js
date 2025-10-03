@@ -21,7 +21,8 @@ import {
   sendOTP,
   createUserProfile,
   createUserDirectly,
-  deleteUserCompletely
+  deleteUserCompletely,
+  verifyTurnstileToken
 } from './supabaseFunctions.js';
 
 // Export all functions
@@ -48,7 +49,8 @@ export {
   sendOTP,
   createUserProfile,
   createUserDirectly,
-  deleteUserCompletely
+  deleteUserCompletely,
+  verifyTurnstileToken
 };
   
   
