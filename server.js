@@ -363,10 +363,10 @@ app.post('/api/verify-turnstile', async (req, res) => {
       });
     }
 
-    const SECRET_KEY = process.env.VITE_SECRET_KEY;
+    const SECRET_KEY = process.env.TURNSTILE_SECRET_KEY;
 
     if (!SECRET_KEY) {
-      console.error('VITE_SECRET_KEY not configured');
+      console.error('TURNSTILE_SECRET_KEY not configured');
       return res.status(500).json({ 
         error: 'Turnstile not configured' 
       });
