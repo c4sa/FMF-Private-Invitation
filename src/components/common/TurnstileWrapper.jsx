@@ -8,7 +8,7 @@ const TurnstileWrapper = ({ children }) => {
   const [error, setError] = useState(null);
 
   // Get sitekey from environment variables
-  const sitekey = import.meta.env.VITE_TURNSTILE_SITEKEY;
+  const sitekey = import.meta.env.VITE_SITE_KEY;
 
   useEffect(() => {
     // Check if user is already verified (from session storage)
