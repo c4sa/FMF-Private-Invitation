@@ -77,6 +77,23 @@ export default async function handler(req, res) {
 
     // Step 1: Test Supabase connection first
     console.log('Testing Supabase connection...');
+    
+    // Try to decode the JWT token to verify it's valid
+    try {
+      const tokenParts = serviceRoleKey.split('.');
+      if (tokenParts.length === 3) {
+        const payload = JSON.parse(Buffer.from(tokenParts[1], 'base64').toString());
+        console.log('JWT payload:', {
+          iss: payload.iss,
+          role: payload.role,
+          aud: payload.aud,
+          exp: payload.exp
+        });
+      }
+    } catch (e) {
+      console.error('JWT decode error:', e.message);
+    }
+    
     const { data: testData, error: testError } = await supabase.auth.admin.listUsers();
     if (testError) {
       console.error('Supabase connection test failed:', testError);
@@ -90,15 +107,25 @@ export default async function handler(req, res) {
     // Step 2: Create user in Supabase Auth using admin API
     console.log('Attempting to create auth user for:', email);
     
-    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-      email: email,
-      password: password,
-      email_confirm: true, // Auto-confirm email
-      user_metadata: {
-        full_name: fullName,
-        company_name: companyName
-      }
-    });
+    // Try alternative approach if admin.createUser fails
+    let authData, authError;
+    
+    try {
+      const result = await supabase.auth.admin.createUser({
+        email: email,
+        password: password,
+        email_confirm: true, // Auto-confirm email
+        user_metadata: {
+          full_name: fullName,
+          company_name: companyName
+        }
+      });
+      authData = result.data;
+      authError = result.error;
+    } catch (error) {
+      console.error('createUser threw an exception:', error);
+      authError = error;
+    }
 
     if (authError) {
       console.error('Error creating auth user:', authError);
