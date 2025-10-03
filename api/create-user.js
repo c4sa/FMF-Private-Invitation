@@ -1,6 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Supabase configuration with service role key for admin operations
 const supabaseUrl = process.env.VITE_SUPABASE_URL;
 const serviceRoleKey = process.env.VITE_SERVICE_ROLE_KEY;
 
