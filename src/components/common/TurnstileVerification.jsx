@@ -14,7 +14,8 @@ const TurnstileVerification = ({ onVerificationSuccess, onVerificationError }) =
 
   useEffect(() => {
     const initializeTurnstile = () => {
-      if (window.turnstile) {
+      // Check if both Turnstile script and DOM element are ready
+      if (window.turnstile && turnstileRef.current) {
         try {
           widgetIdRef.current = window.turnstile.render(turnstileRef.current, {
             sitekey: TURNSTILE_SITE_KEY,
@@ -72,15 +73,22 @@ const TurnstileVerification = ({ onVerificationSuccess, onVerificationError }) =
           setIsLoading(false);
         }
       } else {
-        // Retry after a short delay if Turnstile script hasn't loaded yet
+        // Retry after a short delay if Turnstile script or DOM element isn't ready
         setTimeout(initializeTurnstile, 100);
       }
     };
 
-    initializeTurnstile();
+    // Add a small delay to ensure DOM is fully rendered
+    const timeoutId = setTimeout(() => {
+      // Double-check that the ref is still valid
+      if (turnstileRef.current) {
+        initializeTurnstile();
+      }
+    }, 100);
 
     // Cleanup function
     return () => {
+      clearTimeout(timeoutId);
       if (widgetIdRef.current && window.turnstile) {
         try {
           window.turnstile.remove(widgetIdRef.current);
