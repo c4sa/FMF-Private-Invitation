@@ -45,7 +45,9 @@ export const sendInvitationEmail = async ({ to_email, invitation_code }) => {
     if (template) {
       const invitationUrl = `${window.location.origin}/PublicRegistration?invitation_code=${invitation_code}`
       subject = template.subject
-      html = template.body.replace(/{{invitation_url}}/g, invitationUrl)
+      html = template.body
+        .replace(/{{invitation_url}}/g, invitationUrl)
+        .replace(/{{invitation_code}}/g, invitation_code)
     }
     
     return await emailService.sendInvitationEmail({
