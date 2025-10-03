@@ -13,6 +13,10 @@ console.log('VITE_SERVICE_ROLE_KEY:', process.env.VITE_SERVICE_ROLE_KEY ? 'Set' 
 console.log('SUPABASE_SERVICE_ROLE_KEY:', process.env.SUPABASE_SERVICE_ROLE_KEY ? 'Set' : 'Missing');
 console.log('Final supabaseUrl:', supabaseUrl ? 'Set' : 'Missing');
 console.log('Final serviceRoleKey:', serviceRoleKey ? 'Set' : 'Missing');
+console.log('Supabase URL (first 20 chars):', supabaseUrl ? supabaseUrl.substring(0, 20) + '...' : 'Missing');
+console.log('Service Role Key (first 20 chars):', serviceRoleKey ? serviceRoleKey.substring(0, 20) + '...' : 'Missing');
+console.log('Service Role Key starts with eyJ:', serviceRoleKey ? serviceRoleKey.startsWith('eyJ') : false);
+console.log('Service Role Key length:', serviceRoleKey ? serviceRoleKey.length : 0);
 
 // Validate required environment variables
 if (!supabaseUrl) {
@@ -71,7 +75,19 @@ export default async function handler(req, res) {
       });
     }
 
-    // Step 1: Create user in Supabase Auth using admin API
+    // Step 1: Test Supabase connection first
+    console.log('Testing Supabase connection...');
+    const { data: testData, error: testError } = await supabase.auth.admin.listUsers();
+    if (testError) {
+      console.error('Supabase connection test failed:', testError);
+      return res.status(500).json({ 
+        error: `Supabase connection failed: ${testError.message}`,
+        details: testError
+      });
+    }
+    console.log('Supabase connection test successful');
+
+    // Step 2: Create user in Supabase Auth using admin API
     console.log('Attempting to create auth user for:', email);
     
     const { data: authData, error: authError } = await supabase.auth.admin.createUser({
@@ -103,7 +119,7 @@ export default async function handler(req, res) {
       });
     }
 
-    // Step 2: Create user record in users table
+    // Step 3: Create user record in users table
     const userData = {
       id: authData.user.id,
       email: email,
