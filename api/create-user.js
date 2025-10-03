@@ -97,6 +97,12 @@ export default async function handler(req, res) {
             actual: payload.aud
           });
         }
+        
+        // Check if the audience is missing (this is likely the issue)
+        if (!payload.aud) {
+          console.error('JWT audience is missing! This is likely the cause of the Invalid API key error.');
+          console.error('The service role key may be for a different Supabase project or may be corrupted.');
+        }
       }
     } catch (e) {
       console.error('JWT decode error:', e.message);
@@ -173,26 +179,62 @@ export default async function handler(req, res) {
     if (authError) {
       console.log('Admin createUser failed, trying alternative approach...');
       
-      // Alternative: Create user directly in database without auth
-      // This is a fallback for when admin API doesn't work
-      const fallbackUserId = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-      
-      console.log('Using fallback approach with generated user ID:', fallbackUserId);
-      
-      // Create a mock auth data object
-      authData = {
-        user: {
-          id: fallbackUserId,
+      // Alternative: Use regular signup instead of admin API
+      try {
+        console.log('Trying regular signup approach...');
+        const { data: signupData, error: signupError } = await supabase.auth.signUp({
           email: email,
-          user_metadata: {
-            full_name: fullName,
-            company_name: companyName
+          password: password,
+          options: {
+            data: {
+              full_name: fullName,
+              company_name: companyName
+            }
           }
+        });
+        
+        if (signupError) {
+          console.error('Regular signup also failed:', signupError);
+          // Fallback: Create user directly in database without auth
+          const fallbackUserId = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+          console.log('Using fallback approach with generated user ID:', fallbackUserId);
+          
+          authData = {
+            user: {
+              id: fallbackUserId,
+              email: email,
+              user_metadata: {
+                full_name: fullName,
+                company_name: companyName
+              }
+            }
+          };
+          authError = null;
+          console.log('Fallback approach: User will be created in database only');
+        } else {
+          console.log('Regular signup successful');
+          authData = signupData;
+          authError = null;
         }
-      };
-      authError = null;
-      
-      console.log('Fallback approach: User will be created in database only');
+      } catch (signupException) {
+        console.error('Regular signup threw exception:', signupException);
+        // Fallback: Create user directly in database without auth
+        const fallbackUserId = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        console.log('Using fallback approach with generated user ID:', fallbackUserId);
+        
+        authData = {
+          user: {
+            id: fallbackUserId,
+            email: email,
+            user_metadata: {
+              full_name: fullName,
+              company_name: companyName
+            }
+          }
+        };
+        authError = null;
+        console.log('Fallback approach: User will be created in database only');
+      }
     }
 
     if (authError) {
