@@ -27,7 +27,7 @@ export const sendWelcomeEmail = async ({ attendeeData }) => {
       subject,
       html
     })
-  } catch (error) {
+  } catch (error) {   
     console.error('Error sending welcome email:', error)
     throw error
   }
