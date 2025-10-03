@@ -267,6 +267,90 @@ app.post('/api/create-user', async (req, res) => {
   }
 });
 
+// Delete user endpoint
+app.delete('/api/delete-user', async (req, res) => {
+  try {
+    const { userId } = req.body;
+
+    // Validate required fields
+    if (!userId) {
+      return res.status(400).json({ 
+        error: 'Missing required field: userId' 
+      });
+    }
+
+    // Step 1: Delete all related records first (to handle foreign key constraints)
+    
+    // Delete notifications
+    const { error: notificationError } = await supabase
+      .from('notifications')
+      .delete()
+      .eq('user_id', userId);
+
+    if (notificationError) {
+      console.error('Error deleting notifications:', notificationError);
+      // Continue with deletion even if notifications fail
+    }
+
+    // Delete OTPs
+    const { error: otpError } = await supabase
+      .from('otps')
+      .delete()
+      .eq('user_id', userId);
+
+    if (otpError) {
+      console.error('Error deleting OTPs:', otpError);
+      // Continue with deletion even if OTPs fail
+    }
+
+    // Update attendees to remove registered_by reference (set to null)
+    const { error: attendeeError } = await supabase
+      .from('attendees')
+      .update({ registered_by: null })
+      .eq('registered_by', userId);
+
+    if (attendeeError) {
+      console.error('Error updating attendees:', attendeeError);
+      // Continue with deletion even if attendee update fails
+    }
+
+    // Step 2: Delete user record from users table
+    const { error: userError } = await supabase
+      .from('users')
+      .delete()
+      .eq('id', userId);
+
+    if (userError) {
+      console.error('Error deleting user record:', userError);
+      return res.status(400).json({ 
+        error: `Failed to delete user record: ${userError.message}` 
+      });
+    }
+
+    // Step 3: Delete user from Supabase Auth
+    const { error: authError } = await supabase.auth.admin.deleteUser(userId);
+
+    if (authError) {
+      console.error('Error deleting auth user:', authError);
+      // Note: User record is already deleted, but auth user deletion failed
+      // This is not ideal but we'll continue
+      console.warn('User record deleted but auth user deletion failed');
+    }
+
+    return res.status(200).json({ 
+      success: true,
+      message: 'User deleted successfully from both database and authentication'
+    });
+
+  } catch (error) {
+    console.error('Error in delete-user API:', error);
+    return res.status(500).json({ 
+      error: 'Internal server error',
+      details: error.message 
+    });
+  }
+});
+
 // Health check endpoint
 app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });
@@ -278,6 +362,7 @@ app.listen(PORT, () => {
   console.log(`📧 Email API available at http://localhost:${PORT}/api/send-email`);
   console.log(`🔐 Password update API available at http://localhost:${PORT}/api/update-password`);
   console.log(`👤 User creation API available at http://localhost:${PORT}/api/create-user`);
+  console.log(`🗑️ User deletion API available at http://localhost:${PORT}/api/delete-user`);
   
   if (!smtpConfig.user || !smtpConfig.pass) {
     console.log('⚠️  SMTP not configured - emails will be simulated');

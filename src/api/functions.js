@@ -20,7 +20,8 @@ import {
   sendOTPEmail,
   sendOTP,
   createUserProfile,
-  createUserDirectly
+  createUserDirectly,
+  deleteUserCompletely
 } from './supabaseFunctions.js';
 
 // Export all functions
@@ -46,7 +47,8 @@ export {
   sendOTPEmail,
   sendOTP,
   createUserProfile,
-  createUserDirectly
+  createUserDirectly,
+  deleteUserCompletely
 };
   
   

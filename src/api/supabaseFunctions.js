@@ -620,3 +620,38 @@ export const createUserDirectly = async ({
     throw error;
   }
 };
+
+// Delete user completely (from both database and authentication)
+export const deleteUserCompletely = async (userId) => {
+  try {
+    // Use API endpoint for user deletion (server-side with admin privileges)
+    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? 'http://localhost:3000' : '');
+    
+    const response = await fetch(`${API_BASE_URL}/api/delete-user`, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        userId
+      })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const result = await response.json();
+
+    if (!result.success) {
+      throw new Error(result.error || 'Failed to delete user');
+    }
+
+    return result;
+
+  } catch (error) {
+    console.error('Error in deleteUserCompletely:', error);
+    throw error;
+  }
+};

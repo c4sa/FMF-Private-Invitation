@@ -26,7 +26,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import ProtectedRoute from "../components/common/ProtectedRoute";
-import { sendNewUserRequestEmail, createUserDirectly } from "@/api/functions";
+import { sendNewUserRequestEmail, createUserDirectly, deleteUserCompletely } from "@/api/functions";
 import { format } from "date-fns";
 import { useToast } from "../components/common/Toast";
 
@@ -72,6 +72,7 @@ export default function SystemUsers() {
     registration_slots: attendeeTypes.reduce((acc, type) => ({...acc, [type]: 0}), {})
   });
   const [isSendingUserRequest, setIsSendingUserRequest] = useState(false);
+  const [isDeletingUser, setIsDeletingUser] = useState(false);
   const { toast } = useToast();
 
   const loadData = useCallback(async () => {
@@ -308,34 +309,29 @@ export default function SystemUsers() {
   const handleDelete = async () => {
     if (!userToDelete) return;
 
+    setIsDeletingUser(true);
     try {
-      // First, delete all notifications associated with this user
-      await Notification.filter({ user_id: userToDelete.id }).then(notifications => {
-        if (notifications.length > 0) {
-          return Promise.all(notifications.map(notification => 
-            Notification.delete(notification.id)
-          ));
-        }
-      });
-
-      // Then delete the user
-      await User.delete(userToDelete.id);
+      // Use the new comprehensive delete function
+      await deleteUserCompletely(userToDelete.id);
+      
       loadData();
       setShowDeleteDialog(false);
       setUserToDelete(null);
 
       toast({
         title: "Success",
-        description: "User deleted successfully.",
+        description: "User deleted successfully from both database and authentication.",
         variant: "success",
       });
     } catch (error) {
       console.error("Error deleting user:", error);
       toast({
         title: "Error",
-        description: "Failed to delete user. Please try again.",
+        description: `Failed to delete user: ${error.message}`,
         variant: "destructive",
       });
+    } finally {
+      setIsDeletingUser(false);
     }
   };
 
@@ -679,11 +675,18 @@ export default function SystemUsers() {
                 </DialogDescription>
               </DialogHeader>
               <div className="flex justify-end gap-3 mt-4">
-                <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>
+                <Button variant="outline" onClick={() => setShowDeleteDialog(false)} disabled={isDeletingUser}>
                   Cancel
                 </Button>
-                <Button variant="destructive" onClick={handleDelete}>
-                  Delete User
+                <Button variant="destructive" onClick={handleDelete} disabled={isDeletingUser}>
+                  {isDeletingUser ? (
+                    <div className="flex items-center gap-2">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                      Deleting...
+                    </div>
+                  ) : (
+                    "Delete User"
+                  )}
                 </Button>
               </div>
             </DialogContent>
