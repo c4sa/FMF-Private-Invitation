@@ -188,6 +188,10 @@ export const emailService = {
         <div style="background: #ffffff; padding: 40px; border: 1px solid #e5e7eb; border-top: none;">
           <p style="font-size: 18px; margin-bottom: 20px;">Dear Friend,</p>
           <p style="margin-bottom: 20px;">You have been invited to register for the Future Minerals Forum.</p>
+          <div style="background: #f8fafc; padding: 20px; margin: 20px 0; border-radius: 8px; border: 1px solid #e2e8f0;">
+            <p style="margin: 0 0 10px 0; font-weight: bold; color: #1f2937;">Your Invitation Code:</p>
+            <p style="margin: 0; font-size: 18px; font-weight: bold; color: #2563eb; letter-spacing: 2px; font-family: monospace;">${invitationCode}</p>
+          </div>
           <div style="text-align: center; margin: 40px 0;">
             <a href="${invitationUrl}" style="display: inline-block; background: #2563eb; color: white; padding: 15px 30px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 16px;">
               Register Now
