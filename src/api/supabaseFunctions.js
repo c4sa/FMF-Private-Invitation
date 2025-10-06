@@ -11,16 +11,15 @@ export const sendWelcomeEmail = async ({ attendeeData }) => {
     const templates = await EmailTemplate.filter({ name: 'welcome' })
     const template = templates?.[0]
     
-    let subject = 'Welcome to Future Minerals Forum'
-    let html = emailService.getWelcomeEmailTemplate(attendeeData)
-    
-    if (template) {
-      subject = template.subject
-      html = template.body
-        .replace(/{{first_name}}/g, attendeeData.first_name || '')
-        .replace(/{{last_name}}/g, attendeeData.last_name || '')
-        .replace(/{{email}}/g, attendeeData.email || '')
+    if (!template) {
+      throw new Error('Welcome email template not found')
     }
+    
+    let subject = template.subject
+    let html = template.body
+      .replace(/{{first_name}}/g, attendeeData.first_name || '')
+      .replace(/{{last_name}}/g, attendeeData.last_name || '')
+      .replace(/{{email}}/g, attendeeData.email || '')
     
     return await emailService.sendWelcomeEmail({
       to: attendeeData.email,
@@ -39,22 +38,20 @@ export const sendInvitationEmail = async ({ to_email, invitation_code }) => {
     const templates = await EmailTemplate.filter({ name: 'invitation' })
     const template = templates?.[0]
     
-    let subject = 'Invitation to Future Minerals Forum'
-    let html = emailService.getInvitationEmailTemplate(invitation_code)
-    
-    if (template) {
-      const invitationUrl = `${window.location.origin}/PublicRegistration?invitation_code=${invitation_code}`
-      subject = template.subject
-      html = template.body
-        .replace(/{{invitation_url}}/g, invitationUrl)
-        .replace(/{{invitation_code}}/g, invitation_code)
+    if (!template) {
+      throw new Error('Invitation email template not found')
     }
+    
+    const invitationUrl = `${window.location.origin}/PublicRegistration?invitation_code=${invitation_code}`
+    let subject = template.subject
+    let html = template.body
+      .replace(/{{invitation_url}}/g, invitationUrl)
+      .replace(/{{invitation_code}}/g, invitation_code)
     
     return await emailService.sendInvitationEmail({
       to: to_email,
       subject,
-      html,
-      invitationCode: invitation_code
+      html
     })
   } catch (error) {
     console.error('Error sending invitation email:', error)
@@ -238,7 +235,8 @@ export const generateInvitations = async ({ count, attendee_type }) => {
       const invitation = await Invitation.create({
         invitation_code: invitationCode,
         attendee_type,
-        created_by: currentUser.id
+        created_by: currentUser.id,
+        status: 'available'
       })
       invitations.push(invitation)
     }

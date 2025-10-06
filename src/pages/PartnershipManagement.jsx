@@ -73,7 +73,7 @@ export default function PartnershipManagementPage() {
     try {
       if (editingType) {
         await PartnershipType.update(editingType.id, formData);
-        toast({ title: "Success", description: "Partnership type updated.", variant: "success" });
+        toast({ title: "Success", description: "Partnership type updated and user slots synchronized.", variant: "success" });
       } else {
         await PartnershipType.create(formData);
         toast({ title: "Success", description: "New partnership type created.", variant: "success" });
@@ -96,7 +96,7 @@ export default function PartnershipManagementPage() {
     if (!typeToDelete) return;
     try {
       await PartnershipType.delete(typeToDelete.id);
-      toast({ title: "Success", description: "Partnership type deleted.", variant: "success" });
+      toast({ title: "Success", description: "Partnership type deleted and user slots reset.", variant: "success" });
       setShowDeleteConfirm(false);
       setTypeToDelete(null);
       loadTypes();

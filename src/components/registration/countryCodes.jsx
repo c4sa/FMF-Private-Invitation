@@ -96,7 +96,6 @@ export const countryCodes = [
 	{"name": "Iraq", "dial_code": "+964", "code": "IQ"},
 	{"name": "Ireland", "dial_code": "+353", "code": "IE"},
 	{"name": "Isle of Man", "dial_code": "+44", "code": "IM"},
-	{"name": "Israel", "dial_code": "+972", "code": "IL"},
 	{"name": "Italy", "dial_code": "+39", "code": "IT"},
 	{"name": "Jamaica", "dial_code": "+1 876", "code": "JM"},
 	{"name": "Japan", "dial_code": "+81", "code": "JP"},

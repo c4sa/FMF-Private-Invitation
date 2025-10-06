@@ -387,7 +387,8 @@ export class InvitationsAPI extends SupabaseAPI {
       .update({
         is_used: true,
         used_by_email: email,
-        used_at: new Date().toISOString()
+        used_at: new Date().toISOString(),
+        status: 'used'
       })
       .eq('invitation_code', code)
       .select()
@@ -413,6 +414,73 @@ export class SystemSettingsAPI extends SupabaseAPI {
 export class PartnershipTypesAPI extends SupabaseAPI {
   constructor() {
     super('partnership_types')
+  }
+
+  async update(id, updates) {
+    // First update the partnership type
+    const updatedType = await super.update(id, updates);
+    
+    // Then update all users with this user_type to sync their registration_slots
+    if (updates.slots_vip !== undefined || updates.slots_partner !== undefined || 
+        updates.slots_exhibitor !== undefined || updates.slots_media !== undefined) {
+      
+      const newSlots = {
+        VIP: updates.slots_vip !== undefined ? updates.slots_vip : updatedType.slots_vip,
+        Partner: updates.slots_partner !== undefined ? updates.slots_partner : updatedType.slots_partner,
+        Exhibitor: updates.slots_exhibitor !== undefined ? updates.slots_exhibitor : updatedType.slots_exhibitor,
+        Media: updates.slots_media !== undefined ? updates.slots_media : updatedType.slots_media
+      };
+
+      // Update all users with this user_type
+      const { error: userUpdateError } = await supabase
+        .from('users')
+        .update({ 
+          registration_slots: newSlots,
+          updated_at: new Date().toISOString()
+        })
+        .eq('user_type', updatedType.name);
+
+      if (userUpdateError) {
+        console.error('Failed to update user slots:', userUpdateError);
+        // Don't throw error here as the partnership type was already updated successfully
+      }
+    }
+    
+    return updatedType;
+  }
+
+  async delete(id) {
+    // First get the partnership type to know which users to update
+    const partnershipType = await this.get(id);
+    
+    // Delete the partnership type
+    const result = await super.delete(id);
+    
+    // Update all users with this user_type to reset their slots to default
+    if (partnershipType) {
+      const defaultSlots = {
+        VIP: 0,
+        Partner: 0,
+        Exhibitor: 0,
+        Media: 0
+      };
+
+      const { error: userUpdateError } = await supabase
+        .from('users')
+        .update({ 
+          registration_slots: defaultSlots,
+          user_type: 'N/A',
+          updated_at: new Date().toISOString()
+        })
+        .eq('user_type', partnershipType.name);
+
+      if (userUpdateError) {
+        console.error('Failed to reset user slots after partnership type deletion:', userUpdateError);
+        // Don't throw error here as the partnership type was already deleted successfully
+      }
+    }
+    
+    return result;
   }
 }
 

@@ -57,12 +57,12 @@ export const emailService = {
   },
 
   // Send welcome email
-  async sendWelcomeEmail({ to, subject, html, attendeeData }) {
+  async sendWelcomeEmail({ to, subject, html }) {
     try {
       const result = await this.send({
         to: to,
         subject: subject || 'Welcome to Future Minerals Forum',
-        html: html || this.getWelcomeEmailTemplate(attendeeData)
+        html: html
       });
       
       return result;
@@ -73,12 +73,12 @@ export const emailService = {
   },
 
   // Send invitation email
-  async sendInvitationEmail({ to, subject, html, invitationCode }) {
+  async sendInvitationEmail({ to, subject, html }) {
     try {
       const result = await this.send({
         to: to,
         subject: subject || 'Invitation to Future Minerals Forum',
-        html: html || this.getInvitationEmailTemplate(invitationCode)
+        html: html
       });
       
       return result;
@@ -105,12 +105,12 @@ export const emailService = {
   },
 
   // Send password reset email
-  async sendPasswordResetEmail({ to, resetUrl }) {
+  async sendPasswordResetEmail({ to, subject, html }) {
     try {
       const result = await this.send({
         to: to,
-        subject: 'Password Reset Instructions',
-        html: this.getPasswordResetTemplate(resetUrl)
+        subject: subject || 'Password Reset Instructions',
+        html: html
       });
       
       return result;
@@ -121,12 +121,12 @@ export const emailService = {
   },
 
   // Send new user request email
-  async sendNewUserRequestEmail({ to, newUserData }) {
+  async sendNewUserRequestEmail({ to, subject, html }) {
     try {
       const result = await this.send({
         to: to,
-        subject: 'New User Request - Future Minerals Forum',
-        html: this.getNewUserRequestTemplate(newUserData)
+        subject: subject || 'New User Request - Future Minerals Forum',
+        html: html
       });
       
       return result;
@@ -137,12 +137,12 @@ export const emailService = {
   },
 
   // Send new user notification email
-  async sendNewUserNotificationEmail({ to, newUserData }) {
+  async sendNewUserNotificationEmail({ to, subject, html }) {
     try {
       const result = await this.send({
         to: to,
-        subject: 'Your System Access Request - Future Minerals Forum',
-        html: this.getNewUserNotificationTemplate(newUserData)
+        subject: subject || 'Your System Access Request - Future Minerals Forum',
+        html: html
       });
       
       return result;
@@ -150,169 +150,6 @@ export const emailService = {
       console.error('Error sending new user notification email:', error);
       throw error;
     }
-  },
-
-  // Get welcome email template
-  getWelcomeEmailTemplate(attendeeData) {
-    return `
-      <div style="max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-        <div style="background: #ffffff; padding: 20px; border-bottom: 1px solid #e5e7eb;">
-          <img src="https://xpuhnbeoczxxmzmjronk.supabase.co/storage/v1/object/public/system-assets/logo.jpeg" alt="Future Minerals Forum" style="height: 60px; width: auto;" />
-        </div>
-        <div style="background: linear-gradient(135deg, #059669 0%, #10b981 100%); padding: 30px; text-align: center;">
-          <h1 style="color: white; margin: 0; font-size: 28px; font-weight: bold;">Registration Approved!</h1>
-          <p style="color: #d1fae5; margin: 10px 0 0 0; font-size: 16px;">Welcome to the Future Minerals Forum</p>
-        </div>
-        <div style="background: #ffffff; padding: 40px; border: 1px solid #e5e7eb; border-top: none;">
-          <p style="font-size: 18px; margin-bottom: 20px;">Dear ${attendeeData?.first_name || ''} ${attendeeData?.last_name || ''},</p>
-          <p style="margin-bottom: 20px;">Congratulations! Your registration for the Future Minerals Forum has been approved.</p>
-          <p style="margin-bottom: 20px;">We are excited to have you join us for this prestigious event.</p>
-          <p style="margin-bottom: 0;">Best regards,<br><strong>Future Minerals Forum Team</strong></p>
-        </div>
-      </div>
-    `;
-  },
-
-  // Get invitation email template
-  getInvitationEmailTemplate(invitationCode) {
-    const invitationUrl = `${window.location.origin}/PublicRegistration?invitation_code=${invitationCode}`;
-    return `
-      <div style="max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-        <div style="background: #ffffff; padding: 20px; border-bottom: 1px solid #e5e7eb;">
-          <img src="https://xpuhnbeoczxxmzmjronk.supabase.co/storage/v1/object/public/system-assets/logo.jpeg" alt="Future Minerals Forum" style="height: 60px; width: auto;" />
-        </div>
-        <div style="background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%); padding: 30px; text-align: center;">
-          <h1 style="color: white; margin: 0; font-size: 28px; font-weight: bold;">You're Invited!</h1>
-          <p style="color: #dbeafe; margin: 10px 0 0 0; font-size: 16px;">Join us at the Future Minerals Forum</p>
-        </div>
-        <div style="background: #ffffff; padding: 40px; border: 1px solid #e5e7eb; border-top: none;">
-          <p style="font-size: 18px; margin-bottom: 20px;">Dear Friend,</p>
-          <p style="margin-bottom: 20px;">You have been invited to register for the Future Minerals Forum.</p>
-          <div style="background: #f8fafc; padding: 20px; margin: 20px 0; border-radius: 8px; border: 1px solid #e2e8f0;">
-            <p style="margin: 0 0 10px 0; font-weight: bold; color: #1f2937;">Your Invitation Code:</p>
-            <p style="margin: 0; font-size: 18px; font-weight: bold; color: #2563eb; letter-spacing: 2px; font-family: monospace;">${invitationCode}</p>
-          </div>
-          <div style="text-align: center; margin: 40px 0;">
-            <a href="${invitationUrl}" style="display: inline-block; background: #2563eb; color: white; padding: 15px 30px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 16px;">
-              Register Now
-            </a>
-          </div>
-          <p style="margin-bottom: 0;">Best regards,<br><strong>Future Minerals Forum Team</strong></p>
-        </div>
-      </div>
-    `;
-  },
-
-  // Get password reset template
-  getPasswordResetTemplate(resetUrl) {
-    return `
-      <div style="max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-        <div style="background: #ffffff; padding: 20px; border-bottom: 1px solid #e5e7eb;">
-          <img src="https://xpuhnbeoczxxmzmjronk.supabase.co/storage/v1/object/public/system-assets/logo.jpeg" alt="Future Minerals Forum" style="height: 60px; width: auto;" />
-        </div>
-        <div style="background: linear-gradient(135deg, #7c3aed 0%, #8b5cf6 100%); padding: 30px; text-align: center;">
-          <h1 style="color: white; margin: 0; font-size: 28px; font-weight: bold;">Password Reset</h1>
-          <p style="color: #e9d5ff; margin: 10px 0 0 0; font-size: 16px;">Reset your Future Minerals Forum password</p>
-        </div>
-        <div style="background: #ffffff; padding: 40px; border: 1px solid #e5e7eb; border-top: none;">
-          <p style="font-size: 18px; margin-bottom: 20px;">Dear User,</p>
-          <p style="margin-bottom: 20px;">You have requested to reset your password for the Future Minerals Forum system.</p>
-          <div style="text-align: center; margin: 40px 0;">
-            <a href="${resetUrl}" style="display: inline-block; background: #7c3aed; color: white; padding: 15px 30px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 16px;">
-              Reset Password
-            </a>
-          </div>
-          <p style="margin-bottom: 20px;">If you did not request this password reset, please ignore this email.</p>
-          <p style="margin-bottom: 0;">Best regards,<br><strong>Future Minerals Forum Team</strong></p>
-        </div>
-      </div>
-    `;
-  },
-
-  // Get new user request template
-  getNewUserRequestTemplate(newUserData) {
-    return `
-      <div style="max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-        <div style="background: #ffffff; padding: 20px; border-bottom: 1px solid #e5e7eb;">
-          <img src="https://xpuhnbeoczxxmzmjronk.supabase.co/storage/v1/object/public/system-assets/logo.jpeg" alt="Future Minerals Forum" style="height: 60px; width: auto;" />
-        </div>
-        <div style="background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%); padding: 30px; text-align: center;">
-          <h1 style="color: white; margin: 0; font-size: 28px; font-weight: bold;">New User Request</h1>
-          <p style="color: #fecaca; margin: 10px 0 0 0; font-size: 16px;">A new user has been requested for the system</p>
-        </div>
-        <div style="background: #ffffff; padding: 40px; border: 1px solid #e5e7eb; border-top: none;">
-          <p style="font-size: 18px; margin-bottom: 20px;">Dear Administrator,</p>
-          <p style="margin-bottom: 20px;">A new user has been requested for the Future Minerals Forum system.</p>
-          
-          <div style="background: #f8fafc; padding: 20px; margin: 20px 0; border-radius: 8px;">
-            <h3 style="margin: 0 0 15px 0; color: #1f2937;">User Details:</h3>
-            <p><strong>Full Name:</strong> ${newUserData.full_name}</p>
-            <p><strong>Email:</strong> ${newUserData.email}</p>
-            <p><strong>Password:</strong> ${newUserData.password}</p>
-            <p><strong>Company:</strong> ${newUserData.company_name}</p>
-            <p><strong>System User Type:</strong> ${newUserData.system_role}</p>
-            ${newUserData.user_type && newUserData.user_type !== 'N/A' ? `<p><strong>Sponsor/Partner Type:</strong> ${newUserData.user_type}</p>` : ''}
-            ${newUserData.registration_slots && Object.keys(newUserData.registration_slots).length > 0 ? `
-              <div style="margin-top: 15px;">
-                <h4 style="margin: 0 0 10px 0; color: #1f2937;">Registration Slots:</h4>
-                ${Object.entries(newUserData.registration_slots).map(([type, slots]) => 
-                  `<p style="margin: 5px 0;"><strong>${type}:</strong> ${slots}</p>`
-                ).join('')}
-              </div>
-            ` : ''}
-          </div>
-          
-          <p style="margin-bottom: 20px;">Please review and approve this user request in the system.</p>
-          <p style="margin-bottom: 0;">Best regards,<br><strong>Future Minerals Forum System</strong></p>
-        </div>
-      </div>
-    `;
-  },
-
-  // Get new user notification template
-  getNewUserNotificationTemplate(newUserData) {
-    return `
-      <div style="max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-        <div style="background: #ffffff; padding: 20px; border-bottom: 1px solid #e5e7eb;">
-          <img src="https://xpuhnbeoczxxmzmjronk.supabase.co/storage/v1/object/public/system-assets/logo.jpeg" alt="Future Minerals Forum" style="height: 60px; width: auto;" />
-        </div>
-        <div style="background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%); padding: 30px; text-align: center;">
-          <h1 style="color: white; margin: 0; font-size: 28px; font-weight: bold;">System Access Requested</h1>
-          <p style="color: #e9d5ff; margin: 10px 0 0 0; font-size: 16px;">Your access request is being processed</p>
-        </div>
-        <div style="background: #ffffff; padding: 40px; border: 1px solid #e5e7eb; border-top: none;">
-          <p style="font-size: 18px; margin-bottom: 20px;">Dear ${newUserData.full_name},</p>
-          <p style="margin-bottom: 20px;">A system access request has been submitted on your behalf for the Future Minerals Forum platform.</p>
-          
-          <div style="background: #f8fafc; padding: 20px; margin: 20px 0; border-radius: 8px; border-left: 4px solid #7c3aed;">
-            <h3 style="margin: 0 0 15px 0; color: #1f2937;">Your Request Details:</h3>
-            <p><strong>Full Name:</strong> ${newUserData.full_name}</p>
-            <p><strong>Email:</strong> ${newUserData.email}</p>
-            <p><strong>Company:</strong> ${newUserData.company_name}</p>
-            <p><strong>System User Type:</strong> ${newUserData.system_role}</p>
-            ${newUserData.user_type && newUserData.user_type !== 'N/A' ? `<p><strong>Sponsor/Partner Type:</strong> ${newUserData.user_type}</p>` : ''}
-            <p><strong>Password:</strong> ${newUserData.password}</p>
-            ${newUserData.registration_slots && Object.keys(newUserData.registration_slots).length > 0 && newUserData.system_role === 'User' ? `
-              <div style="margin-top: 15px;">
-                <h4 style="margin: 0 0 10px 0; color: #1f2937;">Registration Slots:</h4>
-                ${Object.entries(newUserData.registration_slots).map(([type, slots]) => 
-                  `<p style="margin: 5px 0;"><strong>${type}:</strong> ${slots}</p>`
-                ).join('')}
-              </div>
-            ` : ''}
-          </div>
-          
-          <div style="background: #fef3c7; padding: 15px; margin: 20px 0; border-radius: 8px; border-left: 4px solid #f59e0b;">
-            <p style="margin: 0; color: #92400e; font-weight: 500;">
-              <strong>Next Steps:</strong> An administrator will review your request and activate your account. You will receive a confirmation email once your access is approved.
-            </p>
-          </div>
-          
-          <p style="margin-bottom: 20px;">If you have any questions about this request, please contact the system administrator.</p>
-          <p style="margin-bottom: 0;">Best regards,<br><strong>Future Minerals Forum System</strong></p>
-        </div>
-      </div>
-    `;
   }
 };
 

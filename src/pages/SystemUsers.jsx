@@ -25,6 +25,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 import ProtectedRoute from "../components/common/ProtectedRoute";
 import { sendNewUserRequestEmail, createUserDirectly, deleteUserCompletely } from "@/api/functions";
 import { format } from "date-fns";
@@ -55,7 +56,8 @@ export default function SystemUsers() {
     user_type: 'N/A',
     mobile: '',
     registration_slots: attendeeTypes.reduce((acc, type) => ({...acc, [type]: 0}), {}),
-    account_status: 'active'
+    account_status: 'active',
+    has_access: false
   });
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showStatusDialog, setShowStatusDialog] = useState(false);
@@ -69,7 +71,8 @@ export default function SystemUsers() {
     company_name: '',
     system_role: 'User',
     user_type: 'N/A',
-    registration_slots: attendeeTypes.reduce((acc, type) => ({...acc, [type]: 0}), {})
+    registration_slots: attendeeTypes.reduce((acc, type) => ({...acc, [type]: 0}), {}),
+    has_access: false
   });
   const [isSendingUserRequest, setIsSendingUserRequest] = useState(false);
   const [isDeletingUser, setIsDeletingUser] = useState(false);
@@ -144,7 +147,8 @@ export default function SystemUsers() {
       user_type: 'N/A',
       mobile: '',
       registration_slots: attendeeTypes.reduce((acc, type) => ({...acc, [type]: 0}), {}),
-      account_status: 'active'
+      account_status: 'active',
+      has_access: false
     });
     setEditingUser(null);
   };
@@ -240,7 +244,8 @@ export default function SystemUsers() {
         user_type: formData.user_type,
         mobile: formData.mobile,
         registration_slots: formData.registration_slots, // Start with current form data's slots
-        account_status: formData.account_status || 'active'
+        account_status: formData.account_status || 'active',
+        has_access: formData.has_access
       };
 
       // ** AUTO-POPULATE SLOTS FROM PARTNERSHIP TYPE **
@@ -296,7 +301,8 @@ export default function SystemUsers() {
       user_type: user.user_type || 'N/A',
       mobile: user.mobile || '',
       registration_slots: initialSlots,
-      account_status: user.account_status || 'active'
+      account_status: user.account_status || 'active',
+      has_access: user.has_access || false
     });
     setShowEditDialog(true);
   };
@@ -423,7 +429,8 @@ export default function SystemUsers() {
         systemRole: newUserRequestData.system_role,
         userType: newUserRequestData.user_type,
         registrationSlots: newUserRequestData.registration_slots,
-        preferredName: newUserRequestData.full_name
+        preferredName: newUserRequestData.full_name,
+        hasAccess: newUserRequestData.has_access
       });
       
       if (result.success) {
@@ -440,7 +447,8 @@ export default function SystemUsers() {
           company_name: '', 
           system_role: 'User', 
           user_type: 'N/A', 
-          registration_slots: attendeeTypes.reduce((acc, type) => ({...acc, [type]: 0}), {}) 
+          registration_slots: attendeeTypes.reduce((acc, type) => ({...acc, [type]: 0}), {}),
+          has_access: false
         });
         // Refresh the users list
         loadData();
@@ -595,6 +603,19 @@ export default function SystemUsers() {
                     </SelectContent>
                   </Select>
                 </div>
+
+                {newUserRequestData.system_role === 'Super User' && (
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="has_access"
+                      checked={newUserRequestData.has_access}
+                      onCheckedChange={(checked) => setNewUserRequestData(prev => ({ ...prev, has_access: checked }))}
+                    />
+                    <Label htmlFor="has_access" className="text-sm">
+                      Allow this Super User to approve/disapprove attendees
+                    </Label>
+                  </div>
+                )}
 
                 {newUserRequestData.system_role === 'User' && (
                   <div>
@@ -789,6 +810,19 @@ export default function SystemUsers() {
                   </div>
                 </div>
 
+                {formData.system_role === 'Super User' && (
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="edit_has_access"
+                      checked={formData.has_access}
+                      onCheckedChange={(checked) => handleInputChange('has_access', checked)}
+                    />
+                    <Label htmlFor="edit_has_access" className="text-sm">
+                      Allow this Super User to approve/disapprove attendees
+                    </Label>
+                  </div>
+                )}
+
                 {formData.system_role === 'User' && (
                      <div>
                         <Label htmlFor="user_type">User Type (Sponsor/Partner)</Label>
@@ -871,7 +905,14 @@ export default function SystemUsers() {
                     <TableRow className="bg-gray-50">
                       <TableHead>User</TableHead>
                       <TableHead>System Type</TableHead>
-                      {users.some(user => user.system_role === 'User') && <TableHead>Sponsor/Partner Type</TableHead>}
+                      {users.filter(user => {
+                        // Only filter out current user if they are a Super User
+                        if (currentUser?.system_role === 'Super User') {
+                          return user.id !== currentUser.id;
+                        }
+                        // Admins can see all users including themselves
+                        return true;
+                      }).some(user => user.system_role === 'User') && <TableHead>Sponsor/Partner Type</TableHead>}
                       <TableHead>Status</TableHead>
                       <TableHead>Last Login</TableHead>
                       <TableHead>Slots (Avail/Total)</TableHead>
@@ -882,7 +923,14 @@ export default function SystemUsers() {
                     {isLoading ? (
                       Array(3).fill(0).map((_, i) => (
                         <TableRow key={i}>
-                          <TableCell colSpan={users.some(user => user.system_role === 'User') ? 7 : 6} className="h-16">
+                          <TableCell colSpan={users.filter(user => {
+                            // Only filter out current user if they are a Super User
+                            if (currentUser?.system_role === 'Super User') {
+                              return user.id !== currentUser.id;
+                            }
+                            // Admins can see all users including themselves
+                            return true;
+                          }).some(user => user.system_role === 'User') ? 7 : 6} className="h-16">
                             <div className="flex items-center justify-center">
                               <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
                             </div>
@@ -890,7 +938,14 @@ export default function SystemUsers() {
                         </TableRow>
                       ))
                     ) : (
-                      users.map((user) => {
+                      users.filter(user => {
+                        // Only filter out current user if they are a Super User
+                        if (currentUser?.system_role === 'Super User') {
+                          return user.id !== currentUser.id;
+                        }
+                        // Admins can see all users including themselves
+                        return true;
+                      }).map((user) => {
                         const totalSlots = getTotalSlots(user.registration_slots);
                         const usedSlots = getTotalUsedSlots(user.used_slots);
                         const availableSlots = totalSlots - usedSlots;
@@ -918,7 +973,14 @@ export default function SystemUsers() {
                                 <Shield className="w-3 h-3 mr-1" />{user.system_role}
                               </Badge>
                             </TableCell>
-                            {users.some(u => u.system_role === 'User') && (
+                            {users.filter(user => {
+                              // Only filter out current user if they are a Super User
+                              if (currentUser?.system_role === 'Super User') {
+                                return user.id !== currentUser.id;
+                              }
+                              // Admins can see all users including themselves
+                              return true;
+                            }).some(u => u.system_role === 'User') && (
                               <TableCell>
                                 {user.system_role === 'User' ? (
                                   user.user_type && user.user_type !== 'N/A' ? (

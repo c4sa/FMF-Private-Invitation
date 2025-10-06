@@ -134,8 +134,6 @@ export default function AccessLevels() {
             {Object.entries(currentUser.registration_slots).map(([type, totalSlots]) => {
               const usedSlots = currentUser.used_slots?.[type] || 0;
               const remainingSlots = totalSlots - usedSlots;
-              
-              if (totalSlots === 0 && usedSlots === 0) return null;
 
               const config = attendeeTypeConfig[type];
               const Icon = config?.icon || Users;
@@ -153,7 +151,7 @@ export default function AccessLevels() {
                     <Progress value={progressPercentage} className="h-2" />
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-gray-600">Used: {usedSlots}/{totalSlots}</span>
-                      <span className="text-xl font-bold text-green-600">{remainingSlots}</span>
+                      <span className={`text-xl font-bold ${remainingSlots > 0 ? 'text-green-600' : 'text-red-600'}`}>{remainingSlots}</span>
                     </div>
                     <p className={`text-right text-sm font-semibold ${remainingSlots > 0 ? 'text-gray-600' : 'text-red-600'}`}>
                       {remainingSlots > 0 ? 'Available' : 'Unavailable'}

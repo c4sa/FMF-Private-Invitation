@@ -80,7 +80,6 @@ export const countries = [
   "Iran",
   "Iraq",
   "Ireland",
-  "Israel",
   "Italy",
   "Jamaica",
   "Japan",

@@ -258,7 +258,6 @@ export default function AuthenticatedLayout({ children, currentPageName }) {
                     {Object.entries(currentUser.registration_slots).map(([type, available]) => {
                       const used = currentUser.used_slots?.[type] || 0;
                       const remaining = available - used;
-                      if (available === 0) return null;
 
                       return (
                         <div key={type} className="flex items-center justify-between text-sm">

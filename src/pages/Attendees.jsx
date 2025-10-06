@@ -216,13 +216,14 @@ export default function Attendees() {
     return isCreator && attendee.status === 'pending';
   };
 
-  // Updated logic for canRequestModification: only admins can request modifications for pending invitation registrations
+  // Updated logic for canRequestModification: only admins and super users with access can request modifications for pending invitation registrations
   const canRequestModification = (attendee) => {
     if (!currentUser) return false;
     
     const isAdmin = currentUser.role === 'admin' || currentUser.system_role === 'Admin';
-    // Only admins can request modifications for pending invitation registrations
-    return isAdmin && attendee.status === 'pending' && attendee.registration_method === 'invitation';
+    const isSuperUserWithAccess = currentUser.system_role === 'Super User' && currentUser.has_access;
+    // Only admins and super users with access can request modifications for pending invitation registrations
+    return (isAdmin || isSuperUserWithAccess) && attendee.status === 'pending' && attendee.registration_method === 'invitation';
   };
 
   const availableFields = [
@@ -282,56 +283,18 @@ export default function Attendees() {
       const templates = await EmailTemplate.filter({ name: 'modification_request' });
       const template = templates?.[0];
 
-      let emailSubject = 'Action Required: Modify Your Future Minerals Forum Registration';
-      let emailBody = `
-        <div style="max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-          <div style="background: #ffffff; padding: 20px; border-bottom: 1px solid #e5e7eb;">
-            <img src="https://xpuhnbeoczxxmzmjronk.supabase.co/storage/v1/object/public/system-assets/logo.jpeg" alt="Future Minerals Forum" style="height: 60px; width: auto;" />
-          </div>
-          <div style="background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%); padding: 30px; text-align: center;">
-            <h1 style="color: white; margin: 0; font-size: 28px; font-weight: bold;">Registration Modification Required</h1>
-            <p style="color: #fecaca; margin: 10px 0 0 0; font-size: 16px;">Action required for your forum registration</p>
-          </div>
-          <div style="background: #ffffff; padding: 40px; border: 1px solid #e5e7eb; border-top: none;">
-            <p style="font-size: 18px; margin-bottom: 20px;">Dear ${selectedAttendee.first_name || ''} ${selectedAttendee.last_name || ''},</p>
-            <p style="margin-bottom: 20px;">Thank you for registering for the Future Minerals Forum. We have reviewed your registration and would like to request some modifications to complete your application.</p>
-            
-            <div style="background: #fef2f2; border-left: 4px solid #dc2626; padding: 20px; margin: 30px 0; border-radius: 0 8px 8px 0;">
-              <h3 style="margin: 0 0 15px 0; color: #dc2626; font-size: 18px;">Sections requiring modification:</h3>
-              <p style="margin: 5px 0; font-weight: bold; color: #dc2626;">${fieldsToModify}</p>
-              ${noteBlockHtml}
-            </div>
-
-            <h3 style="color: #1f2937; margin-top: 30px;">Your Current Registration Details:</h3>
-            ${attendeeInfoHtml}
-
-            <div style="text-align: center; margin: 40px 0;">
-              <a href="${modificationUrl}" style="display: inline-block; background: #dc2626; color: white; padding: 15px 30px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 16px;">
-                Modify Registration
-              </a>
-            </div>
-
-            <p style="margin-bottom: 20px;">Please click the button above to access your registration and make the necessary changes. Your registration will remain pending until the requested modifications are completed.</p>
-            <p style="margin-bottom: 0;">Best regards,<br><strong>Future Minerals Forum Registration Team</strong></p>
-          </div>
-          <div style="background: #f8fafc; padding: 20px; text-align: center; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 8px 8px;">
-            <p style="margin: 0; font-size: 14px; color: #6b7280;">This email was sent automatically. If you have questions, please contact our support team.</p>
-          </div>
-        </div>
-      `;
-
-      if (template) {
-        emailSubject = template.subject;
-        emailBody = template.body
-          .replace(/{{first_name}}/g, selectedAttendee.first_name || '')
-          .replace(/{{last_name}}/g, selectedAttendee.last_name || '')
-          .replace(/{{fields_to_modify}}/g, fieldsToModify)
-          .replace(/{{modification_note_block}}/g, noteBlockHtml)
-          .replace(/{{attendee_info_html}}/g, attendeeInfoHtml)
-          .replace(/{{modification_url}}/g, modificationUrl);
-      } else {
-        console.warn("Modification request email template not found. Using default content.");
+      if (!template) {
+        throw new Error('Modification request email template not found');
       }
+
+      let emailSubject = template.subject;
+      let emailBody = template.body
+        .replace(/{{first_name}}/g, selectedAttendee.first_name || '')
+        .replace(/{{last_name}}/g, selectedAttendee.last_name || '')
+        .replace(/{{fields_to_modify}}/g, fieldsToModify)
+        .replace(/{{modification_note_block}}/g, noteBlockHtml)
+        .replace(/{{attendee_info_html}}/g, attendeeInfoHtml)
+        .replace(/{{modification_url}}/g, modificationUrl);
 
       await sendModificationRequestEmail({
         to: selectedAttendee.email,
@@ -1150,7 +1113,7 @@ export default function Attendees() {
 
                   {/* Action Buttons */}
                   <div className="flex justify-end gap-3 pt-4 border-t">
-                    {(currentUser?.role === 'admin' || currentUser?.system_role === 'Admin') && selectedAttendee.status === 'pending' && (
+                    {((currentUser?.role === 'admin' || currentUser?.system_role === 'Admin') || (currentUser?.system_role === 'Super User' && currentUser?.has_access)) && selectedAttendee.status === 'pending' && (
                       <div className="flex gap-3">
                         <Button 
                           onClick={() => updateAttendeeStatus(selectedAttendee.id, 'approved')}
@@ -1373,7 +1336,7 @@ export default function Attendees() {
                           </TableCell>
                           <TableCell onClick={(e) => e.stopPropagation()}>
                             <div className="flex items-center gap-2">
-                              {(currentUser?.role === 'admin' || currentUser?.system_role === 'Admin') && attendee.status === 'pending' && (
+                              {((currentUser?.role === 'admin' || currentUser?.system_role === 'Admin') || (currentUser?.system_role === 'Super User' && currentUser?.has_access)) && attendee.status === 'pending' && (
                                 <>
                                   <Button
                                     size="sm"

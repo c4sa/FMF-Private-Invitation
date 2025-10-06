@@ -16,6 +16,7 @@ export default function AnalyticsDashboard() {
   const [partnerTypes, setPartnerTypes] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [dateRange, setDateRange] = useState('30');
+  const [filteredAttendees, setFilteredAttendees] = useState([]);
   const { toast } = useToast();
 
   const loadData = useCallback(async () => {
@@ -49,6 +50,7 @@ export default function AnalyticsDashboard() {
       setAttendees(attendeesData);
       setUsers(usersData);
       setPartnerTypes(partnerTypesData);
+      setFilteredAttendees(attendeesData);
     } catch (error) {
       console.error("Error loading analytics data:", error);
       toast({ title: "Error", description: "Failed to load analytics data.", variant: "destructive" });
@@ -60,14 +62,73 @@ export default function AnalyticsDashboard() {
     loadData();
   }, [loadData]);
 
+  // Filter attendees based on date range
+  const filterAttendeesByDateRange = useCallback((attendeesData, range) => {
+    if (!attendeesData || attendeesData.length === 0) return [];
+    
+    const now = new Date();
+    let startDate;
+    
+    switch (range) {
+      case '1':
+        startDate = new Date(now.getTime() - (1 * 60 * 60 * 1000)); // 1 hour ago
+        break;
+      case '24':
+        startDate = new Date(now.getTime() - (24 * 60 * 60 * 1000)); // 24 hours ago
+        break;
+      case '7':
+        startDate = new Date(now.getTime() - (7 * 24 * 60 * 60 * 1000)); // 7 days ago
+        break;
+      case '30':
+        startDate = new Date(now.getTime() - (30 * 24 * 60 * 60 * 1000)); // 30 days ago
+        break;
+      case '90':
+        startDate = new Date(now.getTime() - (90 * 24 * 60 * 60 * 1000)); // 90 days ago
+        break;
+      case '365':
+        startDate = new Date(now.getTime() - (365 * 24 * 60 * 60 * 1000)); // 1 year ago
+        break;
+      case 'all':
+        return attendeesData; // Return all data
+      default:
+        startDate = new Date(now.getTime() - (30 * 24 * 60 * 60 * 1000)); // Default to 30 days
+    }
+    
+    return attendeesData.filter(attendee => {
+      const attendeeDate = new Date(attendee.created_at);
+      return attendeeDate >= startDate;
+    });
+  }, []);
+
+  // Update filtered attendees when date range changes
+  useEffect(() => {
+    const filtered = filterAttendeesByDateRange(attendees, dateRange);
+    setFilteredAttendees(filtered);
+  }, [attendees, dateRange, filterAttendeesByDateRange]);
+
+  // Helper function to get date range label
+  const getDateRangeLabel = (range) => {
+    switch (range) {
+      case '1': return 'Last Hour';
+      case '24': return 'Last 24 Hours';
+      case '7': return 'Last 7 Days';
+      case '30': return 'Last 30 Days';
+      case '90': return 'Last 90 Days';
+      case '365': return 'Last Year';
+      case 'all': return 'All Time';
+      default: return 'Last 30 Days';
+    }
+  };
+
   const exportToExcel = () => {
     const csvData = [
       ['FUTURE MINERALS FORUM - ANALYTICS REPORT'],
       ['Generated on:', format(new Date(), 'yyyy-MM-dd HH:mm:ss')],
+      ['Filter Period:', getDateRangeLabel(dateRange)],
       [],
       ['ATTENDEE DETAILS'],
       ['Name', 'Email', 'Organization', 'Type', 'Status', 'Registration Date'],
-      ...attendees.map(a => [
+      ...filteredAttendees.map(a => [
         `${a.first_name} ${a.last_name}`,
         a.email,
         a.organization || '',
@@ -100,11 +161,11 @@ export default function AnalyticsDashboard() {
     );
   }
 
-  // Calculate metrics
-  const totalAttendees = attendees.length;
-  const approvedAttendees = attendees.filter(a => a.status === 'approved').length;
-  const pendingAttendees = attendees.filter(a => a.status === 'pending').length;
-  const declinedAttendees = attendees.filter(a => a.status === 'declined').length;
+  // Calculate metrics based on filtered attendees
+  const totalAttendees = filteredAttendees.length;
+  const approvedAttendees = filteredAttendees.filter(a => a.status === 'approved').length;
+  const pendingAttendees = filteredAttendees.filter(a => a.status === 'pending').length;
+  const declinedAttendees = filteredAttendees.filter(a => a.status === 'declined').length;
 
   const statusChartData = [
     { name: 'Approved', value: approvedAttendees, color: '#10b981' },
@@ -113,10 +174,10 @@ export default function AnalyticsDashboard() {
   ].filter(item => item.value > 0);
 
   const typeChartData = [
-    { name: 'VIP', value: attendees.filter(a => a.attendee_type === 'VIP').length },
-    { name: 'Partner', value: attendees.filter(a => a.attendee_type === 'Partner').length },
-    { name: 'Exhibitor', value: attendees.filter(a => a.attendee_type === 'Exhibitor').length },
-    { name: 'Media', value: attendees.filter(a => a.attendee_type === 'Media').length }
+    { name: 'VIP', value: filteredAttendees.filter(a => a.attendee_type === 'VIP').length },
+    { name: 'Partner', value: filteredAttendees.filter(a => a.attendee_type === 'Partner').length },
+    { name: 'Exhibitor', value: filteredAttendees.filter(a => a.attendee_type === 'Exhibitor').length },
+    { name: 'Media', value: filteredAttendees.filter(a => a.attendee_type === 'Media').length }
   ];
 
   const partnerBreakdown = partnerTypes.map(pt => ({
@@ -132,14 +193,23 @@ export default function AnalyticsDashboard() {
             <div>
               <h1 className="text-3xl font-bold text-gray-900">Analytics Dashboard</h1>
               <p className="text-gray-500 mt-1">Registration insights and partner analytics</p>
+              <div className="mt-2">
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                  Showing data for: {getDateRangeLabel(dateRange)}
+                </span>
+              </div>
             </div>
             <div className="flex gap-3">
               <Select value={dateRange} onValueChange={setDateRange}>
-                <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="7">Last 7 days</SelectItem>
-                  <SelectItem value="30">Last 30 days</SelectItem>
-                  <SelectItem value="90">Last 90 days</SelectItem>
+                  <SelectItem value="1">Last Hour</SelectItem>
+                  <SelectItem value="24">Last 24 Hours</SelectItem>
+                  <SelectItem value="7">Last 7 Days</SelectItem>
+                  <SelectItem value="30">Last 30 Days</SelectItem>
+                  <SelectItem value="90">Last 90 Days</SelectItem>
+                  <SelectItem value="365">Last Year</SelectItem>
+                  <SelectItem value="all">All Time</SelectItem>
                 </SelectContent>
               </Select>
               <Button variant="outline" onClick={() => window.print()}><Printer className="w-4 h-4 mr-2" />Print</Button>

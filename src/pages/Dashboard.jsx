@@ -17,6 +17,7 @@ import {
 import StatsCard from "../components/dashboard/StatsCard";
 import RecentActivities from "../components/dashboard/RecentActivities";
 import ProtectedRoute from "../components/common/ProtectedRoute";
+import ProfileCompletionModal from "../components/common/ProfileCompletionModal";
 import { format } from "date-fns";
 
 const exportToCsv = (filename, rows) => {
@@ -67,6 +68,8 @@ export default function Dashboard() {
     declined: 0,
   });
   const [isLoading, setIsLoading] = useState(true);
+  const [currentUser, setCurrentUser] = useState(null);
+  const [showProfileModal, setShowProfileModal] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -76,28 +79,35 @@ export default function Dashboard() {
     setIsLoading(true);
     try {
       // Get current user to check permissions
-      const currentUser = await User.me();
+      const user = await User.me();
+      setCurrentUser(user);
+      
+      // Check if profile is complete - all essential fields must be filled
+      const isProfileComplete = user.preferred_name && user.company_name && user.mobile && user.avatar_url;
+      if (!isProfileComplete) {
+        setShowProfileModal(true);
+      }
       
       let attendeesData = [];
       
       // Check if user is admin or super user - they can see all attendees
-      const canSeeAllAttendees = currentUser?.role === 'admin' || 
-                                 currentUser?.system_role === 'Admin' || 
-                                 currentUser?.system_role === 'Super User';
+      const canSeeAllAttendees = user?.role === 'admin' || 
+                                 user?.system_role === 'Admin' || 
+                                 user?.system_role === 'Super User';
       
       if (canSeeAllAttendees) {
         // Admin/Super User: Get all attendees
         attendeesData = await Attendee.list("-created_at");
       } else {
         // Regular User: Only get attendees they registered
-        attendeesData = await Attendee.getByRegisteredBy(currentUser.id);
+        attendeesData = await Attendee.getByRegisteredBy(user.id);
       }
       
       setAttendees(attendeesData);
 
       // Only load users if current user is admin or super user
       let usersData = [];
-      const canSeeAllUsers = currentUser?.role === 'admin' || currentUser?.system_role === 'Admin' || currentUser?.system_role === 'Super User';
+      const canSeeAllUsers = user?.role === 'admin' || user?.system_role === 'Admin' || user?.system_role === 'Super User';
       
       if (canSeeAllUsers) {
         try {
@@ -157,6 +167,21 @@ export default function Dashboard() {
       'Modification Token': a.modification_token || ''
     }));
     exportToCsv('attendees.csv', dataToExport);
+  };
+
+  const handleUserUpdate = (updatedUser) => {
+    setCurrentUser(updatedUser);
+    setShowProfileModal(false);
+  };
+
+  const handleProfileModalClose = () => {
+    // Check if profile is complete before allowing close
+    const isProfileComplete = currentUser?.preferred_name && currentUser?.company_name && currentUser?.mobile && currentUser?.avatar_url;
+    if (!isProfileComplete) {
+      // Don't close the modal, just show the toast
+      return;
+    }
+    setShowProfileModal(false);
   };
 
   return (
@@ -225,6 +250,14 @@ export default function Dashboard() {
           </>
         )}
       </div>
+
+      {/* Profile Completion Modal */}
+      <ProfileCompletionModal
+        isOpen={showProfileModal}
+        currentUser={currentUser}
+        onUserUpdate={handleUserUpdate}
+        onClose={handleProfileModalClose}
+      />
     </ProtectedRoute>
   );
 }

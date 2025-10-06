@@ -115,7 +115,7 @@ export default function ModuleActivationSettings() {
               const settingKey = `module_${mod.key}_enabled_for_${type.key}`;
               const dbSetting = systemSettings.find(s => s.key === settingKey);
               newSettings[settingKey] = {
-                  isEnabled: dbSetting ? dbSetting.value === 'true' : true,
+                  isEnabled: dbSetting ? dbSetting.value === 'true' : false,
                   id: dbSetting ? dbSetting.id : null
               };
           });

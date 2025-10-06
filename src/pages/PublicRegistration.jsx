@@ -26,6 +26,7 @@ import { countries } from "../components/registration/countries"; // New import 
 import { useToast } from "../components/common/Toast";
 import { handleDuplicateEmailError, getGenericErrorMessage } from "../utils/errorHandling";
 import { emailService } from "../lib/resend";
+import { supabase } from "../lib/supabase";
 
 const titles = ["Mr.", "Ms.", "Miss.", "Mrs.", "Dr.", "H.E.", "Hon.", "H.R.H.", "H.H.", "Prof.", "Eng."];
 
@@ -422,33 +423,34 @@ export default function PublicRegistrationPage() {
           
           // Send update confirmation email
           try {
-            const emailSubject = "Registration Update Confirmation - Future Minerals Forum";
-            const emailHtml = `
-              <div style="max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-                <div style="background: #ffffff; padding: 20px; border-bottom: 1px solid #e5e7eb;">
-                  <img src="https://xpuhnbeoczxxmzmjronk.supabase.co/storage/v1/object/public/system-assets/logo.jpeg" alt="Future Minerals Forum" style="height: 60px; width: auto;" />
-                </div>
-                <div style="background: #ffffff; padding: 40px; border: 1px solid #e5e7eb; border-top: none;">
-                  <h2 style="color: #1e40af; margin-bottom: 20px;">Registration Update Confirmation</h2>
-                <p>Dear ${formData.title} ${formData.first_name} ${formData.last_name},</p>
-                <p>Your registration for the Future Minerals Forum has been successfully updated and is currently pending review.</p>
-                <p><strong>Updated Registration Details:</strong></p>
-                <ul style="list-style: none; padding: 0;">
-                  <li><strong>Name:</strong> ${formData.title} ${formData.first_name} ${formData.last_name}</li>
-                  <li><strong>Email:</strong> ${formData.email}</li>
-                  <li><strong>Organization:</strong> ${formData.organization}</li>
-                  <li><strong>Job Title:</strong> ${formData.job_title}</li>
-                </ul>
-                <p>We will review your updated registration and contact you with further details. If you have any questions, please don't hesitate to reach out to us.</p>
-                <p>Best regards,<br>Future Minerals Forum Team</p>
-                </div>
-              </div>
-            `;
+            // Get registration confirmation email template
+            const { data: template, error: templateError } = await supabase
+              .from('email_templates')
+              .select('*')
+              .eq('name', 'registration_confirmation')
+              .eq('is_active', true)
+              .single();
+            
+            if (templateError) {
+              console.warn('Registration confirmation email template not found:', templateError);
+              return; // Skip email if template not found
+            }
+            
+            let subject = template.subject;
+            let html = template.body
+              .replace(/{{title}}/g, formData.title || '')
+              .replace(/{{first_name}}/g, formData.first_name || '')
+              .replace(/{{last_name}}/g, formData.last_name || '')
+              .replace(/{{email}}/g, formData.email || '')
+              .replace(/{{organization}}/g, formData.organization || '')
+              .replace(/{{job_title}}/g, formData.job_title || '')
+              .replace(/{{attendee_type}}/g, formData.attendee_type || '')
+              .replace(/{{is_approved}}/g, 'false');
             
             await emailService.send({
               to: formData.email,
-              subject: emailSubject,
-              html: emailHtml
+              subject: subject,
+              html: html
             });
             
             console.log('Update confirmation email sent successfully');
@@ -479,33 +481,34 @@ export default function PublicRegistrationPage() {
           
           // Send confirmation email
           try {
-            const emailSubject = "Registration Confirmation - Future Minerals Forum";
-            const emailHtml = `
-              <div style="max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-                <div style="background: #ffffff; padding: 20px; border-bottom: 1px solid #e5e7eb;">
-                  <img src="https://xpuhnbeoczxxmzmjronk.supabase.co/storage/v1/object/public/system-assets/logo.jpeg" alt="Future Minerals Forum" style="height: 60px; width: auto;" />
-                </div>
-                <div style="background: #ffffff; padding: 40px; border: 1px solid #e5e7eb; border-top: none;">
-                  <h2 style="color: #1e40af; margin-bottom: 20px;">Registration Confirmation</h2>
-                <p>Dear ${formData.title} ${formData.first_name} ${formData.last_name},</p>
-                <p>Thank you for registering for the Future Minerals Forum. Your registration has been successfully submitted and is currently pending review.</p>
-                <p><strong>Registration Details:</strong></p>
-                <ul style="list-style: none; padding: 0;">
-                  <li><strong>Name:</strong> ${formData.title} ${formData.first_name} ${formData.last_name}</li>
-                  <li><strong>Email:</strong> ${formData.email}</li>
-                  <li><strong>Organization:</strong> ${formData.organization}</li>
-                  <li><strong>Job Title:</strong> ${formData.job_title}</li>
-                </ul>
-                <p>We will review your registration and contact you with further details. If you have any questions, please don't hesitate to reach out to us.</p>
-                <p>Best regards,<br>Future Minerals Forum Team</p>
-                </div>
-              </div>
-            `;
+            // Get registration confirmation email template
+            const { data: template, error: templateError } = await supabase
+              .from('email_templates')
+              .select('*')
+              .eq('name', 'registration_confirmation')
+              .eq('is_active', true)
+              .single();
+            
+            if (templateError) {
+              console.warn('Registration confirmation email template not found:', templateError);
+              return; // Skip email if template not found
+            }
+            
+            let subject = template.subject;
+            let html = template.body
+              .replace(/{{title}}/g, formData.title || '')
+              .replace(/{{first_name}}/g, formData.first_name || '')
+              .replace(/{{last_name}}/g, formData.last_name || '')
+              .replace(/{{email}}/g, formData.email || '')
+              .replace(/{{organization}}/g, formData.organization || '')
+              .replace(/{{job_title}}/g, formData.job_title || '')
+              .replace(/{{attendee_type}}/g, formData.attendee_type || '')
+              .replace(/{{is_approved}}/g, 'false');
             
             await emailService.send({
               to: formData.email,
-              subject: emailSubject,
-              html: emailHtml
+              subject: subject,
+              html: html
             });
             
             console.log('Confirmation email sent successfully');
