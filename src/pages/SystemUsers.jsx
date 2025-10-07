@@ -27,7 +27,7 @@ import {
 } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import ProtectedRoute from "../components/common/ProtectedRoute";
-import { sendNewUserRequestEmail, createUserDirectly, deleteUserCompletely } from "@/api/functions";
+import { sendNewUserRequestEmail, createUserDirectly, deleteUserCompletely, updateUserAccess } from "@/api/functions";
 import { format } from "date-fns";
 import { useToast } from "../components/common/Toast";
 
@@ -268,6 +268,20 @@ export default function SystemUsers() {
 
       await User.update(editingUser.id, userData);
 
+      // Additionally call the updateUserAccess API to ensure has_access is properly set
+      if (formData.system_role === 'Super User' || formData.system_role === 'Admin' || formData.system_role === 'User') {
+        try {
+          await updateUserAccess({
+            userId: editingUser.id,
+            systemRole: formData.system_role,
+            hasAccess: formData.has_access
+          });
+        } catch (accessError) {
+          console.warn('Failed to update user access via API:', accessError);
+          // Don't fail the entire update if this fails, just log it
+        }
+      }
+
       loadData();
       setShowEditDialog(false);
       resetForm();
@@ -434,6 +448,18 @@ export default function SystemUsers() {
       });
       
       if (result.success) {
+        // Additionally call the updateUserAccess API to ensure has_access is properly set
+        try {
+          await updateUserAccess({
+            userId: result.user.id,
+            systemRole: newUserRequestData.system_role,
+            hasAccess: newUserRequestData.has_access
+          });
+        } catch (accessError) {
+          console.warn('Failed to update user access via API after creation:', accessError);
+          // Don't fail the entire creation if this fails, just log it
+        }
+
         toast({ 
           title: "User Created Successfully", 
           description: `User ${newUserRequestData.full_name} has been created and can now log in.`, 

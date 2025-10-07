@@ -45,8 +45,8 @@ export default function ProfileCompletionModal({ isOpen, currentUser, onUserUpda
   const isProfileComplete = () => {
     return formData.preferred_name.trim() !== '' && 
            formData.company_name.trim() !== '' && 
-           formData.mobile.trim() !== '' && 
-           formData.avatar_url.trim() !== '';
+           formData.mobile.trim() !== '' &&
+           currentUser?.is_reset === true;
   };
 
   const handleSave = async () => {
@@ -77,14 +77,6 @@ export default function ProfileCompletionModal({ isOpen, currentUser, onUserUpda
       return;
     }
 
-    if (!formData.avatar_url.trim()) {
-      toast({
-        title: "Error",
-        description: "Profile photo is required.",
-        variant: "destructive",
-      });
-      return;
-    }
 
     setIsSaving(true);
     try {
@@ -124,7 +116,7 @@ export default function ProfileCompletionModal({ isOpen, currentUser, onUserUpda
         setToastShown(true);
         toast({
           title: "Profile Incomplete",
-          description: "Please complete your profile before continuing. Preferred name, company name, mobile number, and profile photo are required.",
+          description: "Please complete your profile before continuing. Preferred name, company name, mobile number, and password reset are required.",
           variant: "destructive",
         });
         
@@ -182,7 +174,7 @@ export default function ProfileCompletionModal({ isOpen, currentUser, onUserUpda
               <span className="font-medium">Profile Completion Required</span>
             </div>
             <p className="text-sm text-yellow-700 mt-1">
-              Please complete your profile information to continue using the system. Preferred name, company name, mobile number, and profile photo are required for your account.
+              Please complete your profile information to continue using the system. Preferred name, company name, mobile number, and password reset are required for your account.
             </p>
           </div>
 
@@ -255,33 +247,54 @@ export default function ProfileCompletionModal({ isOpen, currentUser, onUserUpda
             />
           </div>
 
-          <div className="flex justify-between gap-3 pt-4 border-t">
-            <Button 
-              variant="outline"
-              onClick={handleResetPassword}
-              className="flex items-center gap-2"
-            >
-              <KeyRound className="w-4 h-4" />
-              Reset Password
-            </Button>
+          <div className="space-y-4 pt-4 border-t">
+            <div className={`border rounded-lg p-4 ${currentUser?.is_reset ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
+              <div className={`flex items-center gap-2 ${currentUser?.is_reset ? 'text-green-800' : 'text-red-800'}`}>
+                <div className={`w-2 h-2 rounded-full ${currentUser?.is_reset ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                <span className="font-medium">
+                  {currentUser?.is_reset ? 'Password Reset Completed' : 'Password Reset Required'}
+                </span>
+              </div>
+              <p className={`text-sm mt-1 ${currentUser?.is_reset ? 'text-green-700' : 'text-red-700'}`}>
+                {currentUser?.is_reset 
+                  ? 'Your password has been reset successfully. You can now complete your profile.'
+                  : 'For security reasons, you must reset your password before completing your profile.'
+                }
+              </p>
+            </div>
             
-            <Button 
-              onClick={handleSave} 
-              disabled={isSaving || !isProfileComplete()}
-              className="bg-blue-600 hover:bg-blue-700"
-            >
-              {isSaving ? (
-                <div className="flex items-center gap-2">
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
-                  Saving...
-                </div>
-              ) : (
-                <>
-                  <Save className="w-4 h-4 mr-2" />
-                  Complete Profile
-                </>
-              )}
-            </Button>
+            <div className="flex justify-center">
+              <Button 
+                onClick={handleResetPassword}
+                className={`flex items-center gap-2 ${currentUser?.is_reset 
+                  ? 'bg-green-600 hover:bg-green-700' 
+                  : 'bg-red-600 hover:bg-red-700'
+                }`}
+              >
+                <KeyRound className="w-4 h-4" />
+                {currentUser?.is_reset ? 'Password Already Reset' : 'Reset Password (Required)'}
+              </Button>
+            </div>
+            
+            <div className="flex justify-center">
+              <Button 
+                onClick={handleSave} 
+                disabled={isSaving || !isProfileComplete()}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                {isSaving ? (
+                  <div className="flex items-center gap-2">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                    Saving...
+                  </div>
+                ) : (
+                  <>
+                    <Save className="w-4 h-4 mr-2" />
+                    Complete Profile
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
         </div>
       </DialogContent>

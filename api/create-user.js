@@ -85,6 +85,7 @@ export default async function handler(req, res) {
         Media: 0
       },
       has_access: systemRole === 'Admin' ? true : (systemRole === 'Super User' ? hasAccess : false),
+      is_reset: false,
       account_status: 'active',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()

@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { ArrowLeft, Lock, Eye, EyeOff, Mail, Shield, AlertCircle } from 'lucide-react';
-import { sendOTP, verifyOTP } from '@/api/functions';
+import { sendOTP, verifyOTP, updateIsReset } from '@/api/functions';
 import { User } from '@/api/entities';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '../components/common/Toast';
@@ -129,6 +129,15 @@ export default function ResetPassword() {
       }
 
       const result = await response.json();
+      
+      // Now update the is_reset field
+      try {
+        await updateIsReset(formData.email);
+      } catch (resetError) {
+        // Don't fail the password reset if is_reset update fails
+        console.warn('Password reset successful but failed to update is_reset status:', resetError);
+      }
+
       setStep('success');
       
     } catch (err) {

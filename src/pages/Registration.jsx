@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Save, AlertCircle, Edit3, CheckCircle } from "lucide-react";
+import { ArrowLeft, Save, AlertCircle, Edit3, CheckCircle, Download, Upload } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -30,6 +30,7 @@ import ProtectedRoute from "../components/common/ProtectedRoute";
 import { useToast } from "../components/common/Toast";
 import { handleDuplicateEmailError, getGenericErrorMessage } from "../utils/errorHandling";
 import { emailService } from "../lib/resend";
+import * as XLSX from 'xlsx';
 
 const attendeeTypes = [
   "VIP", "Partner", "Exhibitor", "Media"
@@ -100,6 +101,7 @@ export default function RegistrationPage() {
   const [submissionError, setSubmissionError] = useState("");
   const [fieldErrors, setFieldErrors] = useState({});
   const [showForm, setShowForm] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const { toast } = useToast();
   
   const [formData, setFormData] = useState({
@@ -276,13 +278,534 @@ export default function RegistrationPage() {
   const getAvailableAttendeeTypes = () => {
     const isAdminUser = currentUser?.role === 'admin' || currentUser?.system_role === 'Admin' || currentUser?.system_role === 'Super User';
     if (isAdminUser || editingId) return attendeeTypes;
-    return attendeeTypes.filter(type => availableSlots[type] > 0);
+    // Show all attendee types, even those with 0 slots
+    return attendeeTypes.filter(type => availableSlots[type] !== undefined);
   };
 
   const getRemainingSlots = (type) => {
     const isAdminUser = currentUser?.role === 'admin' || currentUser?.system_role === 'Admin' || currentUser?.system_role === 'Super User';
     if (isAdminUser || editingId) return '∞';
     return availableSlots[type] !== undefined ? availableSlots[type] : 0;
+  };
+
+  const handleDownloadTemplate = () => {
+    try {
+      // Function to sanitize sheet names (remove invalid characters)
+      const sanitizeSheetName = (name) => {
+        return name.replace(/[:\\/\?\*\[\]]/g, ' ').substring(0, 31); // Excel sheet names max 31 chars
+      };
+
+      // Create a new workbook
+      const wb = XLSX.utils.book_new();
+      
+      // Define all the columns with their headers and validation data
+      const templateData = [
+        // Header row
+        [
+          'Attendee Type', 'Title', 'First Name', 'Last Name', 'Email', 'Confirm Email',
+          'Country Code', 'Mobile Number', 'Nationality', 'Country of Residence',
+          'LinkedIn Account', 'Organization', 'Job Title', 'Level', 'Level Specify',
+          'Work Address', 'Work City', 'Work Country', 'ID Type', 'ID Number',
+          'Issue Date', 'Need Visa', 'Expiry Date', 'Issue Place', 'Date of Birth',
+          'Religion', 'Face Photo URL', 'ID Photo URL', 'Areas of Interest', 'Primary Nature of Business',
+          'Previous Attendance', 'Previous Years'
+        ],
+        // Example row with sample data
+        [
+          'Partner', 'Mr.', 'John', 'Doe', 'john.doe@example.com', 'john.doe@example.com',
+          '+966', '501234567', 'Saudi Arabia', 'Saudi Arabia',
+          'https://linkedin.com/in/johndoe', 'Example Corp', 'Manager', 'Manager / Associate / Director', '',
+          '123 Business St', 'Riyadh', 'Saudi Arabia', 'National ID', '1234567890',
+          '2020-01-01', 'No', '2030-01-01', 'Riyadh', '1990-01-01',
+          'Muslim', 'https://example.com/face-photo.jpg', 'https://example.com/id-photo.jpg', 
+          'Finance and Investment;Technology', 'Finance / Investment',
+          'No', ''
+        ]
+      ];
+
+      // Create the main worksheet
+      const ws = XLSX.utils.aoa_to_sheet(templateData);
+
+      // Set column widths for better readability
+      const colWidths = [
+        { wch: 15 }, // Attendee Type
+        { wch: 8 },  // Title
+        { wch: 15 }, // First Name
+        { wch: 15 }, // Last Name
+        { wch: 25 }, // Email
+        { wch: 25 }, // Confirm Email
+        { wch: 12 }, // Country Code
+        { wch: 15 }, // Mobile Number
+        { wch: 20 }, // Nationality
+        { wch: 20 }, // Country of Residence
+        { wch: 30 }, // LinkedIn Account
+        { wch: 20 }, // Organization
+        { wch: 20 }, // Job Title
+        { wch: 35 }, // Level
+        { wch: 20 }, // Level Specify
+        { wch: 30 }, // Work Address
+        { wch: 15 }, // Work City
+        { wch: 20 }, // Work Country
+        { wch: 12 }, // ID Type
+        { wch: 15 }, // ID Number
+        { wch: 12 }, // Issue Date
+        { wch: 10 }, // Need Visa
+        { wch: 12 }, // Expiry Date
+        { wch: 15 }, // Issue Place
+        { wch: 12 }, // Date of Birth
+        { wch: 12 }, // Religion
+        { wch: 40 }, // Face Photo URL
+        { wch: 40 }, // ID Photo URL
+        { wch: 40 }, // Areas of Interest
+        { wch: 25 }, // Primary Nature of Business
+        { wch: 18 }, // Previous Attendance
+        { wch: 20 }  // Previous Years
+      ];
+      ws['!cols'] = colWidths;
+
+      // Add the main sheet
+      XLSX.utils.book_append_sheet(wb, ws, sanitizeSheetName('Registration Template'));
+
+      // Create dropdown reference sheets
+      const dropdownSheets = {
+        'Attendee Types': attendeeTypes,
+        'Titles': titles,
+        'Levels': levels,
+        'ID Types': idTypes,
+        'Religions': religions,
+        'Countries': countries,
+        'Country Codes': countryCodes.map(cc => `${cc.dial_code} (${cc.name})`),
+        'Areas of Interest': areasOfInterest,
+        'Business Natures': businessNatures,
+        'Yes No Options': ['Yes', 'No'],
+        'Previous Years': ['2019', '2020', '2021', '2022', '2023', '2024']
+      };
+
+      // Add dropdown reference sheets
+      Object.entries(dropdownSheets).forEach(([sheetName, data]) => {
+        const dropdownData = [['Options'], ...data.map(item => [item])];
+        const dropdownWs = XLSX.utils.aoa_to_sheet(dropdownData);
+        dropdownWs['!cols'] = [{ wch: 50 }];
+        XLSX.utils.book_append_sheet(wb, dropdownWs, sanitizeSheetName(sheetName));
+      });
+
+      // Create instructions sheet
+      const instructionsData = [
+        ['Future Minerals Forum - Bulk Registration Template'],
+        [''],
+        ['INSTRUCTIONS:'],
+        [''],
+        ['1. Fill in the Registration Template sheet with attendee information'],
+        ['2. Use the dropdown reference sheets for valid values'],
+        ['3. Required fields are marked in the example row'],
+        ['4. Date format: YYYY-MM-DD (e.g., 2024-01-15)'],
+        ['5. Areas of Interest: Separate multiple values with semicolons (;)'],
+        ['6. Previous Years: Separate multiple years with semicolons (;)'],
+        ['7. Need Visa: Use "Yes" or "No"'],
+        ['8. Previous Attendance: Use "Yes" or "No"'],
+        [''],
+        ['FIELD DESCRIPTIONS:'],
+        [''],
+        ['• Attendee Type: Select from VIP, Partner, Exhibitor, Media'],
+        ['• Title: Professional title (Mr., Ms., Dr., etc.)'],
+        ['• Email & Confirm Email: Must match exactly'],
+        ['• Country Code: Include + symbol (e.g., +966)'],
+        ['• Level Specify: Only required if Level is "Other"'],
+        ['• Need Visa: Required for passport holders'],
+        ['• Expiry Date & Issue Place: Required if Need Visa is "Yes"'],
+        ['• Face Photo URL: Valid URL to face photo (JPG/JPEG/PNG)'],
+        ['• ID Photo URL: Valid URL to ID document (JPG/PNG/PDF)'],
+        ['• Areas of Interest: Select multiple from the reference sheet'],
+        ['• Previous Years: Only required if Previous Attendance is "Yes"'],
+        [''],
+        ['VALIDATION RULES:'],
+        [''],
+        ['• All text fields (names, organization, etc.) must use English characters only'],
+        ['• Email addresses must be valid format'],
+        ['• Photo URLs must be valid URLs starting with http:// or https://'],
+        ['• Mobile numbers should be numeric'],
+        ['• Dates must be in YYYY-MM-DD format'],
+        ['• Age must be 18 or older'],
+        ['• LinkedIn account should be a valid URL (optional)'],
+        [''],
+        ['For questions, contact the registration team.']
+      ];
+
+      const instructionsWs = XLSX.utils.aoa_to_sheet(instructionsData);
+      instructionsWs['!cols'] = [{ wch: 80 }];
+      
+      // Style the instructions sheet
+      instructionsWs['A1'] = { 
+        v: 'Future Minerals Forum - Bulk Registration Template',
+        s: { font: { bold: true, sz: 16 } }
+      };
+
+      XLSX.utils.book_append_sheet(wb, instructionsWs, sanitizeSheetName('Instructions'));
+
+      // Generate filename with current date
+      const currentDate = new Date().toISOString().split('T')[0];
+      const filename = `FMF_Registration_Template_${currentDate}.xlsx`;
+
+      // Write and download the file
+      XLSX.writeFile(wb, filename);
+
+      toast({
+        title: "Template Downloaded",
+        description: `Excel template "${filename}" has been downloaded successfully.`,
+        variant: "success"
+      });
+
+    } catch (error) {
+      console.error('Error generating Excel template:', error);
+      toast({
+        title: "Download Failed",
+        description: "Failed to generate Excel template. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleBulkUpload = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    let createdAttendees = [];
+
+    try {
+      // Read the Excel file
+      const data = await file.arrayBuffer();
+      const workbook = XLSX.read(data, { type: 'array' });
+      const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+      const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+      if (jsonData.length < 2) {
+        throw new Error('Excel file must contain at least a header row and one data row');
+      }
+
+      // Get headers and data rows
+      const headers = jsonData[0];
+      const dataRows = jsonData.slice(1).filter(row => row.some(cell => cell !== undefined && cell !== ''));
+
+      if (dataRows.length === 0) {
+        throw new Error('No data rows found in the Excel file');
+      }
+
+      // Validate headers match expected format
+      const expectedHeaders = [
+        'Attendee Type', 'Title', 'First Name', 'Last Name', 'Email', 'Confirm Email',
+        'Country Code', 'Mobile Number', 'Nationality', 'Country of Residence',
+        'LinkedIn Account', 'Organization', 'Job Title', 'Level', 'Level Specify',
+        'Work Address', 'Work City', 'Work Country', 'ID Type', 'ID Number',
+        'Issue Date', 'Need Visa', 'Expiry Date', 'Issue Place', 'Date of Birth',
+        'Religion', 'Face Photo URL', 'ID Photo URL', 'Areas of Interest', 'Primary Nature of Business',
+        'Previous Attendance', 'Previous Years'
+      ];
+
+      // Check if headers match (allow some flexibility in order)
+      const missingHeaders = expectedHeaders.filter(header => !headers.includes(header));
+      if (missingHeaders.length > 0) {
+        throw new Error(`Missing required columns: ${missingHeaders.join(', ')}`);
+      }
+
+      // Count attendee types in the upload to check against available slots
+      const attendeeTypeCounts = {};
+      dataRows.forEach((row, index) => {
+        const attendeeTypeIndex = headers.indexOf('Attendee Type');
+        const attendeeType = row[attendeeTypeIndex];
+        if (attendeeType) {
+          attendeeTypeCounts[attendeeType] = (attendeeTypeCounts[attendeeType] || 0) + 1;
+        }
+      });
+
+      // Check if user has enough slots for each attendee type
+      const isAdminUser = currentUser?.role === 'admin' || currentUser?.system_role === 'Admin' || currentUser?.system_role === 'Super User';
+      
+      if (!isAdminUser) {
+        for (const [attendeeType, count] of Object.entries(attendeeTypeCounts)) {
+          const availableForType = availableSlots[attendeeType] || 0;
+          if (count > availableForType) {
+            throw new Error(`Not enough slots for ${attendeeType} attendees. Required: ${count}, Available: ${availableForType}`);
+          }
+        }
+      }
+
+      // Validate and process each row
+      const processedAttendees = [];
+      const validationErrors = [];
+
+      for (let i = 0; i < dataRows.length; i++) {
+        const row = dataRows[i];
+        const rowNumber = i + 2; // +2 because Excel is 1-indexed and we skip header
+        
+        try {
+          const attendeeData = {};
+          
+          // Map Excel columns to database fields
+          const fieldMapping = {
+            'Attendee Type': 'attendee_type',
+            'Title': 'title',
+            'First Name': 'first_name',
+            'Last Name': 'last_name',
+            'Email': 'email',
+            'Confirm Email': 'confirm_email',
+            'Country Code': 'country_code',
+            'Mobile Number': 'mobile_number',
+            'Nationality': 'nationality',
+            'Country of Residence': 'country_of_residence',
+            'LinkedIn Account': 'linkedin_account',
+            'Organization': 'organization',
+            'Job Title': 'job_title',
+            'Level': 'level',
+            'Level Specify': 'level_specify',
+            'Work Address': 'work_address',
+            'Work City': 'work_city',
+            'Work Country': 'work_country',
+            'ID Type': 'id_type',
+            'ID Number': 'id_number',
+            'Issue Date': 'issue_date',
+            'Need Visa': 'need_visa',
+            'Expiry Date': 'expiry_date',
+            'Issue Place': 'issue_place',
+            'Date of Birth': 'date_of_birth',
+            'Religion': 'religion',
+            'Face Photo URL': 'face_photo_url',
+            'ID Photo URL': 'id_photo_url',
+            'Areas of Interest': 'areas_of_interest',
+            'Primary Nature of Business': 'primary_nature_of_business',
+            'Previous Attendance': 'previous_attendance',
+            'Previous Years': 'previous_years'
+          };
+
+          // Extract data from row
+          headers.forEach((header, index) => {
+            const fieldName = fieldMapping[header];
+            if (fieldName && row[index] !== undefined) {
+              let value = row[index];
+              
+              // Handle special field types
+              if (fieldName === 'need_visa' || fieldName === 'previous_attendance') {
+                value = value === 'Yes' || value === true;
+              } else if (fieldName === 'areas_of_interest' || fieldName === 'previous_years') {
+                value = typeof value === 'string' ? value.split(';').map(s => s.trim()).filter(s => s) : [];
+              } else if (fieldName === 'issue_date' || fieldName === 'expiry_date' || fieldName === 'date_of_birth') {
+                if (value && value !== '') {
+                  // Handle Excel date formats
+                  if (typeof value === 'number') {
+                    // Excel date serial number
+                    const excelDate = new Date((value - 25569) * 86400 * 1000);
+                    value = excelDate.toISOString().split('T')[0];
+                  } else if (typeof value === 'string') {
+                    // Try to parse string date
+                    const parsedDate = new Date(value);
+                    if (!isNaN(parsedDate.getTime())) {
+                      value = parsedDate.toISOString().split('T')[0];
+                    }
+                  }
+                } else {
+                  value = null;
+                }
+              }
+              
+              attendeeData[fieldName] = value;
+            }
+          });
+
+          // Validate required fields
+          const requiredFields = [
+            'attendee_type', 'title', 'first_name', 'last_name', 'email',
+            'mobile_number', 'country_code', 'nationality', 'country_of_residence',
+            'organization', 'job_title', 'level', 'work_address', 'work_city',
+            'work_country', 'id_type', 'id_number', 'issue_date', 'date_of_birth',
+            'face_photo_url', 'id_photo_url'
+          ];
+
+          const missingFields = requiredFields.filter(field => 
+            !attendeeData[field] || attendeeData[field] === ''
+          );
+
+          if (missingFields.length > 0) {
+            throw new Error(`Missing required fields: ${missingFields.join(', ')}`);
+          }
+
+          // Validate email format
+          const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+          if (!emailRegex.test(attendeeData.email)) {
+            throw new Error('Invalid email format');
+          }
+
+          // Validate email confirmation
+          if (attendeeData.email !== attendeeData.confirm_email) {
+            throw new Error('Email and Confirm Email do not match');
+          }
+
+          // Validate photo URLs
+          const urlRegex = /^https?:\/\/.+/;
+          if (attendeeData.face_photo_url && !urlRegex.test(attendeeData.face_photo_url)) {
+            throw new Error('Face Photo URL must be a valid URL starting with http:// or https://');
+          }
+          if (attendeeData.id_photo_url && !urlRegex.test(attendeeData.id_photo_url)) {
+            throw new Error('ID Photo URL must be a valid URL starting with http:// or https://');
+          }
+
+          // Validate attendee type
+          if (!attendeeTypes.includes(attendeeData.attendee_type)) {
+            throw new Error(`Invalid attendee type: ${attendeeData.attendee_type}`);
+          }
+
+          // Validate age (must be 18+)
+          if (attendeeData.date_of_birth) {
+            const dob = new Date(attendeeData.date_of_birth);
+            const today = new Date();
+            let age = today.getFullYear() - dob.getFullYear();
+            const m = today.getMonth() - dob.getMonth();
+            if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) {
+              age--;
+            }
+            if (age < 18) {
+              throw new Error('Attendee must be at least 18 years old');
+            }
+          }
+
+          // Validate English-only fields
+          const englishOnlyFields = ['first_name', 'last_name', 'organization', 'job_title', 'work_address', 'work_city'];
+          const englishOnlyRegex = /^[A-Za-z0-9\s&.\-,()\/]*$/;
+          
+          for (const field of englishOnlyFields) {
+            if (attendeeData[field] && !englishOnlyRegex.test(attendeeData[field])) {
+              throw new Error(`${field.replace(/_/g, ' ')} must contain only English characters`);
+            }
+          }
+
+          // Remove confirm_email before saving
+          delete attendeeData.confirm_email;
+
+          // Set default values
+          attendeeData.status = isAdminUser ? 'pending' : 'approved';
+          attendeeData.registration_method = 'manual'; // Use 'manual' as 'bulk' is not allowed by DB constraint
+          attendeeData.registered_by = currentUser?.id;
+
+          processedAttendees.push(attendeeData);
+
+        } catch (error) {
+          validationErrors.push(`Row ${rowNumber}: ${error.message}`);
+        }
+      }
+
+      // If there are validation errors, stop and show them
+      if (validationErrors.length > 0) {
+        throw new Error(`Validation failed:\n${validationErrors.slice(0, 5).join('\n')}${validationErrors.length > 5 ? `\n... and ${validationErrors.length - 5} more errors` : ''}`);
+      }
+
+      // Create attendees in database
+      for (const attendeeData of processedAttendees) {
+        try {
+          const createdAttendee = await Attendee.create(attendeeData);
+          createdAttendees.push(createdAttendee);
+
+          // Send welcome email for approved attendees
+          if (attendeeData.status === 'approved') {
+            try {
+              await sendWelcomeEmail({ 
+                attendeeData: createdAttendee
+              });
+            } catch (emailError) {
+              console.warn(`Failed to send welcome email to ${attendeeData.email}:`, emailError);
+            }
+          }
+
+          // Send registration confirmation email
+          try {
+            const { data: template, error: templateError } = await supabase
+              .from('email_templates')
+              .select('*')
+              .eq('name', 'registration_confirmation')
+              .eq('is_active', true)
+              .single();
+            
+            if (!templateError && template) {
+              let subject = template.subject;
+              let html = template.body
+                .replace(/{{title}}/g, attendeeData.title || '')
+                .replace(/{{first_name}}/g, attendeeData.first_name || '')
+                .replace(/{{last_name}}/g, attendeeData.last_name || '')
+                .replace(/{{email}}/g, attendeeData.email || '')
+                .replace(/{{organization}}/g, attendeeData.organization || '')
+                .replace(/{{job_title}}/g, attendeeData.job_title || '')
+                .replace(/{{attendee_type}}/g, attendeeData.attendee_type || '')
+                .replace(/{{is_approved}}/g, attendeeData.status === 'approved' ? 'true' : 'false');
+              
+              await emailService.send({
+                to: attendeeData.email,
+                subject: subject,
+                html: html
+              });
+            }
+          } catch (emailError) {
+            console.warn(`Failed to send confirmation email to ${attendeeData.email}:`, emailError);
+          }
+
+        } catch (error) {
+          // If creation fails, rollback all created attendees
+          console.error(`Failed to create attendee ${attendeeData.email}:`, error);
+          
+          // Delete all previously created attendees
+          for (const createdAttendee of createdAttendees) {
+            try {
+              await Attendee.delete(createdAttendee.id);
+            } catch (deleteError) {
+              console.error('Failed to rollback attendee:', deleteError);
+            }
+          }
+          
+          throw new Error(`Failed to create attendee ${attendeeData.email}: ${error.message}`);
+        }
+      }
+
+      // Update user's used slots if not admin
+      if (!isAdminUser && currentUser) {
+        const newUsedSlots = { ...currentUser.used_slots };
+        
+        Object.entries(attendeeTypeCounts).forEach(([attendeeType, count]) => {
+          newUsedSlots[attendeeType] = (newUsedSlots[attendeeType] || 0) + count;
+        });
+        
+        await User.updateMyUserData({ used_slots: newUsedSlots });
+        await loadCurrentUser();
+      }
+
+      toast({
+        title: "Bulk Upload Successful",
+        description: `Successfully created ${createdAttendees.length} attendees. Confirmation emails have been sent.`,
+        variant: "success"
+      });
+
+      // Reset file input
+      event.target.value = '';
+
+    } catch (error) {
+      console.error('Bulk upload failed:', error);
+      
+      // Rollback any created attendees
+      for (const createdAttendee of createdAttendees) {
+        try {
+          await Attendee.delete(createdAttendee.id);
+        } catch (deleteError) {
+          console.error('Failed to rollback attendee:', deleteError);
+        }
+      }
+
+      toast({
+        title: "Bulk Upload Failed",
+        description: error.message,
+        variant: "destructive"
+      });
+
+      // Reset file input
+      event.target.value = '';
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -625,23 +1148,55 @@ export default function RegistrationPage() {
             </Card>
           ) : (
             <>
-              <div className="flex items-center gap-4 mb-6">
-                {(isAdmin || editingId) && (
-                  <Button variant="outline" size="icon" onClick={() => navigate(createPageUrl("Attendees"))}>
-                    <ArrowLeft className="w-4 h-4" />
-                  </Button>
-                )}
-                <div>
-                  <h1 className="text-3xl font-bold text-gray-900">
-                    {editingId ? 'Edit Attendee' : 'Create Single Attendee'}
-                  </h1>
-                  <p className="text-gray-500 mt-1">
-                    {editingId ? 'Update the details for this attendee.' : 'Register a new forum attendee.'}
-                  </p>
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-4">
+                  {(isAdmin || editingId) && (
+                    <Button variant="outline" size="icon" onClick={() => navigate(createPageUrl("Attendees"))}>
+                      <ArrowLeft className="w-4 h-4" />
+                    </Button>
+                  )}
+                  <div>
+                    <h1 className="text-3xl font-bold text-gray-900">
+                      {editingId ? 'Edit Attendee' : 'Create Single Attendee'}
+                    </h1>
+                    <p className="text-gray-500 mt-1">
+                      {editingId ? 'Update the details for this attendee.' : 'Register a new forum attendee.'}
+                    </p>
+                  </div>
                 </div>
+                
+                {/* Bulk Upload Buttons - Only show for Users (not Admin/Super User) */}
+                {currentUser?.system_role === 'User' && !editingId && (
+                  <div className="flex items-center gap-3">
+                    <Button 
+                      variant="outline" 
+                      className="flex items-center gap-2"
+                      onClick={handleDownloadTemplate}
+                    >
+                      <Download className="w-4 h-4" />
+                      Download Template
+                    </Button>
+            <Button 
+              variant="outline" 
+              className="flex items-center gap-2"
+              onClick={() => document.getElementById('bulk-upload-input').click()}
+              disabled={isUploading}
+            >
+              <Upload className="w-4 h-4" />
+              {isUploading ? 'Uploading...' : 'Bulk Upload'}
+            </Button>
+            <input
+              id="bulk-upload-input"
+              type="file"
+              accept=".xlsx,.xls"
+              onChange={handleBulkUpload}
+              style={{ display: 'none' }}
+            />
+                  </div>
+                )}
               </div>
 
-              {!isAdmin && !editingId && availableTypes.length === 0 && (
+              {!isAdmin && !editingId && availableTypes.length > 0 && availableTypes.every(type => availableSlots[type] === 0) && (
                 <Card className="mb-6 bg-orange-50 border-orange-200">
                   <CardContent className="p-8 text-center">
                     <AlertCircle className="h-12 w-12 text-orange-600 mx-auto mb-4" />
@@ -658,15 +1213,18 @@ export default function RegistrationPage() {
                   </CardHeader>
                   <CardContent>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {Object.entries(availableSlots).filter(([, remaining]) => remaining > 0).map(([type, remaining]) => (
+                      {Object.entries(availableSlots).map(([type, remaining]) => (
                         <Button
                           key={type}
                           variant={formData.attendee_type === type ? "default" : "outline"}
-                          className="p-6 h-auto flex-col gap-2"
-                          onClick={() => handleAttendeeTypeChange(type)}
+                          className={`p-6 h-auto flex-col gap-2 ${remaining === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
+                          onClick={() => remaining > 0 && handleAttendeeTypeChange(type)}
+                          disabled={remaining === 0}
                         >
                           <span className="font-semibold text-lg">{type}</span>
-                          <Badge variant="secondary">{remaining} Available</Badge>
+                          <Badge variant={remaining === 0 ? "destructive" : "secondary"}>
+                            {remaining} Available
+                          </Badge>
                         </Button>
                       ))}
                     </div>

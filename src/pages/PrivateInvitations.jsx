@@ -654,13 +654,13 @@ export default function PrivateInvitations() {
                     )}
                   </div>
                 </div>
-              </div>
+            </div>
 
               {/* Action Buttons */}
               <div className="flex justify-end gap-3 pt-4 border-t">
-                <Link to={createPageUrl("Attendees")}>
-                  <Button variant="outline"><ExternalLink className="w-4 h-4 mr-2" />View Full Profile</Button>
-                </Link>
+             <Link to={createPageUrl("Attendees")}>
+              <Button variant="outline"><ExternalLink className="w-4 h-4 mr-2" />View Full Profile</Button>
+             </Link>
                 <Button variant="outline" onClick={() => setShowAttendeeDialog(false)}>
                   Close
                 </Button>

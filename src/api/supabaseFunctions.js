@@ -500,6 +500,7 @@ export const createUserProfile = async (userId, userData) => {
         account_status: userData.account_status || 'active',
         registration_slots: userData.registration_slots || { "VIP": 0, "Media": 0, "Partner": 0, "Exhibitor": 0 },
         used_slots: userData.used_slots || { "VIP": 0, "Media": 0, "Partner": 0, "Exhibitor": 0 },
+        is_reset: false,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       })
@@ -529,7 +530,7 @@ export const createUserDirectly = async ({
   password, 
   companyName, 
   systemRole, 
-  userType, 
+  userType,
   registrationSlots,
   mobile = null,
   preferredName = null 
@@ -619,6 +620,42 @@ export const createUserDirectly = async ({
   }
 };
 
+// Update user access function
+export const updateUserAccess = async ({ userId, systemRole, hasAccess }) => {
+  try {
+    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? 'http://localhost:3000' : '');
+    
+    const response = await fetch(`${API_BASE_URL}/api/update-user-access`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        userId,
+        systemRole,
+        hasAccess
+      })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const result = await response.json();
+
+    if (!result.success) {
+      throw new Error(result.error || 'Failed to update user access');
+    }
+
+    return result;
+
+  } catch (error) {
+    console.error('Error in updateUserAccess:', error);
+    throw error;
+  }
+};
+
 // Delete user completely (from both database and authentication)
 export const deleteUserCompletely = async (userId) => {
   try {
@@ -686,6 +723,41 @@ export const verifyTurnstileToken = async (token, remoteip = null) => {
 
   } catch (error) {
     console.error('Error in verifyTurnstileToken:', error);
+    throw error;
+  }
+};
+
+// Update is_reset field for user
+export const updateIsReset = async (email) => {
+  try {
+    // Use API endpoint for updating is_reset field
+    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? 'http://localhost:3000' : '');
+    
+    const response = await fetch(`${API_BASE_URL}/api/update-is-reset`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        email
+      })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const result = await response.json();
+
+    if (!result.success) {
+      throw new Error(result.error || 'Failed to update is_reset field');
+    }
+
+    return result;
+
+  } catch (error) {
+    console.error('Error in updateIsReset:', error);
     throw error;
   }
 };

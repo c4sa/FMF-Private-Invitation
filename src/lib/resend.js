@@ -121,12 +121,64 @@ export const emailService = {
   },
 
   // Send new user request email
-  async sendNewUserRequestEmail({ to, subject, html }) {
+  async sendNewUserRequestEmail({ to, newUserData, subject, html }) {
     try {
+      let emailSubject = subject;
+      let emailHtml = html;
+      
+      // If subject and html are not provided, get from template
+      if (!subject || !html) {
+        const { supabase } = await import('../lib/supabase.js');
+        
+        const { data: templates, error: templateError } = await supabase
+          .from('email_templates')
+          .select('*')
+          .eq('name', 'new_user_request')
+          .eq('is_active', true)
+          .order('created_at', { ascending: false })
+          .limit(1);
+        
+        const template = templates?.[0];
+        
+        if (templateError || !template) {
+          console.error('Error fetching new_user_request template:', templateError);
+          throw new Error('New user request email template not found');
+        }
+        
+        emailSubject = template.subject;
+        emailHtml = template.body;
+        
+        // Replace template variables
+        const variables = {
+          '{{full_name}}': newUserData.full_name || '',
+          '{{email}}': newUserData.email || '',
+          '{{password}}': newUserData.password || '',
+          '{{company_name}}': newUserData.company_name || '',
+          '{{system_role}}': newUserData.system_role || '',
+          '{{user_type}}': newUserData.user_type || ''
+        };
+        
+        Object.entries(variables).forEach(([key, value]) => {
+          emailSubject = emailSubject.replace(new RegExp(key, 'g'), value);
+          emailHtml = emailHtml.replace(new RegExp(key, 'g'), value);
+        });
+        
+        // Handle registration slots if present
+        if (newUserData.registration_slots) {
+          const slotsHtml = Object.entries(newUserData.registration_slots)
+            .map(([key, value]) => `<p style="margin: 5px 0;"><strong>${key}:</strong> ${value}</p>`)
+            .join('');
+          emailHtml = emailHtml.replace(/{{#if registration_slots}}[\s\S]*?{{\/if}}/g, 
+            slotsHtml ? `<div style="margin-top: 15px;"><h4 style="margin: 0 0 10px 0; color: #1f2937;">Registration Slots:</h4>${slotsHtml}</div>` : '');
+        } else {
+          emailHtml = emailHtml.replace(/{{#if registration_slots}}[\s\S]*?{{\/if}}/g, '');
+        }
+      }
+      
       const result = await this.send({
         to: to,
-        subject: subject || 'New User Request - Future Minerals Forum',
-        html: html
+        subject: emailSubject,
+        html: emailHtml
       });
       
       return result;
@@ -137,12 +189,64 @@ export const emailService = {
   },
 
   // Send new user notification email
-  async sendNewUserNotificationEmail({ to, subject, html }) {
+  async sendNewUserNotificationEmail({ to, newUserData, subject, html }) {
     try {
+      let emailSubject = subject;
+      let emailHtml = html;
+      
+      // If subject and html are not provided, get from template
+      if (!subject || !html) {
+        const { supabase } = await import('../lib/supabase.js');
+        
+        const { data: templates, error: templateError } = await supabase
+          .from('email_templates')
+          .select('*')
+          .eq('name', 'new_user_notification')
+          .eq('is_active', true)
+          .order('created_at', { ascending: false })
+          .limit(1);
+        
+        const template = templates?.[0];
+        
+        if (templateError || !template) {
+          console.error('Error fetching new_user_notification template:', templateError);
+          throw new Error('New user notification email template not found');
+        }
+        
+        emailSubject = template.subject;
+        emailHtml = template.body;
+        
+        // Replace template variables
+        const variables = {
+          '{{full_name}}': newUserData.full_name || '',
+          '{{email}}': newUserData.email || '',
+          '{{password}}': newUserData.password || '',
+          '{{company_name}}': newUserData.company_name || '',
+          '{{system_role}}': newUserData.system_role || '',
+          '{{user_type}}': newUserData.user_type || ''
+        };
+        
+        Object.entries(variables).forEach(([key, value]) => {
+          emailSubject = emailSubject.replace(new RegExp(key, 'g'), value);
+          emailHtml = emailHtml.replace(new RegExp(key, 'g'), value);
+        });
+        
+        // Handle registration slots if present
+        if (newUserData.registration_slots) {
+          const slotsHtml = Object.entries(newUserData.registration_slots)
+            .map(([key, value]) => `<p style="margin: 5px 0;"><strong>${key}:</strong> ${value}</p>`)
+            .join('');
+          emailHtml = emailHtml.replace(/{{#if registration_slots}}[\s\S]*?{{\/if}}/g, 
+            slotsHtml ? `<div style="margin-top: 15px;"><h4 style="margin: 0 0 10px 0; color: #1f2937;">Registration Slots:</h4>${slotsHtml}</div>` : '');
+        } else {
+          emailHtml = emailHtml.replace(/{{#if registration_slots}}[\s\S]*?{{\/if}}/g, '');
+        }
+      }
+      
       const result = await this.send({
         to: to,
-        subject: subject || 'Your System Access Request - Future Minerals Forum',
-        html: html
+        subject: emailSubject,
+        html: emailHtml
       });
       
       return result;

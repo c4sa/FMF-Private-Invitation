@@ -83,7 +83,7 @@ export default function Dashboard() {
       setCurrentUser(user);
       
       // Check if profile is complete - all essential fields must be filled
-      const isProfileComplete = user.preferred_name && user.company_name && user.mobile && user.avatar_url;
+      const isProfileComplete = user.preferred_name && user.company_name && user.mobile && user.is_reset;
       if (!isProfileComplete) {
         setShowProfileModal(true);
       }
@@ -176,7 +176,7 @@ export default function Dashboard() {
 
   const handleProfileModalClose = () => {
     // Check if profile is complete before allowing close
-    const isProfileComplete = currentUser?.preferred_name && currentUser?.company_name && currentUser?.mobile && currentUser?.avatar_url;
+    const isProfileComplete = currentUser?.preferred_name && currentUser?.company_name && currentUser?.mobile && currentUser?.is_reset;
     if (!isProfileComplete) {
       // Don't close the modal, just show the toast
       return;

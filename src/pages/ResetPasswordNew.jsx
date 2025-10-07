@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { ArrowLeft, Lock, Eye, EyeOff, Mail, Shield, AlertCircle } from 'lucide-react';
-import { sendOTP, verifyOTP } from '@/api/functions';
+import { sendOTP, verifyOTP, updateIsReset } from '@/api/functions';
 import { supabase } from '@/lib/supabase';
 
 export default function ResetPassword() {
@@ -81,13 +81,39 @@ export default function ResetPassword() {
     }
 
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(formData.email, {
-        redirectTo: `${window.location.origin}/reset-password-confirm`
+      // Use the API endpoint to update password
+      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? 'http://localhost:3000' : '');
+      
+      const response = await fetch(`${API_BASE_URL}/api/update-password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password
+        })
       });
 
-      if (error) {
-        setError(error.message);
+      if (!response.ok) {
+        const errorData = await response.json();
+        setError(errorData.error || 'Failed to reset password');
         return;
+      }
+
+      const result = await response.json();
+      
+      if (!result.success) {
+        setError(result.message || 'Failed to reset password');
+        return;
+      }
+
+      // Now update the is_reset field
+      try {
+        await updateIsReset(formData.email);
+      } catch (resetError) {
+        // Don't fail the password reset if is_reset update fails
+        console.warn('Password reset successful but failed to update is_reset status:', resetError);
       }
 
       setStep('success');

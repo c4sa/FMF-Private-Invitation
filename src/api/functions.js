@@ -22,7 +22,9 @@ import {
   createUserProfile,
   createUserDirectly,
   deleteUserCompletely,
-  verifyTurnstileToken
+  verifyTurnstileToken,
+  updateIsReset,
+  updateUserAccess
 } from './supabaseFunctions.js';
 
 // Export all functions
@@ -50,7 +52,9 @@ export {
   createUserProfile,
   createUserDirectly,
   deleteUserCompletely,
-  verifyTurnstileToken
+  verifyTurnstileToken,
+  updateIsReset,
+  updateUserAccess
 };
   
   

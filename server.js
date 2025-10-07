@@ -118,6 +118,61 @@ app.post('/api/send-email', async (req, res) => {
   }
 });
 
+// Update user access endpoint
+app.post('/api/update-user-access', async (req, res) => {
+  try {
+    const { userId, systemRole, hasAccess } = req.body;
+
+    // Validate required fields
+    if (!userId || !systemRole) {
+      return res.status(400).json({ 
+        error: 'Missing required fields: userId, systemRole' 
+      });
+    }
+
+    // Determine has_access based on system role and checkbox
+    let accessValue;
+    if (systemRole === 'Admin') {
+      accessValue = true; // Admins always have access
+    } else if (systemRole === 'Super User') {
+      accessValue = hasAccess === true; // Super Users depend on checkbox
+    } else {
+      accessValue = false; // Regular Users never have access
+    }
+
+    // Update the user's has_access field
+    const { data: updatedUser, error: updateError } = await supabase
+      .from('users')
+      .update({ 
+        has_access: accessValue,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', userId)
+      .select()
+      .single();
+
+    if (updateError) {
+      console.error('Error updating user access:', updateError);
+      return res.status(400).json({ 
+        error: `Failed to update user access: ${updateError.message}` 
+      });
+    }
+
+    return res.status(200).json({ 
+      success: true,
+      user: updatedUser,
+      message: 'User access updated successfully'
+    });
+
+  } catch (error) {
+    console.error('Error in update-user-access API:', error);
+    return res.status(500).json({ 
+      error: 'Internal server error',
+      details: error.message 
+    });
+  }
+});
+
 // Password update endpoint
 app.post('/api/update-password', async (req, res) => {
   try {
@@ -163,6 +218,51 @@ app.post('/api/update-password', async (req, res) => {
   }
 });
 
+// Update is_reset field endpoint
+app.post('/api/update-is-reset', async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ error: 'Email is required' });
+    }
+
+    // Find the user in the users table by email
+    const { data: userRecord, error: findUserError } = await supabase
+      .from('users')
+      .select('id, email, is_reset')
+      .eq('email', email)
+      .single();
+
+    if (findUserError) {
+      console.error('Error finding user in users table:', findUserError);
+      return res.status(404).json({ error: 'User not found in users table' });
+    }
+
+    // Update the is_reset field
+    const { data: updateData, error: userUpdateError } = await supabase
+      .from('users')
+      .update({ is_reset: true })
+      .eq('id', userRecord.id)
+      .select();
+
+    if (userUpdateError) {
+      console.error('Error updating is_reset field:', userUpdateError);
+      return res.status(500).json({ error: 'Failed to update is_reset field' });
+    }
+
+    return res.status(200).json({ 
+      success: true, 
+      message: 'is_reset field updated successfully',
+      data: updateData
+    });
+
+  } catch (error) {
+    console.error('Update is_reset error:', error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // Create user endpoint
 app.post('/api/create-user', async (req, res) => {
   try {
@@ -175,7 +275,8 @@ app.post('/api/create-user', async (req, res) => {
       userType, 
       registrationSlots,
       mobile = null,
-      preferredName = null 
+      preferredName = null,
+      hasAccess = false
     } = req.body;
 
     // Validate required fields
@@ -231,6 +332,7 @@ app.post('/api/create-user', async (req, res) => {
         Exhibitor: 0,
         Media: 0
       },
+      has_access: systemRole === 'Admin' ? true : (systemRole === 'Super User' ? hasAccess : false),
       account_status: 'active',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
@@ -515,6 +617,8 @@ app.listen(PORT, () => {
   console.log(`👤 User creation API available at http://localhost:${PORT}/api/create-user`);
   console.log(`🗑️ User deletion API available at http://localhost:${PORT}/api/delete-user`);
   console.log(`🛡️ Turnstile verification API available at http://localhost:${PORT}/api/verify-turnstile`);
+  console.log(`🔄 Update is_reset field API available at http://localhost:${PORT}/api/update-is-reset`);
+  console.log(`🔑 Update user access API available at http://localhost:${PORT}/api/update-user-access`);
   
   if (!smtpConfig.user || !smtpConfig.pass) {
     console.log('⚠️  SMTP not configured - emails will be simulated');
