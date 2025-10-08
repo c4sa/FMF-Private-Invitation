@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { SystemSetting } from '@/api/entities';
+import { updateEmailTemplateStatus } from '@/api/functions';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
@@ -20,6 +21,61 @@ const initialSettings = {
     isEnabled: true, isLoading: true, id: null, key: 'send_modification_request_email',
     label: 'Send Registration Modification Requests',
     description: 'Sent to attendees when admins request changes to their registration details.'
+  },
+  user_role_changed: {
+    isEnabled: true, isLoading: true, id: null, key: 'send_user_role_changed_email',
+    label: 'User Role Changed Notifications',
+    description: 'Sent to administrators when a user\'s role is changed in the system.'
+  },
+  user_login: {
+    isEnabled: true, isLoading: true, id: null, key: 'send_user_login_email',
+    label: 'User Login Notifications',
+    description: 'Sent to administrators when a user logs into the system.'
+  },
+  new_user_request: {
+    isEnabled: true, isLoading: true, id: null, key: 'send_new_user_request_email',
+    label: 'New User Request Notifications',
+    description: 'Sent to administrators when a new user is requested for the system.'
+  },
+  user_updated: {
+    isEnabled: true, isLoading: true, id: null, key: 'send_user_updated_email',
+    label: 'User Updated Notifications',
+    description: 'Sent to administrators when a system user is updated.'
+  },
+  registration_confirmation: {
+    isEnabled: true, isLoading: true, id: null, key: 'send_registration_confirmation_email',
+    label: 'Registration Confirmation Emails',
+    description: 'Sent to attendees when their registration is confirmed.'
+  },
+  attendee_status_change: {
+    isEnabled: true, isLoading: true, id: null, key: 'send_attendee_status_change_email',
+    label: 'Attendee Status Change Notifications',
+    description: 'Sent to attendees when their registration status changes.'
+  },
+  password_reset: {
+    isEnabled: true, isLoading: true, id: null, key: 'send_password_reset_email',
+    label: 'Password Reset Emails',
+    description: 'Sent to users when they request a password reset.'
+  },
+  send_otp: {
+    isEnabled: true, isLoading: true, id: null, key: 'send_otp_email',
+    label: 'OTP Verification Emails',
+    description: 'Sent to users with verification codes for various processes.'
+  },
+  user_created: {
+    isEnabled: true, isLoading: true, id: null, key: 'send_user_created_email',
+    label: 'New User Created Notifications',
+    description: 'Sent to administrators when a new system user is created.'
+  },
+  new_user_notification: {
+    isEnabled: true, isLoading: true, id: null, key: 'send_new_user_notification_email',
+    label: 'New User Access Request Notifications',
+    description: 'Sent to users when a system access request is submitted on their behalf.'
+  },
+  registration_rejection: {
+    isEnabled: true, isLoading: true, id: null, key: 'send_registration_rejection_email',
+    label: 'Registration Rejection Emails',
+    description: 'Sent to attendees when their registration is rejected.'
   },
 };
 
@@ -77,6 +133,7 @@ export default function EmailActivationSettings() {
     const newValue = String(checked);
 
     try {
+      // Update system settings (original functionality)
       if (settingToUpdate.id) {
         await SystemSetting.update(settingToUpdate.id, { value: newValue });
       } else {
@@ -90,6 +147,16 @@ export default function EmailActivationSettings() {
           [settingKey]: { ...prev[settingKey], id: newSetting.id }
         }));
       }
+
+      // Update email template status in email_templates table
+      try {
+        await updateEmailTemplateStatus(settingKey, checked);
+        console.log(`Successfully updated email template ${settingKey} status to ${checked}`);
+      } catch (templateError) {
+        console.warn(`Failed to update email template ${settingKey} status:`, templateError);
+        // Don't fail the entire operation if template update fails
+      }
+
       toast({
         title: "Setting Saved",
         description: `${settingToUpdate.label} ${checked ? 'enabled' : 'disabled'}.`,
@@ -112,9 +179,9 @@ export default function EmailActivationSettings() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Settings</CardTitle>
+        <CardTitle>Email Activation Settings</CardTitle>
         <CardDescription>
-          Manage various system settings, including email automation.
+          Enable or disable various email notifications and communications sent by the system.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">

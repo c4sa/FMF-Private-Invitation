@@ -14,6 +14,12 @@ export const sendWelcomeEmail = async ({ attendeeData }) => {
     if (!template) {
       throw new Error('Welcome email template not found')
     }
+
+    // Check if the email template is active
+    if (!template.is_active) {
+      console.log('Welcome email template is disabled, skipping email send')
+      return { success: true, message: 'Email template is disabled' }
+    }
     
     let subject = template.subject
     let html = template.body
@@ -40,6 +46,12 @@ export const sendInvitationEmail = async ({ to_email, invitation_code }) => {
     
     if (!template) {
       throw new Error('Invitation email template not found')
+    }
+
+    // Check if the email template is active
+    if (!template.is_active) {
+      console.log('Invitation email template is disabled, skipping email send')
+      return { success: true, message: 'Email template is disabled' }
     }
     
     const invitationUrl = `${window.location.origin}/PublicRegistration?invitation_code=${invitation_code}`
@@ -74,9 +86,29 @@ export const sendModificationRequestEmail = async ({ to, subject, body }) => {
 
 export const sendPasswordResetInstructions = async ({ email, resetUrl }) => {
   try {
+    // Get password reset email template
+    const templates = await EmailTemplate.filter({ name: 'password_reset' })
+    const template = templates?.[0]
+    
+    if (!template) {
+      throw new Error('Password reset email template not found')
+    }
+
+    // Check if the email template is active
+    if (!template.is_active) {
+      console.log('Password reset email template is disabled, skipping email send')
+      return { success: true, message: 'Email template is disabled' }
+    }
+
+    let subject = template.subject
+    let html = template.body
+      .replace(/{{user_name}}/g, email.split('@')[0] || 'User')
+      .replace(/{{reset_url}}/g, resetUrl)
+    
     return await emailService.sendPasswordResetEmail({
       to: email,
-      resetUrl
+      subject,
+      html
     })
   } catch (error) {
     console.error('Error sending password reset email:', error)
@@ -758,6 +790,42 @@ export const updateIsReset = async (email) => {
 
   } catch (error) {
     console.error('Error in updateIsReset:', error);
+    throw error;
+  }
+};
+
+// Update email template status (is_active field)
+export const updateEmailTemplateStatus = async (templateName, isActive) => {
+  try {
+    // Use API endpoint for updating email template status
+    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? 'http://localhost:3000' : '');
+    
+    const response = await fetch(`${API_BASE_URL}/api/update-email-template-status`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        templateName,
+        isActive
+      })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const result = await response.json();
+
+    if (!result.success) {
+      throw new Error(result.error || 'Failed to update email template status');
+    }
+
+    return result;
+
+  } catch (error) {
+    console.error('Error in updateEmailTemplateStatus:', error);
     throw error;
   }
 };

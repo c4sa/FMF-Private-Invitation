@@ -286,6 +286,50 @@ app.post('/api/update-is-reset', async (req, res) => {
   }
 });
 
+// Update email template status endpoint
+app.post('/api/update-email-template-status', async (req, res) => {
+  try {
+    const { templateName, isActive } = req.body;
+
+    if (!templateName || typeof isActive !== 'boolean') {
+      return res.status(400).json({ error: 'Template name and isActive status are required' });
+    }
+
+    // Update the is_active field in the email_templates table
+    console.log('Attempting to update email template status:', templateName, 'to', isActive);
+    
+    const { data: updateData, error: updateError } = await supabase
+      .from('email_templates')
+      .update({ is_active: isActive })
+      .eq('name', templateName)
+      .select();
+
+    if (updateError) {
+      console.error('Error updating email template status:', updateError);
+      console.error('Error details:', JSON.stringify(updateError, null, 2));
+      return res.status(500).json({ error: 'Failed to update email template status' });
+    }
+
+    console.log('Successfully updated email template status for:', templateName);
+    console.log('Updated data:', JSON.stringify(updateData, null, 2));
+    
+    if (!updateData || updateData.length === 0) {
+      console.warn('No email templates were updated - template might not exist');
+      return res.status(404).json({ error: 'Email template not found' });
+    }
+
+    return res.status(200).json({ 
+      success: true, 
+      message: 'Email template status updated successfully',
+      data: updateData
+    });
+
+  } catch (error) {
+    console.error('Email template status update error:', error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // Create user endpoint
 app.post('/api/create-user', async (req, res) => {
   try {
@@ -642,6 +686,7 @@ app.listen(PORT, () => {
   console.log(`🛡️ Turnstile verification API available at http://localhost:${PORT}/api/verify-turnstile`);
   console.log(`🔄 Update is_reset field API available at http://localhost:${PORT}/api/update-is-reset`);
   console.log(`🔑 Update user access API available at http://localhost:${PORT}/api/update-user-access`);
+  console.log(`📝 Update email template status API available at http://localhost:${PORT}/api/update-email-template-status`);
   
   if (!smtpConfig.user || !smtpConfig.pass) {
     console.log('⚠️  SMTP not configured - emails will be simulated');

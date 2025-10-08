@@ -24,7 +24,8 @@ import {
   deleteUserCompletely,
   verifyTurnstileToken,
   updateIsReset,
-  updateUserAccess
+  updateUserAccess,
+  updateEmailTemplateStatus
 } from './supabaseFunctions.js';
 
 // Export all functions
@@ -54,7 +55,8 @@ export {
   deleteUserCompletely,
   verifyTurnstileToken,
   updateIsReset,
-  updateUserAccess
+  updateUserAccess,
+  updateEmailTemplateStatus
 };
   
   

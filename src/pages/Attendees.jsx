@@ -287,6 +287,17 @@ export default function Attendees() {
         throw new Error('Modification request email template not found');
       }
 
+      // Check if the email template is active
+      if (!template.is_active) {
+        console.log('Modification request email template is disabled, skipping email send');
+        toast({
+          title: "Email Disabled",
+          description: "Modification request email template is currently disabled.",
+          variant: "warning",
+        });
+        return;
+      }
+
       let emailSubject = template.subject;
       let emailBody = template.body
         .replace(/{{first_name}}/g, selectedAttendee.first_name || '')
