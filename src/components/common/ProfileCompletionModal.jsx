@@ -87,10 +87,12 @@ export default function ProfileCompletionModal({ isOpen, currentUser, onUserUpda
 
     setIsSaving(true);
     try {
-      await User.updateMyUserData(formData);
+      // Filter out fields that shouldn't be sent to the database
+      const { confirmPassword, password, ...userData } = formData;
+      await User.updateMyUserData(userData);
       
       // Update the current user state
-      const updatedUser = { ...currentUser, ...formData };
+      const updatedUser = { ...currentUser, ...userData };
       onUserUpdate(updatedUser);
       
       toast({
