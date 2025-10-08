@@ -257,7 +257,7 @@ export default function Attendees() {
       }
 
       // Create modification link with production domain
-      const modificationUrl = `https://app.futuremineralsforum.com.sa${createPageUrl(`PublicRegistration?modify=${selectedAttendee.id}`)}`;
+      const modificationUrl = `https://www.pis.futuremineralsforum.com.sa${createPageUrl(`PublicRegistration?modify=${selectedAttendee.id}`)}`;
       
       // Create attendee info table HTML
       const attendeeInfoHtml = `
