@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { User } from '@/api/entities';
 import { useToast } from '@/components/common/Toast';
-import { Save, X, KeyRound } from 'lucide-react';
+import { Save, X, KeyRound, Eye, EyeOff } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import ProfilePhotoUpload from '../user/ProfilePhotoUpload';
@@ -16,10 +16,15 @@ export default function ProfileCompletionModal({ isOpen, currentUser, onUserUpda
     preferred_name: '',
     company_name: '',
     mobile: '',
-    avatar_url: ''
+    avatar_url: '',
+    password: '',
+    confirmPassword: ''
   });
   const [isSaving, setIsSaving] = useState(false);
+  const [isResettingPassword, setIsResettingPassword] = useState(false);
   const [toastShown, setToastShown] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -29,7 +34,9 @@ export default function ProfileCompletionModal({ isOpen, currentUser, onUserUpda
         preferred_name: currentUser.preferred_name || '',
         company_name: currentUser.company_name || '',
         mobile: currentUser.mobile || '',
-        avatar_url: currentUser.avatar_url || ''
+        avatar_url: currentUser.avatar_url || '',
+        password: '',
+        confirmPassword: ''
       });
     }
   }, [currentUser]);
@@ -129,8 +136,98 @@ export default function ProfileCompletionModal({ isOpen, currentUser, onUserUpda
     }
   };
 
-  const handleResetPassword = () => {
-    navigate('/reset-password');
+  const handleResetPassword = async () => {
+    if (!formData.password.trim()) {
+      toast({
+        title: "Error",
+        description: "Password is required.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!formData.confirmPassword.trim()) {
+      toast({
+        title: "Error",
+        description: "Confirm password is required.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (formData.password !== formData.confirmPassword) {
+      toast({
+        title: "Error",
+        description: "Passwords do not match.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (formData.password.length < 8) {
+      toast({
+        title: "Error",
+        description: "Password must be at least 8 characters long.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsResettingPassword(true);
+    try {
+      // Use the API endpoint to update password
+      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? 'http://localhost:3000' : '');
+      
+      const response = await fetch(`${API_BASE_URL}/api/update-password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: currentUser.email,
+          password: formData.password
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        toast({
+          title: "Error",
+          description: errorData.error || 'Failed to reset password',
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const result = await response.json();
+      
+      if (!result.success) {
+        toast({
+          title: "Error",
+          description: result.message || 'Failed to reset password',
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Update the current user state to reflect password reset
+      const updatedUser = { ...currentUser, is_reset: true };
+      onUserUpdate(updatedUser);
+      
+      toast({
+        title: "Success",
+        description: "Password reset successfully!",
+        variant: "success",
+      });
+    } catch (error) {
+      console.error("Failed to reset password:", error);
+      toast({
+        title: "Error",
+        description: "Failed to reset password. Please try again.",
+        variant: "destructive",
+      });
+    }
+    setIsResettingPassword(false);
   };
 
   return (
@@ -263,18 +360,86 @@ export default function ProfileCompletionModal({ isOpen, currentUser, onUserUpda
               </p>
             </div>
             
-            <div className="flex justify-center">
-              <Button 
-                onClick={handleResetPassword}
-                className={`flex items-center gap-2 ${currentUser?.is_reset 
-                  ? 'bg-green-600 hover:bg-green-700' 
-                  : 'bg-red-600 hover:bg-red-700'
-                }`}
-              >
-                <KeyRound className="w-4 h-4" />
-                {currentUser?.is_reset ? 'Password Already Reset' : 'Reset Password (Required)'}
-              </Button>
-            </div>
+            {!currentUser?.is_reset && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Reset Password</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <Label htmlFor="password">New Password *</Label>
+                    <div className="relative">
+                      <Input
+                        id="password"
+                        type={showPassword ? 'text' : 'password'}
+                        value={formData.password}
+                        onChange={(e) => handleInputChange('password', e.target.value)}
+                        placeholder="Enter new password"
+                        className="pr-10"
+                        minLength={8}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2"
+                      >
+                        {showPassword ? <EyeOff className="h-4 w-4 text-gray-400" /> : <Eye className="h-4 w-4 text-gray-400" />}
+                      </button>
+                    </div>
+                    {!formData.password.trim() && (
+                      <p className="text-xs text-red-500 mt-1">This field is required</p>
+                    )}
+                  </div>
+
+                  <div>
+                    <Label htmlFor="confirmPassword">Confirm New Password *</Label>
+                    <div className="relative">
+                      <Input
+                        id="confirmPassword"
+                        type={showConfirmPassword ? 'text' : 'password'}
+                        value={formData.confirmPassword}
+                        onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
+                        placeholder="Confirm new password"
+                        className="pr-10"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2"
+                      >
+                        {showConfirmPassword ? <EyeOff className="h-4 w-4 text-gray-400" /> : <Eye className="h-4 w-4 text-gray-400" />}
+                      </button>
+                    </div>
+                    {!formData.confirmPassword.trim() && (
+                      <p className="text-xs text-red-500 mt-1">This field is required</p>
+                    )}
+                    {formData.password && formData.confirmPassword && formData.password !== formData.confirmPassword && (
+                      <p className="text-xs text-red-500 mt-1">Passwords do not match</p>
+                    )}
+                  </div>
+
+                  <div className="flex justify-center">
+                    <Button 
+                      onClick={handleResetPassword}
+                      disabled={isResettingPassword || !formData.password.trim() || !formData.confirmPassword.trim() || formData.password !== formData.confirmPassword}
+                      className="bg-red-600 hover:bg-red-700"
+                    >
+                      {isResettingPassword ? (
+                        <div className="flex items-center gap-2">
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                          Resetting...
+                        </div>
+                      ) : (
+                        <>
+                          <KeyRound className="w-4 h-4 mr-2" />
+                          Reset Password
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
             
             <div className="flex justify-center">
               <Button 

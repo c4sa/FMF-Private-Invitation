@@ -81,42 +81,9 @@ export default function ResetPassword() {
     }
 
     try {
-      // Use the API endpoint to update password
-      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? 'http://localhost:3000' : '');
-      
-      const response = await fetch(`${API_BASE_URL}/api/update-password`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: formData.email,
-          password: formData.password
-        })
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        setError(errorData.error || 'Failed to reset password');
-        return;
-      }
-
-      const result = await response.json();
-      
-      if (!result.success) {
-        setError(result.message || 'Failed to reset password');
-        return;
-      }
-
-      // Now update the is_reset field
-      try {
-        await updateIsReset(formData.email);
-      } catch (resetError) {
-        // Don't fail the password reset if is_reset update fails
-        console.warn('Password reset successful but failed to update is_reset status:', resetError);
-      }
-
-      setStep('success');
+      // Password reset functionality has been moved to ProfileCompletionModal
+      // This screen is no longer used for password reset
+      setError('Password reset functionality has been moved to the profile completion modal.');
     } catch (err) {
       setError('An unexpected error occurred. Please try again.');
     } finally {

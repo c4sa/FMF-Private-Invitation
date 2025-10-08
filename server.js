@@ -207,6 +207,29 @@ app.post('/api/update-password', async (req, res) => {
       return res.status(500).json({ error: updateError.message });
     }
 
+    // Update the is_reset field in the users table using user ID
+    console.log('Attempting to update is_reset field for user ID:', user.id, 'email:', email);
+    
+    const { data: updateData, error: resetError } = await supabase
+      .from('users')
+      .update({ is_reset: true })
+      .eq('id', user.id)
+      .select();
+
+    if (resetError) {
+      console.error('Error updating is_reset field:', resetError);
+      console.error('Error details:', JSON.stringify(resetError, null, 2));
+      // Don't fail the password update if is_reset update fails
+      console.warn('Password updated successfully but failed to update is_reset status');
+    } else {
+      console.log('Successfully updated is_reset field for user:', email);
+      console.log('Updated data:', JSON.stringify(updateData, null, 2));
+      
+      if (!updateData || updateData.length === 0) {
+        console.warn('No rows were updated - user might not exist in users table');
+      }
+    }
+
     return res.status(200).json({ 
       success: true, 
       message: 'Password updated successfully' 
