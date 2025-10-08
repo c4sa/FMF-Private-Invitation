@@ -168,11 +168,27 @@ export default function AuthenticatedLayout({ children, currentPageName }) {
   }
 
   const systemUserType = currentUser?.system_role || 'User';
-  let navigationItems = userNavigationItems;
+  
+  // Create a comprehensive list of all possible navigation items
+  const allNavigationItems = [
+    { title: "Dashboard", url: createPageUrl("Dashboard"), icon: LayoutDashboard, module: "dashboard" },
+    { title: "Private Invitations", url: createPageUrl("PrivateInvitations"), icon: Ticket, module: "private_invitations" },
+    { title: "Attendees", url: createPageUrl("Attendees"), icon: Users, module: "attendees" },
+    { title: "Registration", url: createPageUrl("Registration"), icon: UserPlus, module: "registration" },
+    { title: "Partnership Management", url: createPageUrl("PartnershipManagement"), icon: Briefcase, module: "partnership_management" },
+    { title: "Analytics/Reports", url: createPageUrl("AnalyticsDashboard"), icon: BarChart, module: "analytics" },
+    { title: "System Users", url: createPageUrl("SystemUsers"), icon: GanttChartSquare, module: "system_users" },
+    { title: "Requests", url: createPageUrl("Requests"), icon: Bell, module: "requests" },
+    { title: "Settings", url: createPageUrl("Settings"), icon: SettingsIcon, module: "settings" },
+    { title: "My Access", url: createPageUrl("AccessLevels"), icon: ClipboardList, module: "access_levels" }
+  ];
+
+  // Get default navigation items for this user type
+  let defaultNavigationItems = userNavigationItems;
   if (systemUserType === 'Admin') {
-    navigationItems = adminNavigationItems;
+    defaultNavigationItems = adminNavigationItems;
   } else if (systemUserType === 'Super User') {
-    navigationItems = superUserNavigationItems;
+    defaultNavigationItems = superUserNavigationItems;
   }
   
   const userDisplayName = currentUser?.preferred_name || currentUser?.full_name || currentUser?.email || 'User';
@@ -182,8 +198,19 @@ export default function AuthenticatedLayout({ children, currentPageName }) {
   const isModuleEnabled = (moduleName, userType) => {
     if (!moduleName) return true; // Always show items without a module key
     const settingKey = `module_${moduleName}_enabled_for_${userType.toLowerCase().replace(' ', '_')}`;
-    return moduleSettings[settingKey] !== false; // Default to true if setting doesn't exist
+    
+    // If setting exists, use its value
+    if (settingKey in moduleSettings) {
+      return moduleSettings[settingKey] === true;
+    }
+    
+    // If no setting exists, check if this module is in the default navigation for this user type
+    const defaultModules = defaultNavigationItems.map(item => item.module);
+    return defaultModules.includes(moduleName);
   };
+
+  // Filter navigation items based on module settings
+  const navigationItems = allNavigationItems.filter(item => isModuleEnabled(item.module, systemUserType));
 
   return (
     <SidebarProvider>
@@ -223,26 +250,24 @@ export default function AuthenticatedLayout({ children, currentPageName }) {
               </SidebarGroupLabel>
               <SidebarGroupContent>
                 <SidebarMenu className="space-y-1">
-                  {navigationItems.map((item) =>
-                    isModuleEnabled(item.module, systemUserType) && (
-                      <SidebarMenuItem key={item.title}>
-                        <SidebarMenuButton
-                          asChild
-                          className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-xl mb-0.5 ${
-                            (item.url === '/' && location.pathname === '/') || (item.url !== '/' && location.pathname.startsWith(item.url)) ?
-                              'bg-blue-50 text-blue-700 font-semibold' :
-                              'text-gray-600 hover:text-gray-900'
-                          }`
-                          }>
+                  {navigationItems.map((item) => (
+                    <SidebarMenuItem key={item.title}>
+                      <SidebarMenuButton
+                        asChild
+                        className={`hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 rounded-xl mb-0.5 ${
+                          (item.url === '/' && location.pathname === '/') || (item.url !== '/' && location.pathname.startsWith(item.url)) ?
+                            'bg-blue-50 text-blue-700 font-semibold' :
+                            'text-gray-600 hover:text-gray-900'
+                        }`
+                        }>
   
-                          <Link to={item.url} className="flex items-center gap-3 px-4 py-3">
-                            <item.icon className="w-5 h-5" />
-                            <span className="font-medium">{item.title}</span>
-                          </Link>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                    )
-                  )}
+                        <Link to={item.url} className="flex items-center gap-3 px-4 py-3">
+                          <item.icon className="w-5 h-5" />
+                          <span className="font-medium">{item.title}</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
                 </SidebarMenu>
               </SidebarGroupContent>
             </SidebarGroup>

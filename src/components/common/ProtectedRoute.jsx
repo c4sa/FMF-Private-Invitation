@@ -51,10 +51,28 @@ export default function ProtectedRoute({ children, adminOnly = false, pageName }
         const settingsData = await SystemSetting.list();
         const moduleSetting = settingsData.find(s => s.key === settingKey);
         
-        // If the module setting exists and is false, deny access
-        if (moduleSetting && moduleSetting.value === 'false') {
-          navigate(createPageUrl("Dashboard"));
-          return;
+        // Define default modules for each user type
+        const defaultModules = {
+          'admin': ['dashboard', 'private_invitations', 'attendees', 'registration', 'partnership_management', 'analytics', 'system_users', 'requests', 'settings'],
+          'super_user': ['dashboard', 'attendees', 'registration', 'system_users'],
+          'user': ['dashboard', 'attendees', 'registration', 'access_levels']
+        };
+        
+        const userDefaultModules = defaultModules[userType] || [];
+        const isDefaultModule = userDefaultModules.includes(moduleKey);
+        
+        // If setting exists, use its value
+        if (moduleSetting) {
+          if (moduleSetting.value === 'false') {
+            navigate(createPageUrl("Dashboard"));
+            return;
+          }
+        } else {
+          // If no setting exists, only allow if it's a default module for this user type
+          if (!isDefaultModule) {
+            navigate(createPageUrl("Dashboard"));
+            return;
+          }
         }
       }
 
