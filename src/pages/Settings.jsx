@@ -56,7 +56,7 @@ export default function SettingsPage() {
   };
 
   return (
-    <ProtectedRoute adminOnly>
+    <ProtectedRoute adminOnly pageName="Settings">
       <div className="p-6 space-y-8 bg-slate-50 min-h-screen">
         <div className="max-w-4xl mx-auto">
           <div className="flex items-center gap-4 mb-8">

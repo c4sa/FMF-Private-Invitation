@@ -522,7 +522,7 @@ export default function SystemUsers() {
 
   if (hasPermissionError) {
     return (
-      <ProtectedRoute>
+      <ProtectedRoute pageName="SystemUsers">
         <div className="p-6 space-y-6 bg-slate-50 min-h-screen">
           <div className="max-w-7xl mx-auto">
             <div className="flex flex-col items-center justify-center min-h-96">
@@ -550,7 +550,7 @@ export default function SystemUsers() {
   }
 
   return (
-    <ProtectedRoute>
+    <ProtectedRoute pageName="SystemUsers">
       <div className="p-6 space-y-6 bg-slate-50 min-h-screen">
         <div className="max-w-7xl mx-auto">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">

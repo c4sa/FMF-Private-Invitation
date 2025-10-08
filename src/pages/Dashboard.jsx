@@ -187,7 +187,7 @@ export default function Dashboard() {
   return (
     // Removed adminOnly prop to allow Super Users access as well.
     // ProtectedRoute without adminOnly will check for 'admin' or 'Super User' by default.
-    <ProtectedRoute> 
+    <ProtectedRoute pageName="Dashboard"> 
       <div className="flex flex-col p-4 md:p-8">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-3xl font-bold">Dashboard</h1>

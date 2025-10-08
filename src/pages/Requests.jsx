@@ -144,7 +144,7 @@ export default function RequestsPage() {
   };
 
   return (
-    <ProtectedRoute adminOnly>
+    <ProtectedRoute adminOnly pageName="Requests">
       <div className="p-6 space-y-6 bg-slate-50 min-h-screen">
         <div className="max-w-7xl mx-auto">
           <h1 className="text-3xl font-bold text-gray-900 mb-6">Requests</h1>

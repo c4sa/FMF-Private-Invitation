@@ -6,14 +6,17 @@ import { createPageUrl } from '@/utils';
 
 // Map page names to their corresponding module keys
 const pageModuleMap = {
+  'Dashboard': 'dashboard',
   'Registration': 'registration',
   'Attendees': 'attendees',
   'PrivateInvitations': 'private_invitations',
   'PartnershipManagement': 'partnership_management',
+  'Analytics': 'analytics',
   'AnalyticsDashboard': 'analytics',
   'SystemUsers': 'system_users',
   'Requests': 'requests',
-  'Settings': 'settings'
+  'Settings': 'settings',
+  'AccessLevels': 'access_levels'
 };
 
 export default function ProtectedRoute({ children, adminOnly = false, pageName }) {
@@ -31,25 +34,19 @@ export default function ProtectedRoute({ children, adminOnly = false, pageName }
         return;
       }
       
-      // Check admin-only access
-      if (adminOnly) {
-        const isAdmin = user.role === 'admin' || user.system_role === 'Admin';
-        if (!isAdmin) {
-          // If not an admin, redirect them to a safe page.
-          navigate(createPageUrl("Dashboard"));
-          return;
-        }
-      }
-
       // Check module-level permissions if pageName is provided
       if (pageName && pageModuleMap[pageName]) {
         const moduleKey = pageModuleMap[pageName];
         const userType = (user.system_role || 'User').toLowerCase().replace(' ', '_');
         const settingKey = `module_${moduleKey}_enabled_for_${userType}`;
 
+        console.log(`Checking access for page: ${pageName}, module: ${moduleKey}, userType: ${userType}, settingKey: ${settingKey}`);
+
         // Load module settings
         const settingsData = await SystemSetting.list();
         const moduleSetting = settingsData.find(s => s.key === settingKey);
+        
+        console.log(`Module setting found:`, moduleSetting);
         
         // Define default modules for each user type
         const defaultModules = {
@@ -63,13 +60,31 @@ export default function ProtectedRoute({ children, adminOnly = false, pageName }
         
         // If setting exists, use its value
         if (moduleSetting) {
-          if (moduleSetting.value === 'false') {
+          if (moduleSetting.value === 'true') {
+            // Setting exists and is enabled, allow access
+            console.log(`Module ${moduleKey} is explicitly enabled for ${userType}`);
+          } else {
+            // Setting exists but is disabled, deny access
+            console.log(`Module ${moduleKey} is explicitly disabled for ${userType}`);
             navigate(createPageUrl("Dashboard"));
             return;
           }
         } else {
           // If no setting exists, only allow if it's a default module for this user type
-          if (!isDefaultModule) {
+          if (isDefaultModule) {
+            console.log(`Module ${moduleKey} is a default module for ${userType}, allowing access`);
+          } else {
+            console.log(`Module ${moduleKey} is not a default module for ${userType} and no setting exists, denying access`);
+            navigate(createPageUrl("Dashboard"));
+            return;
+          }
+        }
+      } else {
+        // If no pageName is provided, fall back to admin-only check
+        if (adminOnly) {
+          const isAdmin = user.role === 'admin' || user.system_role === 'Admin';
+          if (!isAdmin) {
+            // If not an admin, redirect them to a safe page.
             navigate(createPageUrl("Dashboard"));
             return;
           }

@@ -107,7 +107,7 @@ export default function PartnershipManagementPage() {
   };
 
   return (
-    <ProtectedRoute adminOnly>
+    <ProtectedRoute adminOnly pageName="PartnershipManagement">
       <div className="p-6 space-y-6 bg-slate-50 min-h-screen">
         <div className="max-w-7xl mx-auto">
           <div className="flex justify-between items-center mb-6">

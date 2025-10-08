@@ -281,7 +281,7 @@ export default function AnalyticsPage() {
 
   if (isLoading) {
     return (
-      <ProtectedRoute adminOnly>
+      <ProtectedRoute adminOnly pageName="Analytics">
         <div className="p-6 bg-slate-50 min-h-screen flex items-center justify-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
         </div>
@@ -290,7 +290,7 @@ export default function AnalyticsPage() {
   }
 
   return (
-    <ProtectedRoute adminOnly>
+    <ProtectedRoute adminOnly pageName="Analytics">
       <div className="p-6 space-y-6 bg-slate-50 min-h-screen">
         <style>{`
           @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
