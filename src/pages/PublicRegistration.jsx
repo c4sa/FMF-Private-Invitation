@@ -216,7 +216,13 @@ export default function PublicRegistrationPage() {
         setStep(2);
       }
     } catch (err) {
-      const errorMessage = err.response?.data?.error || "Failed to validate invitation. Please try again.";
+      let errorMessage = err.response?.data?.error || err.message || "Failed to validate invitation. Please try again.";
+      
+      // Customize the message for already used invitations
+      if (errorMessage.includes("already been used") || errorMessage.includes("already used")) {
+        errorMessage = "This link is already used.";
+      }
+      
       errorSetter(errorMessage);
       toast({ title: "Validation Error", description: errorMessage, variant: "destructive" });
       setValidatedInvitation(null);

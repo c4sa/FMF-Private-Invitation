@@ -1,4 +1,5 @@
 export const countries = [
+  "Saudi Arabia",
   "Afghanistan",
   "Albania",
   "Algeria",
@@ -149,7 +150,6 @@ export const countries = [
   "Samoa",
   "San Marino",
   "Sao Tome and Principe",
-  "Saudi Arabia",
   "Senegal",
   "Serbia",
   "Seychelles",

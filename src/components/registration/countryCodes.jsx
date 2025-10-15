@@ -1,4 +1,5 @@
 export const countryCodes = [
+	{"name": "Saudi Arabia", "dial_code": "+966", "code": "SA"},
 	{"name": "Afghanistan", "dial_code": "+93", "code": "AF"},
 	{"name": "Albania", "dial_code": "+355", "code": "AL"},
 	{"name": "Algeria", "dial_code": "+213", "code": "DZ"},
@@ -174,7 +175,6 @@ export const countryCodes = [
 	{"name": "Samoa", "dial_code": "+685", "code": "WS"},
 	{"name": "San Marino", "dial_code": "+378", "code": "SM"},
 	{"name": "Sao Tome and Principe", "dial_code": "+239", "code": "ST"},
-	{"name": "Saudi Arabia", "dial_code": "+966", "code": "SA"},
 	{"name": "Senegal", "dial_code": "+221", "code": "SN"},
 	{"name": "Serbia", "dial_code": "+381", "code": "RS"},
 	{"name": "Seychelles", "dial_code": "+248", "code": "SC"},

@@ -44,18 +44,18 @@ import ProfileSettings from "../user/ProfileSettings";
 
 const adminNavigationItems = [
   { title: "Dashboard", url: createPageUrl("Dashboard"), icon: LayoutDashboard, module: "dashboard" },
-  { title: "Private Invitations", url: createPageUrl("PrivateInvitations"), icon: Ticket, module: "private_invitations" },
+  { title: "VIP Invitations", url: createPageUrl("PrivateInvitations"), icon: Ticket, module: "private_invitations" },
   { title: "Attendees", url: createPageUrl("Attendees"), icon: Users, module: "attendees" },
   { title: "Registration", url: createPageUrl("Registration"), icon: UserPlus, module: "registration" },
   { title: "Partnership Management", url: createPageUrl("PartnershipManagement"), icon: Briefcase, module: "partnership_management" },
   { title: "Analytics/Reports", url: createPageUrl("AnalyticsDashboard"), icon: BarChart, module: "analytics" },
-  { title: "System Users", url: createPageUrl("SystemUsers"), icon: GanttChartSquare, module: "system_users" },
+  { title: "PartnershipUsers", url: createPageUrl("SystemUsers"), icon: GanttChartSquare, module: "system_users" },
   { title: "Requests", url: createPageUrl("Requests"), icon: Bell, module: "requests" },
   { title: "Settings", url: createPageUrl("Settings"), icon: SettingsIcon, module: "settings" },
 ];
 
-const superUserNavigationItems = [
-    {
+  const superUserNavigationItems = [
+      {
     title: "Dashboard",
     url: createPageUrl("Dashboard"),
     icon: LayoutDashboard,
@@ -74,7 +74,7 @@ const superUserNavigationItems = [
     module: "registration"
   },
     {
-    title: "System Users",
+    title: "Partnership Users",
     url: createPageUrl("SystemUsers"),
     icon: GanttChartSquare,
     module: "system_users"
@@ -172,12 +172,12 @@ export default function AuthenticatedLayout({ children, currentPageName }) {
   // Create a comprehensive list of all possible navigation items
   const allNavigationItems = [
     { title: "Dashboard", url: createPageUrl("Dashboard"), icon: LayoutDashboard, module: "dashboard" },
-    { title: "Private Invitations", url: createPageUrl("PrivateInvitations"), icon: Ticket, module: "private_invitations" },
+    { title: "VIP Invitations", url: createPageUrl("PrivateInvitations"), icon: Ticket, module: "private_invitations" },
     { title: "Attendees", url: createPageUrl("Attendees"), icon: Users, module: "attendees" },
     { title: "Registration", url: createPageUrl("Registration"), icon: UserPlus, module: "registration" },
     { title: "Partnership Management", url: createPageUrl("PartnershipManagement"), icon: Briefcase, module: "partnership_management" },
     { title: "Analytics/Reports", url: createPageUrl("AnalyticsDashboard"), icon: BarChart, module: "analytics" },
-    { title: "System Users", url: createPageUrl("SystemUsers"), icon: GanttChartSquare, module: "system_users" },
+    { title: "Partnership Users", url: createPageUrl("SystemUsers"), icon: GanttChartSquare, module: "system_users" },
     { title: "Requests", url: createPageUrl("Requests"), icon: Bell, module: "requests" },
     { title: "Settings", url: createPageUrl("Settings"), icon: SettingsIcon, module: "settings" },
     { title: "My Access", url: createPageUrl("AccessLevels"), icon: ClipboardList, module: "access_levels" }

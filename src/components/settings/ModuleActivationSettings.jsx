@@ -42,7 +42,7 @@ const modules = [
     },
     { 
         key: 'private_invitations', 
-        label: 'Private Invitations', 
+        label: 'VIP Invitations', 
         description: 'Generate invitation codes',
         icon: Mail,
         category: 'Core'
@@ -70,8 +70,8 @@ const modules = [
     },
     { 
         key: 'system_users', 
-        label: 'System Users', 
-        description: 'Manage system users and permissions',
+        label: 'Partnership Users', 
+        description: 'Manage partnership users and permissions',
         icon: Users,
         category: 'Management'
     },

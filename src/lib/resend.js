@@ -155,7 +155,7 @@ export const emailService = {
           '{{password}}': newUserData.password || '',
           '{{company_name}}': newUserData.company_name || '',
           '{{system_role}}': newUserData.system_role || '',
-          '{{user_type}}': newUserData.user_type || ''
+          '{{user_type}}': (newUserData.system_role === 'User') ? (newUserData.user_type || '') : ''
         };
         
         Object.entries(variables).forEach(([key, value]) => {
@@ -163,8 +163,8 @@ export const emailService = {
           emailHtml = emailHtml.replace(new RegExp(key, 'g'), value);
         });
         
-        // Handle registration slots if present
-        if (newUserData.registration_slots) {
+        // Handle registration slots if present and user is of type 'User'
+        if (newUserData.registration_slots && newUserData.system_role === 'User') {
           const slotsHtml = Object.entries(newUserData.registration_slots)
             .map(([key, value]) => `<p style="margin: 5px 0;"><strong>${key}:</strong> ${value}</p>`)
             .join('');
@@ -223,7 +223,7 @@ export const emailService = {
           '{{password}}': newUserData.password || '',
           '{{company_name}}': newUserData.company_name || '',
           '{{system_role}}': newUserData.system_role || '',
-          '{{user_type}}': newUserData.user_type || ''
+          '{{user_type}}': (newUserData.system_role === 'User') ? (newUserData.user_type || '') : ''
         };
         
         Object.entries(variables).forEach(([key, value]) => {
@@ -231,8 +231,8 @@ export const emailService = {
           emailHtml = emailHtml.replace(new RegExp(key, 'g'), value);
         });
         
-        // Handle registration slots if present
-        if (newUserData.registration_slots) {
+        // Handle registration slots if present and user is of type 'User'
+        if (newUserData.registration_slots && newUserData.system_role === 'User') {
           const slotsHtml = Object.entries(newUserData.registration_slots)
             .map(([key, value]) => `<p style="margin: 5px 0;"><strong>${key}:</strong> ${value}</p>`)
             .join('');
