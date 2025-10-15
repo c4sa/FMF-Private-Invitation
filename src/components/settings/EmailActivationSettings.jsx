@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/common/Toast";
+import Loader from "@/components/ui/loader";
 
 const initialSettings = {
   welcome: { 
@@ -189,7 +190,7 @@ export default function EmailActivationSettings() {
           <div key={key}>
             {setting.isLoading ? (
               <div className="h-10 flex items-center">
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
+                <Loader size="small" />
               </div>
             ) : (
               <div className="flex items-start space-x-3">

@@ -14,6 +14,7 @@ import { ArrowLeft, Save, AlertCircle, Edit3, CheckCircle, Download, Upload } fr
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import Loader from "@/components/ui/loader";
 import {
   Dialog,
   DialogContent,
@@ -1110,7 +1111,7 @@ export default function RegistrationPage() {
   if (!currentUser) {
     return (
       <div className="p-6 bg-slate-50 min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <Loader size="default" />
       </div>
     );
   }

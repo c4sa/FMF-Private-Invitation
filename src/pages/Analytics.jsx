@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Attendee, User, PartnershipType } from '@/api/entities';
+import Loader from '@/components/ui/loader';
 import {
   BarChart,
   Bar,
@@ -283,7 +284,7 @@ export default function AnalyticsPage() {
     return (
       <ProtectedRoute adminOnly pageName="Analytics">
         <div className="p-6 bg-slate-50 min-h-screen flex items-center justify-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          <Loader size="default" />
         </div>
       </ProtectedRoute>
     );

@@ -4,6 +4,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { User, SystemSetting } from "@/api/entities";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import Loader from "@/components/ui/loader";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -162,7 +163,7 @@ export default function AuthenticatedLayout({ children, currentPageName }) {
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <Loader size="default" />
       </div>
     );
   }

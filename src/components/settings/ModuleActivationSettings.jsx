@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/common/Toast";
+import Loader from "@/components/ui/loader";
 import {
   UserPlus,
   Users,
@@ -196,7 +197,7 @@ export default function ModuleActivationSettings() {
       <Card>
         <CardContent className="p-8">
           <div className="flex items-center justify-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            <Loader size="default" />
             <span className="ml-3 text-gray-600">Loading module permissions...</span>
           </div>
         </CardContent>
@@ -285,7 +286,7 @@ export default function ModuleActivationSettings() {
                               <td key={userType.key} className="py-4 px-4 text-center">
                                 <div className="flex items-center justify-center">
                                   {isSaving ? (
-                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                                    <Loader size="small" />
                                   ) : (
                                     <Switch
                                       checked={currentSetting?.isEnabled || false}

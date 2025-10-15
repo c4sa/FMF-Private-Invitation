@@ -9,6 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import Loader from "@/components/ui/loader";
 import {
   UserPlus,
   Edit3,
@@ -958,7 +959,7 @@ export default function SystemUsers() {
                             return true;
                           }).some(user => user.system_role === 'User') ? 7 : 6} className="h-16">
                             <div className="flex items-center justify-center">
-                              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                              <Loader size="small" />
                             </div>
                           </TableCell>
                         </TableRow>

@@ -16,6 +16,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Save, AlertCircle, CheckCircle } from "lucide-react";
+import Loader from "@/components/ui/loader";
 import { registerWithInvitation } from "@/api/functions";
 import { validateInvitation } from "@/api/functions";
 import { getAttendeeForModification } from "@/api/functions";
@@ -567,7 +568,7 @@ export default function PublicRegistrationPage() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <Loader size="large" />
       </div>
     );
   }

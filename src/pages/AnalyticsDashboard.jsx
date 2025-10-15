@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Attendee, User, PartnershipType } from '@/api/entities';
+import Loader from '@/components/ui/loader';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 import { Users, UserCheck, Clock, XCircle, Download, Printer, FileSpreadsheet } from 'lucide-react';
 import { format } from 'date-fns';
@@ -155,7 +156,7 @@ export default function AnalyticsDashboard() {
     return (
       <ProtectedRoute adminOnly pageName="AnalyticsDashboard">
         <div className="p-6 bg-slate-50 min-h-screen flex items-center justify-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          <Loader size="default" />
         </div>
       </ProtectedRoute>
     );

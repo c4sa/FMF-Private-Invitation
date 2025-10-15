@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import Loader from "@/components/ui/loader";
 import { uploadFile } from "@/api/functions";
 import { Camera, Upload, X, Check, FileText } from "lucide-react";
 
@@ -158,7 +159,7 @@ export default function PhotoUpload({ label, onUpload, value, required = false, 
                 className="flex items-center gap-2"
               >
                 {isUploading ? (
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600" />
+                  <Loader size="small" />
                 ) : (
                   <Upload className="w-4 h-4" />
                 )}

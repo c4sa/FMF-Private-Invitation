@@ -6,6 +6,7 @@ import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import Loader from "@/components/ui/loader";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/common/Toast";
 import NotificationService from "@/services/notificationService";
@@ -98,7 +99,7 @@ export default function AccessLevels() {
   if (isLoading) {
     return (
       <div className="p-6 bg-slate-50 min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <Loader size="default" />
       </div>
     );
   }

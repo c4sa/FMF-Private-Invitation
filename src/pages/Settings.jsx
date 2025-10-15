@@ -6,6 +6,7 @@ import ModuleActivationSettings from '@/components/settings/ModuleActivationSett
 import { Mail, Power } from 'lucide-react';
 import { EmailTemplate } from '@/api/entities';
 import { useToast } from '../components/common/Toast';
+import Loader from '@/components/ui/loader';
 
 export default function SettingsPage() {
   const [templates, setTemplates] = React.useState([]);
@@ -77,7 +78,7 @@ export default function SettingsPage() {
             {/* Email Templates */}
             {isLoading ? (
               <div className="flex justify-center items-center h-64">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                <Loader size="default" />
               </div>
             ) : (
               <>

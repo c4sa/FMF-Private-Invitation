@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { uploadFile } from "@/api/functions";
 import { Camera, Upload, X, Check } from "lucide-react";
+import Loader from "@/components/ui/loader";
 
 export default function ProfilePhotoUpload({ currentUser, onPhotoUpdate }) {
   const [isUploading, setIsUploading] = useState(false);
@@ -71,7 +72,7 @@ export default function ProfilePhotoUpload({ currentUser, onPhotoUpdate }) {
               className="flex items-center gap-2"
             >
               {isUploading ? (
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600" />
+                <Loader size="small" />
               ) : (
                 <Camera className="w-4 h-4" />
               )}
