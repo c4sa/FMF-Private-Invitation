@@ -17,8 +17,11 @@ import {
   Shield,
   Power,
   PowerOff,
-  Clock
+  Clock,
+  Download,
+  Upload
 } from "lucide-react";
+import * as XLSX from 'xlsx';
 import {
   Dialog,
   DialogContent,
@@ -77,6 +80,7 @@ export default function SystemUsers() {
   });
   const [isSendingUserRequest, setIsSendingUserRequest] = useState(false);
   const [isDeletingUser, setIsDeletingUser] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const { toast } = useToast();
 
   const loadData = useCallback(async () => {
@@ -491,6 +495,410 @@ export default function SystemUsers() {
     setIsSendingUserRequest(false);
   };
 
+  const handleDownloadTemplate = () => {
+    try {
+      // Function to sanitize sheet names (remove invalid characters)
+      const sanitizeSheetName = (name) => {
+        return name.replace(/[:\\/\?\*\[\]]/g, ' ').substring(0, 31); // Excel sheet names max 31 chars
+      };
+
+      // Create a new workbook
+      const wb = XLSX.utils.book_new();
+      
+      // Define all the columns with their headers and validation data
+      const templateData = [
+        // Header row
+        [
+          'Full Name', 'Email', 'Password', 'Company Name', 'System User Type', 'Partner Type',
+          'VIP Slots', 'Partner Slots', 'Exhibitor Slots', 'Media Slots', 'Has Access'
+        ],
+        // Example row with sample data
+        [
+          'John Doe', 'john.doe@example.com', 'SecurePassword123!', 'Example Corp', 'User', 'Strategic Partner',
+          '5', '10', '8', '3', 'No'
+        ]
+      ];
+
+      // Create the main worksheet
+      const ws = XLSX.utils.aoa_to_sheet(templateData);
+
+      // Set column widths for better readability
+      const colWidths = [
+        { wch: 20 }, // Full Name
+        { wch: 30 }, // Email
+        { wch: 20 }, // Password
+        { wch: 25 }, // Company Name
+        { wch: 18 }, // System User Type
+        { wch: 25 }, // Partner Type
+        { wch: 12 }, // VIP Slots
+        { wch: 15 }, // Partner Slots
+        { wch: 18 }, // Exhibitor Slots
+        { wch: 15 }, // Media Slots
+        { wch: 15 }  // Has Access
+      ];
+      ws['!cols'] = colWidths;
+
+      // Add the main sheet
+      XLSX.utils.book_append_sheet(wb, ws, sanitizeSheetName('System Users Template'));
+
+      // Create dropdown reference sheets
+      const dropdownSheets = {
+        'System User Types': ['Admin', 'Super User', 'User'],
+        'Partner Types': ['N/A', ...partnerTypes.map(pt => pt.name)],
+        'Yes No Options': ['Yes', 'No']
+      };
+
+      // Add dropdown reference sheets
+      Object.entries(dropdownSheets).forEach(([sheetName, data]) => {
+        const dropdownData = [['Options'], ...data.map(item => [item])];
+        const dropdownWs = XLSX.utils.aoa_to_sheet(dropdownData);
+        dropdownWs['!cols'] = [{ wch: 50 }];
+        XLSX.utils.book_append_sheet(wb, dropdownWs, sanitizeSheetName(sheetName));
+      });
+
+      // Create instructions sheet
+      const instructionsData = [
+        ['Future Minerals Forum - System Users Bulk Upload Template'],
+        [''],
+        ['INSTRUCTIONS:'],
+        [''],
+        ['1. Fill in the System Users Template sheet with user information'],
+        ['2. Use the dropdown reference sheets for valid values'],
+        ['3. Required fields are marked in the example row'],
+        ['4. Each email must be unique across all rows'],
+        ['5. Password should be secure (minimum 8 characters recommended)'],
+        [''],
+        ['FIELD DESCRIPTIONS:'],
+        [''],
+        ['• Full Name: Complete name of the system user'],
+        ['• Email: Unique email address for login (required)'],
+        ['• Password: Login password for the user (required)'],
+        ['• Company Name: Organization the user represents (required)'],
+        ['• System User Type: Select from Admin, Super User, or User'],
+        ['• Partner Type: Required only for "User" type. Select from available partner types or "N/A"'],
+        ['• Registration Slots: Number of slots for each attendee type (only for "User" type)'],
+        ['• Has Access: Only for "Super User" type. Select "Yes" or "No"'],
+        [''],
+        ['VALIDATION RULES:'],
+        [''],
+        ['• Email addresses must be valid and unique'],
+        ['• Password must be provided for each user'],
+        ['• System User Type must be one of: Admin, Super User, User'],
+        ['• Partner Type is required for "User" type, ignored for others'],
+        ['• Registration slots are only applicable for "User" type'],
+        ['• Has Access field is only applicable for "Super User" type'],
+        ['• Admin and Super User types have unlimited registration slots'],
+        [''],
+        ['SLOT ALLOCATION:'],
+        [''],
+        ['• Admin: Unlimited slots for all attendee types'],
+        ['• Super User: Unlimited slots for all attendee types'],
+        ['• User with Partner Type: Slots auto-populated from partner type settings'],
+        ['• User with "N/A" Partner Type: Use manually specified slot values'],
+        [''],
+        ['For questions, contact the system administrator.']
+      ];
+
+      const instructionsWs = XLSX.utils.aoa_to_sheet(instructionsData);
+      instructionsWs['!cols'] = [{ wch: 80 }];
+      
+      // Style the instructions sheet
+      instructionsWs['A1'] = { 
+        v: 'Future Minerals Forum - System Users Bulk Upload Template',
+        s: { font: { bold: true, sz: 16 } }
+      };
+
+      XLSX.utils.book_append_sheet(wb, instructionsWs, sanitizeSheetName('Instructions'));
+
+      // Generate filename with current date
+      const currentDate = new Date().toISOString().split('T')[0];
+      const filename = `FMF_SystemUsers_Template_${currentDate}.xlsx`;
+
+      // Write and download the file
+      XLSX.writeFile(wb, filename);
+
+      toast({
+        title: "Template Downloaded",
+        description: `Excel template "${filename}" has been downloaded successfully.`,
+        variant: "success"
+      });
+
+    } catch (error) {
+      console.error('Error generating Excel template:', error);
+      toast({
+        title: "Download Failed",
+        description: "Failed to generate Excel template. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleBulkUpload = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    let createdUsers = [];
+
+    try {
+      // Read the Excel file
+      const data = await file.arrayBuffer();
+      const workbook = XLSX.read(data, { type: 'array' });
+      const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+      const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+      if (jsonData.length < 2) {
+        throw new Error('Excel file must contain at least a header row and one data row');
+      }
+
+      // Get headers and data rows
+      const headers = jsonData[0];
+      const dataRows = jsonData.slice(1).filter(row => row.some(cell => cell !== undefined && cell !== ''));
+
+      if (dataRows.length === 0) {
+        throw new Error('No data rows found in the Excel file');
+      }
+
+      // Validate headers match expected format
+      const expectedHeaders = [
+        'Full Name', 'Email', 'Password', 'Company Name', 'System User Type', 'Partner Type',
+        'VIP Slots', 'Partner Slots', 'Exhibitor Slots', 'Media Slots', 'Has Access'
+      ];
+
+      // Check if headers match (allow some flexibility in order)
+      const missingHeaders = expectedHeaders.filter(header => !headers.includes(header));
+      if (missingHeaders.length > 0) {
+        throw new Error(`Missing required columns: ${missingHeaders.join(', ')}`);
+      }
+
+      // Validate and process each row
+      const processedUsers = [];
+      const validationErrors = [];
+      const emailSet = new Set(); // To track unique emails
+
+      for (let i = 0; i < dataRows.length; i++) {
+        const row = dataRows[i];
+        const rowNumber = i + 2; // +2 because Excel is 1-indexed and we skip header
+        
+        try {
+          const userData = {};
+          
+          // Map Excel columns to database fields
+          const fieldMapping = {
+            'Full Name': 'full_name',
+            'Email': 'email',
+            'Password': 'password',
+            'Company Name': 'company_name',
+            'System User Type': 'system_role',
+            'Partner Type': 'user_type',
+            'VIP Slots': 'vip_slots',
+            'Partner Slots': 'partner_slots',
+            'Exhibitor Slots': 'exhibitor_slots',
+            'Media Slots': 'media_slots',
+            'Has Access': 'has_access'
+          };
+
+          // Extract data from row
+          headers.forEach((header, index) => {
+            const fieldName = fieldMapping[header];
+            if (fieldName && row[index] !== undefined) {
+              let value = row[index];
+              
+              // Handle special field types
+              if (fieldName === 'has_access') {
+                value = value === 'Yes' || value === true;
+              } else if (fieldName.endsWith('_slots')) {
+                value = parseInt(value) || 0;
+              }
+              
+              userData[fieldName] = value;
+            }
+          });
+
+          // Validate required fields
+          const requiredFields = ['full_name', 'email', 'password', 'company_name', 'system_role'];
+          const missingFields = requiredFields.filter(field => 
+            !userData[field] || userData[field] === ''
+          );
+
+          if (missingFields.length > 0) {
+            throw new Error(`Missing required fields: ${missingFields.join(', ')}`);
+          }
+
+          // Validate email format
+          const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+          if (!emailRegex.test(userData.email)) {
+            throw new Error('Invalid email format');
+          }
+
+          // Check for duplicate emails
+          if (emailSet.has(userData.email.toLowerCase())) {
+            throw new Error(`Duplicate email address: ${userData.email}`);
+          }
+          emailSet.add(userData.email.toLowerCase());
+
+          // Validate system role
+          const validSystemRoles = getSystemUserTypesForDropdown();
+          if (!validSystemRoles.includes(userData.system_role)) {
+            throw new Error(`Invalid system user type: ${userData.system_role}. Must be one of: ${validSystemRoles.join(', ')}`);
+          }
+
+          // Validate partner type for User role
+          if (userData.system_role === 'User') {
+            if (!userData.user_type) {
+              throw new Error('Partner Type is required for User system role');
+            }
+            
+            const validPartnerTypes = ['N/A', ...partnerTypes.map(pt => pt.name)];
+            if (!validPartnerTypes.includes(userData.user_type)) {
+              throw new Error(`Invalid partner type: ${userData.user_type}. Must be one of: ${validPartnerTypes.join(', ')}`);
+            }
+          } else {
+            // For Admin and Super User, partner type should be N/A
+            userData.user_type = 'N/A';
+          }
+
+          // Validate has_access for Super User
+          if (userData.system_role === 'Super User') {
+            if (userData.has_access === undefined) {
+              throw new Error('Has Access field is required for Super User system role');
+            }
+          } else {
+            // For other roles, has_access should be false
+            userData.has_access = false;
+          }
+
+          // Set up registration slots
+          let registrationSlots = {};
+          
+          if (userData.system_role === 'User') {
+            if (userData.user_type && userData.user_type !== 'N/A') {
+              // Auto-populate from partner type
+              const selectedPartnerType = partnerTypes.find(p => p.name === userData.user_type);
+              if (selectedPartnerType) {
+                registrationSlots = {
+                  VIP: selectedPartnerType.slots_vip || 0,
+                  Partner: selectedPartnerType.slots_partner || 0,
+                  Exhibitor: selectedPartnerType.slots_exhibitor || 0,
+                  Media: selectedPartnerType.slots_media || 0,
+                };
+              }
+            } else {
+              // Use manually specified slots
+              registrationSlots = {
+                VIP: userData.vip_slots || 0,
+                Partner: userData.partner_slots || 0,
+                Exhibitor: userData.exhibitor_slots || 0,
+                Media: userData.media_slots || 0,
+              };
+            }
+          } else {
+            // Admin and Super User have unlimited slots (empty object)
+            registrationSlots = {};
+          }
+
+          // Clean up the userData for createUserDirectly function
+          const cleanUserData = {
+            fullName: userData.full_name,
+            email: userData.email,
+            password: userData.password,
+            companyName: userData.company_name,
+            systemRole: userData.system_role,
+            userType: userData.user_type,
+            registrationSlots: registrationSlots,
+            preferredName: userData.full_name,
+            hasAccess: userData.has_access || false
+          };
+
+          processedUsers.push(cleanUserData);
+
+        } catch (error) {
+          validationErrors.push(`Row ${rowNumber}: ${error.message}`);
+        }
+      }
+
+      // If there are validation errors, stop and show them
+      if (validationErrors.length > 0) {
+        throw new Error(`Validation failed:\n${validationErrors.slice(0, 5).join('\n')}${validationErrors.length > 5 ? `\n... and ${validationErrors.length - 5} more errors` : ''}`);
+      }
+
+      // Create users in database
+      for (const userData of processedUsers) {
+        try {
+          const result = await createUserDirectly(userData);
+          
+          if (result.success) {
+            createdUsers.push(result.user);
+
+            // Additionally call the updateUserAccess API to ensure has_access is properly set
+            if (userData.systemRole === 'Super User' || userData.systemRole === 'Admin' || userData.systemRole === 'User') {
+              try {
+                await updateUserAccess({
+                  userId: result.user.id,
+                  systemRole: userData.systemRole,
+                  hasAccess: userData.hasAccess
+                });
+              } catch (accessError) {
+                console.warn('Failed to update user access via API after bulk creation:', accessError);
+                // Don't fail the entire creation if this fails, just log it
+              }
+            }
+          } else {
+            throw new Error(result.error || 'Failed to create user');
+          }
+
+        } catch (error) {
+          // If creation fails, rollback all created users
+          console.error(`Failed to create user ${userData.email}:`, error);
+          
+          // Delete all previously created users
+          for (const createdUser of createdUsers) {
+            try {
+              await deleteUserCompletely(createdUser.id);
+            } catch (deleteError) {
+              console.error('Failed to rollback user:', deleteError);
+            }
+          }
+          
+          throw new Error(`Failed to create user ${userData.email}: ${error.message}`);
+        }
+      }
+
+      toast({
+        title: "Bulk Upload Successful",
+        description: `Successfully created ${createdUsers.length} system users. Welcome emails have been sent.`,
+        variant: "success"
+      });
+
+      // Reset file input and reload data
+      event.target.value = '';
+      await loadData();
+
+    } catch (error) {
+      console.error('Bulk upload failed:', error);
+      
+      // Rollback any created users
+      for (const createdUser of createdUsers) {
+        try {
+          await deleteUserCompletely(createdUser.id);
+        } catch (deleteError) {
+          console.error('Failed to rollback user:', deleteError);
+        }
+      }
+
+      toast({
+        title: "Bulk Upload Failed",
+        description: error.message,
+        variant: "destructive"
+      });
+
+      // Reset file input
+      event.target.value = '';
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   const getTotalSlots = (slots) => {
     return Object.values(slots || {}).reduce((sum, count) => sum + (count || 0), 0);
   };
@@ -561,6 +969,30 @@ export default function SystemUsers() {
             </div>
             {currentUser && (currentUser.role === 'admin' || currentUser.system_role === 'Admin' || currentUser.system_role === 'Super User') && (
               <div className="flex items-center gap-3">
+                <Button 
+                  variant="outline" 
+                  className="flex items-center gap-2"
+                  onClick={handleDownloadTemplate}
+                >
+                  <Download className="w-4 h-4" />
+                  Download Template
+                </Button>
+                <Button 
+                  variant="outline" 
+                  className="flex items-center gap-2"
+                  onClick={() => document.getElementById('bulk-upload-input').click()}
+                  disabled={isUploading}
+                >
+                  <Upload className="w-4 h-4" />
+                  {isUploading ? 'Uploading...' : 'Bulk Upload'}
+                </Button>
+                <input
+                  id="bulk-upload-input"
+                  type="file"
+                  accept=".xlsx,.xls"
+                  onChange={handleBulkUpload}
+                  style={{ display: 'none' }}
+                />
                 <Button className="bg-blue-600 hover:bg-blue-700" onClick={() => setShowAddUserRequestDialog(true)}>
                   <UserPlus className="w-4 h-4 mr-2" />
                   Add New System User
@@ -838,7 +1270,7 @@ export default function SystemUsers() {
                 </div>
 
                 {formData.system_role === 'Super User' && (
-                  <div className="flex items-center space-x-2">
+                  <div className="flex items-center space-x-2"> 
                     <Checkbox
                       id="edit_has_access"
                       checked={formData.has_access}
