@@ -75,7 +75,7 @@ const adminNavigationItems = [
     module: "registration"
   },
     {
-    title: "Partnership Users",
+    title: "System Users",
     url: createPageUrl("SystemUsers"),
     icon: GanttChartSquare,
     module: "system_users"
@@ -178,7 +178,7 @@ export default function AuthenticatedLayout({ children, currentPageName }) {
     { title: "Registration", url: createPageUrl("Registration"), icon: UserPlus, module: "registration" },
     { title: "Partnership Management", url: createPageUrl("PartnershipManagement"), icon: Briefcase, module: "partnership_management" },
     { title: "Analytics/Reports", url: createPageUrl("AnalyticsDashboard"), icon: BarChart, module: "analytics" },
-    { title: "Partnership Users", url: createPageUrl("SystemUsers"), icon: GanttChartSquare, module: "system_users" },
+    { title: "System Users", url: createPageUrl("SystemUsers"), icon: GanttChartSquare, module: "system_users" },
     { title: "Requests", url: createPageUrl("Requests"), icon: Bell, module: "requests" },
     { title: "Settings", url: createPageUrl("Settings"), icon: SettingsIcon, module: "settings" },
     { title: "My Access", url: createPageUrl("AccessLevels"), icon: ClipboardList, module: "access_levels" }

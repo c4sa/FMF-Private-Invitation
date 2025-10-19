@@ -71,8 +71,8 @@ const modules = [
     },
     { 
         key: 'system_users', 
-        label: 'Partnership Users', 
-        description: 'Manage partnership users and permissions',
+        label: 'System Users', 
+        description: 'Manage system users and permissions',
         icon: Users,
         category: 'Management'
     },

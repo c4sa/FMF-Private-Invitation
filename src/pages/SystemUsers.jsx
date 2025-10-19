@@ -533,7 +533,7 @@ export default function SystemUsers() {
                 </div>
                 <h1 className="text-2xl font-bold text-gray-900">Access Restricted</h1>
                 <p className="text-gray-600 max-w-md">
-                  You don't have permission to manage partnership users. Only administrators and super users can access this section.
+                  You don't have permission to manage system users. Only administrators and super users can access this section.
                 </p>
                 <div className="pt-4">
                   <Link to={createPageUrl("Dashboard")}>
@@ -556,14 +556,14 @@ export default function SystemUsers() {
         <div className="max-w-7xl mx-auto">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Partnership Users</h1>
+              <h1 className="text-3xl font-bold text-gray-900">System Users</h1>
               <p className="text-gray-500 mt-1">Manage user accounts and registration permissions</p>
             </div>
             {currentUser && (currentUser.role === 'admin' || currentUser.system_role === 'Admin' || currentUser.system_role === 'Super User') && (
               <div className="flex items-center gap-3">
                 <Button className="bg-blue-600 hover:bg-blue-700" onClick={() => setShowAddUserRequestDialog(true)}>
                   <UserPlus className="w-4 h-4 mr-2" />
-                  Add New Partner
+                  Add New System User
                 </Button>
               </div>
             )}
@@ -573,9 +573,9 @@ export default function SystemUsers() {
           <Dialog open={showAddUserRequestDialog} onOpenChange={setShowAddUserRequestDialog}>
             <DialogContent className="max-w-md">
               <DialogHeader>
-                <DialogTitle>Add New Partner</DialogTitle>
+                <DialogTitle>Add New System User</DialogTitle>
                 <DialogDescription>
-                  Create a new partner account with the specified details. The partner will be able to log in immediately.
+                  Create a new system user account with the specified details. The system user will be able to log in immediately.
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4 py-4">
@@ -583,7 +583,7 @@ export default function SystemUsers() {
                   <Label htmlFor="new_user_full_name">Full Name</Label>
                   <Input
                     id="new_user_full_name"
-                    placeholder="Enter the full name of the new partner"
+                    placeholder="Enter the full name of the new system user"
                     value={newUserRequestData.full_name}
                     onChange={(e) => setNewUserRequestData(prev => ({ ...prev, full_name: e.target.value }))}
                   />
@@ -603,7 +603,7 @@ export default function SystemUsers() {
                   <Input
                     id="new_user_password"
                     type="password"
-                    placeholder="Enter the password for the new partner"
+                    placeholder="Enter the password for the new system user"
                     value={newUserRequestData.password}
                     onChange={(e) => setNewUserRequestData(prev => ({ ...prev, password: e.target.value }))}
                   />
@@ -706,7 +706,7 @@ export default function SystemUsers() {
                       Creating...
                     </div>
                   ) : (
-                    "Create Partner"
+                    "Create System User"
                   )}
                 </Button>
               </div>
@@ -852,10 +852,10 @@ export default function SystemUsers() {
 
                 {formData.system_role === 'User' && (
                      <div>
-                        <Label htmlFor="user_type">Partner Type</Label>
+                        <Label htmlFor="user_type">System User Type</Label>
                         <Select value={formData.user_type} onValueChange={(value) => handleInputChange('user_type', value)}>
                             <SelectTrigger>
-                                <SelectValue placeholder="Select partner type"/>
+                                <SelectValue placeholder="Select system user type"/>
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="N/A">N/A</SelectItem>
