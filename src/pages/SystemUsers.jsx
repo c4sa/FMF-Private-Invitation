@@ -572,7 +572,7 @@ export default function SystemUsers() {
         [''],
         ['• Full Name: Complete name of the system user'],
         ['• Email: Unique email address for login (required)'],
-        ['• Password: Login password for the user (required)'],
+        ['• Password: Login password for the user (required) - use text format in Excel'],
         ['• Company Name: Organization the user represents (required)'],
         ['• System User Type: Select from Admin, Super User, or User'],
         ['• Partner Type: Required only for "User" type. Select from available partner types or "N/A"'],
@@ -582,7 +582,7 @@ export default function SystemUsers() {
         ['VALIDATION RULES:'],
         [''],
         ['• Email addresses must be valid and unique'],
-        ['• Password must be provided for each user'],
+        ['• Password must be provided for each user (format cells as Text in Excel)'],
         ['• System User Type must be one of: Admin, Super User, User'],
         ['• Partner Type is required for "User" type, ignored for others'],
         ['• Registration slots are only applicable for "User" type'],
@@ -709,6 +709,9 @@ export default function SystemUsers() {
                 value = value === 'Yes' || value === true;
               } else if (fieldName.endsWith('_slots')) {
                 value = parseInt(value) || 0;
+              } else if (typeof value === 'number' && !fieldName.endsWith('_slots') && fieldName !== 'has_access') {
+                // Convert all other numeric values to strings (except slots and has_access)
+                value = String(value);
               }
               
               userData[fieldName] = value;
