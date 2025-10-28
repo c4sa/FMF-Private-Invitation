@@ -166,6 +166,7 @@ export const emailService = {
         // Handle registration slots if present and user is of type 'User'
         if (newUserData.registration_slots && newUserData.system_role === 'User') {
           const slotsHtml = Object.entries(newUserData.registration_slots)
+            .filter(([, value]) => value > 0) // Only include slots with values greater than 0
             .map(([key, value]) => `<p style="margin: 5px 0;"><strong>${key}:</strong> ${value}</p>`)
             .join('');
           emailHtml = emailHtml.replace(/{{#if registration_slots}}[\s\S]*?{{\/if}}/g, 
@@ -234,6 +235,7 @@ export const emailService = {
         // Handle registration slots if present and user is of type 'User'
         if (newUserData.registration_slots && newUserData.system_role === 'User') {
           const slotsHtml = Object.entries(newUserData.registration_slots)
+            .filter(([, value]) => value > 0) // Only include slots with values greater than 0
             .map(([key, value]) => `<p style="margin: 5px 0;"><strong>${key}:</strong> ${value}</p>`)
             .join('');
           emailHtml = emailHtml.replace(/{{#if registration_slots}}[\s\S]*?{{\/if}}/g, 
