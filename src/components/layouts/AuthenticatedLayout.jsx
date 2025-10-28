@@ -281,19 +281,25 @@ export default function AuthenticatedLayout({ children, currentPageName }) {
                 </SidebarGroupLabel>
                 <SidebarGroupContent>
                   <div className="px-3 py-2 space-y-2">
-                    {Object.entries(currentUser.registration_slots).map(([type, available]) => {
-                      const used = currentUser.used_slots?.[type] || 0;
-                      const remaining = available - used;
+                    {Object.entries(currentUser.registration_slots)
+                      .filter(([type, available]) => {
+                        const used = currentUser.used_slots?.[type] || 0;
+                        const remaining = available - used;
+                        return remaining > 0;
+                      })
+                      .map(([type, available]) => {
+                        const used = currentUser.used_slots?.[type] || 0;
+                        const remaining = available - used;
 
-                      return (
-                        <div key={type} className="flex items-center justify-between text-sm">
-                          <span className="text-gray-600 text-xs">{type}</span>
-                          <span className={`font-semibold ${remaining > 0 ? 'text-green-600' : 'text-red-500'}`}>
-                            {remaining}/{available}
-                          </span>
-                        </div>
-                      );
-                    })}
+                        return (
+                          <div key={type} className="flex items-center justify-between text-sm">
+                            <span className="text-gray-600 text-xs">{type}</span>
+                            <span className={`font-semibold ${remaining > 0 ? 'text-green-600' : 'text-red-500'}`}>
+                              {remaining}/{available}
+                            </span>
+                          </div>
+                        );
+                      })}
                   </div>
                 </SidebarGroupContent>
               </SidebarGroup>
