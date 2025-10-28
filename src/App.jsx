@@ -3,6 +3,7 @@ import Pages from "@/pages/index.jsx"
 import { Toaster } from "@/components/ui/toaster"
 import { ToastProvider } from "@/components/common/Toast"
 import TurnstileWrapper from "@/components/common/TurnstileWrapper"
+import { SpeedInsights } from "@vercel/speed-insights/react"
 
 function App() {
   return (
@@ -10,6 +11,7 @@ function App() {
       <TurnstileWrapper>
         <Pages />
         <Toaster />
+        <SpeedInsights />
       </TurnstileWrapper>
     </ToastProvider>
   )
