@@ -83,7 +83,7 @@ export default function Login() {
 
             {/* Title and Subtitle */}
             <div className="text-center mb-8">
-              <h1 className="text-2xl font-bold text-gray-900 mb-2">Welcome to FMF Private Invitation</h1>
+              <h1 className="text-2xl font-bold text-gray-900 mb-2">Welcome to FMF Partner Registration</h1>
               <p className="text-sm text-gray-500">Sign in to continue</p>
             </div>
 
