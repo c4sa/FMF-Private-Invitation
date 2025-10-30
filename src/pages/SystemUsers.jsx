@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import Loader from "@/components/ui/loader";
 import {
   UserPlus,
@@ -1419,7 +1419,10 @@ export default function SystemUsers() {
                             <TableCell>
                               <div className="flex items-center gap-3">
                                 <Avatar className="w-10 h-10">
-                                   <AvatarFallback className="bg-blue-100 text-blue-600 font-semibold">
+                                  {user.avatar_url && (
+                                    <AvatarImage src={user.avatar_url} alt={displayName} />
+                                  )}
+                                  <AvatarFallback className="bg-blue-100 text-blue-600 font-semibold">
                                     {displayName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
                                   </AvatarFallback>
                                 </Avatar>
