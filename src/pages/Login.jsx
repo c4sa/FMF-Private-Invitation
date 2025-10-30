@@ -75,9 +75,9 @@ export default function Login() {
             {/* Logo */}
             <div className="flex justify-center mb-6">
               <img 
-                src="https://xpuhnbeoczxxmzmjronk.supabase.co/storage/v1/object/public/system-assets/logo.jpeg" 
+                src="https://xpuhnbeoczxxmzmjronk.supabase.co/storage/v1/object/public/system-assets/new_logo.png" 
                 alt="Future Minerals Forum Logo" 
-                className="w-16 h-16 object-contain"
+                className="w-36 h-36 object-contain"
               />
             </div>
 
