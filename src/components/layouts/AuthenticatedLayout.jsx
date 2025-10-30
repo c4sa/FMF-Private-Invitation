@@ -152,8 +152,18 @@ export default function AuthenticatedLayout({ children, currentPageName }) {
     }
   };
 
-  const handleUserUpdate = (updatedUser) => {
+  const handleUserUpdate = async (updatedUser) => {
+    // Update the current user state with the new data
     setCurrentUser(updatedUser);
+    
+    // Also refresh user data from the database to ensure we have the latest info
+    try {
+      const freshUser = await User.me();
+      setCurrentUser(freshUser);
+    } catch (error) {
+      console.error('Failed to refresh user data:', error);
+      // If refresh fails, keep the updated user data we received
+    }
   };
 
   useEffect(() => {
