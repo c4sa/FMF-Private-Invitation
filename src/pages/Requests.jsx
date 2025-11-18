@@ -6,9 +6,10 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/components/common/Toast';
 import { format } from 'date-fns';
-import { Check, X, Eye, Inbox, UserPlus } from 'lucide-react';
+import { Check, X, Eye, Inbox, UserPlus, Download } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import NotificationService from '@/services/notificationService';
+import * as XLSX from 'xlsx';
 
 // Helper function to safely format dates
 const safeFormatDate = (dateValue, formatStr = 'PPP') => {
@@ -48,14 +49,16 @@ export default function RequestsPage() {
             return {
               ...req,
               user_name: user.preferred_name || user.full_name || 'Unknown User',
-              user_email: user.email || 'No email'
+              user_email: user.email || 'No email',
+              user_company_name: user.company_name || ''
             };
           } catch (error) {
             console.error(`Failed to fetch user for slot request ${req.id}:`, error);
             return {
               ...req,
               user_name: 'Unknown User',
-              user_email: 'No email'
+              user_email: 'No email',
+              user_company_name: ''
             };
           }
         })
@@ -143,6 +146,150 @@ export default function RequestsPage() {
     }
   };
 
+  const handleExportSlotRequests = () => {
+    try {
+      if (!slotRequests || slotRequests.length === 0) {
+        toast({
+          title: "No Data",
+          description: "There are no slot requests to export.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Prepare data for export
+      const exportData = slotRequests.map(req => ({
+        'User Name': req.user_name || 'Unknown',
+        'User Email': req.user_email || '',
+        'Company Name': req.user_company_name || '',
+        'Reason': req.reason || '',
+        'VIP Slots': req.requested_slots?.VIP || 0,
+        'Partner Slots': req.requested_slots?.Partner || 0,
+        'Exhibitor Slots': req.requested_slots?.Exhibitor || 0,
+        'Media Slots': req.requested_slots?.Media || 0,
+        'Total Requested': Object.values(req.requested_slots || {}).reduce((sum, count) => sum + (count || 0), 0),
+        'Status': req.status || 'pending',
+        'Requested Date': req.created_at ? format(new Date(req.created_at), 'yyyy-MM-dd HH:mm:ss') : '',
+        'Request ID': req.id || ''
+      }));
+
+      // Create workbook and worksheet
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.json_to_sheet(exportData);
+
+      // Set column widths for better readability
+      const colWidths = [
+        { wch: 25 }, // User Name
+        { wch: 30 }, // User Email
+        { wch: 30 }, // Company Name
+        { wch: 40 }, // Reason
+        { wch: 12 }, // VIP Slots
+        { wch: 15 }, // Partner Slots
+        { wch: 18 }, // Exhibitor Slots
+        { wch: 15 }, // Media Slots
+        { wch: 15 }, // Total Requested
+        { wch: 12 }, // Status
+        { wch: 20 }, // Requested Date
+        { wch: 40 }  // Request ID
+      ];
+      ws['!cols'] = colWidths;
+
+      // Add worksheet to workbook
+      XLSX.utils.book_append_sheet(wb, ws, 'Slot Requests');
+
+      // Generate filename with current date
+      const currentDate = new Date().toISOString().split('T')[0];
+      const filename = `FMF_Slot_Requests_${currentDate}.xlsx`;
+
+      // Write and download the file
+      XLSX.writeFile(wb, filename);
+
+      toast({
+        title: "Export Successful",
+        description: `Slot requests exported to "${filename}" successfully.`,
+        variant: "success"
+      });
+    } catch (error) {
+      console.error('Error exporting slot requests:', error);
+      toast({
+        title: "Export Failed",
+        description: "Failed to export slot requests. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleExportModificationRequests = () => {
+    try {
+      if (!modificationRequests || modificationRequests.length === 0) {
+        toast({
+          title: "No Data",
+          description: "There are no modification requests to export.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Prepare data for export
+      const exportData = modificationRequests.map(attendee => ({
+        'First Name': attendee.first_name || '',
+        'Last Name': attendee.last_name || '',
+        'Email': attendee.email || '',
+        'Organization': attendee.organization || '',
+        'Job Title': attendee.job_title || '',
+        'Attendee Type': attendee.attendee_type || '',
+        'Status': attendee.status || 'change_requested',
+        'Status Changed Date': attendee.updated_at ? format(new Date(attendee.updated_at), 'yyyy-MM-dd HH:mm:ss') : '',
+        'Registration Date': attendee.created_at ? format(new Date(attendee.created_at), 'yyyy-MM-dd HH:mm:ss') : '',
+        'Reference ID': attendee.id ? attendee.id.slice(-8).toUpperCase() : '',
+        'Modification Token': attendee.modification_token || ''
+      }));
+
+      // Create workbook and worksheet
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.json_to_sheet(exportData);
+
+      // Set column widths for better readability
+      const colWidths = [
+        { wch: 20 }, // First Name
+        { wch: 20 }, // Last Name
+        { wch: 30 }, // Email
+        { wch: 30 }, // Organization
+        { wch: 25 }, // Job Title
+        { wch: 15 }, // Attendee Type
+        { wch: 15 }, // Status
+        { wch: 20 }, // Status Changed Date
+        { wch: 20 }, // Registration Date
+        { wch: 15 }, // Reference ID
+        { wch: 40 }  // Modification Token
+      ];
+      ws['!cols'] = colWidths;
+
+      // Add worksheet to workbook
+      XLSX.utils.book_append_sheet(wb, ws, 'Modification Requests');
+
+      // Generate filename with current date
+      const currentDate = new Date().toISOString().split('T')[0];
+      const filename = `FMF_Modification_Requests_${currentDate}.xlsx`;
+
+      // Write and download the file
+      XLSX.writeFile(wb, filename);
+
+      toast({
+        title: "Export Successful",
+        description: `Modification requests exported to "${filename}" successfully.`,
+        variant: "success"
+      });
+    } catch (error) {
+      console.error('Error exporting modification requests:', error);
+      toast({
+        title: "Export Failed",
+        description: "Failed to export modification requests. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
   return (
     <ProtectedRoute adminOnly pageName="Requests">
       <div className="p-6 space-y-6 bg-slate-50 min-h-screen">
@@ -152,10 +299,22 @@ export default function RequestsPage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <UserPlus className="w-5 h-5 text-blue-600" />
-                  Additional Slot Requests
-                </CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2">
+                    <UserPlus className="w-5 h-5 text-blue-600" />
+                    Additional Slot Requests
+                  </CardTitle>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex items-center gap-2"
+                    onClick={handleExportSlotRequests}
+                    disabled={isLoading || slotRequests.length === 0}
+                  >
+                    <Download className="w-4 h-4" />
+                    Export
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent className="space-y-4">
                 {isLoading ? <p>Loading...</p> : slotRequests.length > 0 ? slotRequests.map(req => (
@@ -192,10 +351,22 @@ export default function RequestsPage() {
 
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Eye className="w-5 h-5 text-orange-600" />
-                  Attendee Modification Requests
-                </CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2">
+                    <Eye className="w-5 h-5 text-orange-600" />
+                    Attendee Modification Requests
+                  </CardTitle>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex items-center gap-2"
+                    onClick={handleExportModificationRequests}
+                    disabled={isLoading || modificationRequests.length === 0}
+                  >
+                    <Download className="w-4 h-4" />
+                    Export
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent className="space-y-4">
                 {isLoading ? <p>Loading...</p> : modificationRequests.length > 0 ? modificationRequests.map(attendee => (
