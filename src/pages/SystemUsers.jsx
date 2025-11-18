@@ -711,12 +711,13 @@ export default function SystemUsers() {
       const exportData = usersToExport.map(user => {
         const totalSlots = getTotalSlots(user.registration_slots);
         const usedSlots = getTotalUsedSlots(user.used_slots);
+        const remainingSlots = totalSlots - usedSlots;
         const displayName = getDisplayName(user);
         
-        // Format slots as "used/total" or "∞" for Admin/Super User
-        const slotsDisplay = (user.system_role === 'Admin' || user.system_role === 'Super User') 
-          ? '∞' 
-          : `${usedSlots}/${totalSlots}`;
+        // Format slots for Admin/Super User (unlimited) or regular users
+        const isUnlimited = (user.system_role === 'Admin' || user.system_role === 'Super User');
+        const slotsUsed = isUnlimited ? '∞' : usedSlots;
+        const slotsRemaining = isUnlimited ? '∞' : remainingSlots;
         
         // Format last login date
         const loggedIn = user.last_login_date 
@@ -732,7 +733,8 @@ export default function SystemUsers() {
           'Email': user.email || '',
           'Logged In': loggedIn,
           'User Type': userType,
-          'No of Slots': slotsDisplay
+          'Slots Used': slotsUsed,
+          'Slots Remaining': slotsRemaining
         };
       });
 
@@ -746,7 +748,8 @@ export default function SystemUsers() {
         { wch: 30 }, // Email
         { wch: 15 }, // Logged In
         { wch: 25 }, // User Type
-        { wch: 15 }  // No of Slots
+        { wch: 15 }, // Slots Used
+        { wch: 18 }  // Slots Remaining
       ];
       ws['!cols'] = colWidths;
 
