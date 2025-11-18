@@ -19,7 +19,8 @@ import {
   PowerOff,
   Clock,
   Download,
-  Upload
+  Upload,
+  Search
 } from "lucide-react";
 import * as XLSX from 'xlsx';
 import {
@@ -34,6 +35,8 @@ import ProtectedRoute from "../components/common/ProtectedRoute";
 import { sendNewUserRequestEmail, createUserDirectly, deleteUserCompletely, updateUserAccess } from "@/api/functions";
 import { format } from "date-fns";
 import { useToast } from "../components/common/Toast";
+import { Link } from "react-router-dom";
+import { createPageUrl } from "@/utils";
 
 
 const attendeeTypes = ["VIP", "Partner", "Exhibitor", "Media"];
@@ -46,9 +49,11 @@ const attendeeTypes = ["VIP", "Partner", "Exhibitor", "Media"];
 
 export default function SystemUsers() {
   const [users, setUsers] = useState([]);
+  const [filteredUsers, setFilteredUsers] = useState([]);
   const [currentUser, setCurrentUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [hasPermissionError, setHasPermissionError] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
   const [partnerTypes, setPartnerTypes] = useState([]); // <-- State for dynamic partner types
@@ -107,13 +112,16 @@ export default function SystemUsers() {
 
         setPartnerTypes(partnerTypeData);
 
+        let filteredUserData;
         if (me.system_role === 'Super User') {
           // Super Users see themselves and all 'User' type users
-          setUsers(userData.filter(u => u.id === me.id || u.system_role === 'User'));
+          filteredUserData = userData.filter(u => u.id === me.id || u.system_role === 'User');
         } else {
           // Admins see everyone
-          setUsers(userData);
+          filteredUserData = userData;
         }
+        setUsers(filteredUserData);
+        setFilteredUsers(filteredUserData);
       } catch (dataError) {
         console.error("Error loading user data:", dataError);
         // Assuming "Permission denied" or similar message in the error object for API access issues
@@ -142,6 +150,43 @@ export default function SystemUsers() {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  const getDisplayName = (user) => {
+    return user.preferred_name || user.full_name || user.email || 'Unknown User';
+  };
+
+  const applyFilters = useCallback(() => {
+    let filtered = [...users];
+
+    if (searchTerm) {
+      const lowercasedSearch = searchTerm.toLowerCase();
+      filtered = filtered.filter(user => {
+        const displayName = getDisplayName(user);
+        const email = user.email || '';
+        const companyName = user.company_name || '';
+        const mobile = user.mobile || '';
+        const systemRole = user.system_role || '';
+        const userType = user.user_type || '';
+        const userId = user.id || '';
+
+        return (
+          displayName.toLowerCase().includes(lowercasedSearch) ||
+          email.toLowerCase().includes(lowercasedSearch) ||
+          companyName.toLowerCase().includes(lowercasedSearch) ||
+          mobile.toLowerCase().includes(lowercasedSearch) ||
+          systemRole.toLowerCase().includes(lowercasedSearch) ||
+          userType.toLowerCase().includes(lowercasedSearch) ||
+          userId.toLowerCase().includes(lowercasedSearch)
+        );
+      });
+    }
+
+    setFilteredUsers(filtered);
+  }, [users, searchTerm]);
+
+  useEffect(() => {
+    applyFilters();
+  }, [applyFilters]);
 
   const resetForm = () => {
     setFormData({
@@ -633,6 +678,104 @@ export default function SystemUsers() {
     }
   };
 
+  const handleExportUsers = () => {
+    try {
+      // Function to sanitize sheet names (remove invalid characters)
+      const sanitizeSheetName = (name) => {
+        return name.replace(/[:\\/\?\*\[\]]/g, ' ').substring(0, 31); // Excel sheet names max 31 chars
+      };
+
+      // Get users to export (use filteredUsers to respect current search/filter)
+      const usersToExport = filteredUsers.filter(user => {
+        // Only filter out current user if they are a Super User
+        if (currentUser?.system_role === 'Super User') {
+          return user.id !== currentUser.id;
+        }
+        // Admins can see all users including themselves
+        return true;
+      });
+
+      if (usersToExport.length === 0) {
+        toast({
+          title: "No Data to Export",
+          description: "There are no users to export.",
+          variant: "warning"
+        });
+        return;
+      }
+
+      // Create a new workbook
+      const wb = XLSX.utils.book_new();
+
+      // Prepare data for export with only the requested columns
+      const exportData = usersToExport.map(user => {
+        const totalSlots = getTotalSlots(user.registration_slots);
+        const usedSlots = getTotalUsedSlots(user.used_slots);
+        const displayName = getDisplayName(user);
+        
+        // Format slots as "used/total" or "∞" for Admin/Super User
+        const slotsDisplay = (user.system_role === 'Admin' || user.system_role === 'Super User') 
+          ? '∞' 
+          : `${usedSlots}/${totalSlots}`;
+        
+        // Format last login date
+        const loggedIn = user.last_login_date 
+          ? format(new Date(user.last_login_date), 'yyyy-MM-dd')
+          : 'Never';
+        
+        // Get user type (Partner Type)
+        const userType = (user.user_type && user.user_type !== 'N/A') ? user.user_type : 'N/A';
+
+        return {
+          'Company Name': user.company_name || '',
+          'Name': displayName,
+          'Email': user.email || '',
+          'Logged In': loggedIn,
+          'User Type': userType,
+          'No of Slots': slotsDisplay
+        };
+      });
+
+      // Convert to worksheet
+      const ws = XLSX.utils.json_to_sheet(exportData);
+
+      // Set column widths for better readability
+      const colWidths = [
+        { wch: 25 }, // Company Name
+        { wch: 25 }, // Name
+        { wch: 30 }, // Email
+        { wch: 15 }, // Logged In
+        { wch: 25 }, // User Type
+        { wch: 15 }  // No of Slots
+      ];
+      ws['!cols'] = colWidths;
+
+      // Add the main sheet
+      XLSX.utils.book_append_sheet(wb, ws, sanitizeSheetName('System Users'));
+
+      // Generate filename with current date
+      const currentDate = new Date().toISOString().split('T')[0];
+      const filename = `FMF_SystemUsers_Export_${currentDate}.xlsx`;
+
+      // Write and download the file
+      XLSX.writeFile(wb, filename);
+
+      toast({
+        title: "Export Successful",
+        description: `Successfully exported ${usersToExport.length} system user(s) to "${filename}".`,
+        variant: "success"
+      });
+
+    } catch (error) {
+      console.error('Error exporting system users:', error);
+      toast({
+        title: "Export Failed",
+        description: "Failed to export system users. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
   const handleBulkUpload = async (event) => {
     const file = event.target.files[0];
     if (!file) return;
@@ -910,10 +1053,6 @@ export default function SystemUsers() {
     return Object.values(usedSlots || {}).reduce((sum, count) => sum + (count || 0), 0);
   };
 
-  const getDisplayName = (user) => {
-    return user.preferred_name || user.full_name || user.email || 'Unknown User';
-  };
-
   const canPerformAction = (targetUser) => {
       if (!currentUser || !targetUser) return false;
       if (currentUser.role === 'admin' || currentUser.system_role === 'Admin') return true; // Admins can do anything
@@ -979,6 +1118,15 @@ export default function SystemUsers() {
                 >
                   <Download className="w-4 h-4" />
                   Download Template
+                </Button>
+                <Button 
+                  variant="outline" 
+                  className="flex items-center gap-2"
+                  onClick={handleExportUsers}
+                  disabled={isLoading || filteredUsers.length === 0}
+                >
+                  <Download className="w-4 h-4" />
+                  Export
                 </Button>
                 <Button 
                   variant="outline" 
@@ -1353,11 +1501,30 @@ export default function SystemUsers() {
             </DialogContent>
           </Dialog>
 
+          {/* Search Filter */}
+          <Card className="mb-6">
+            <CardContent className="p-6">
+              <div className="flex flex-col md:flex-row gap-4">
+                <div className="flex-1">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                    <Input
+                      placeholder="Search by name, email, company, mobile, system role, partner type, or user ID"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <UserPlus className="w-5 h-5" />
-                System Users ({users.length})
+                System Users ({filteredUsers.length})
               </CardTitle>
             </CardHeader>
             <CardContent className="p-0">
@@ -1367,7 +1534,7 @@ export default function SystemUsers() {
                     <TableRow className="bg-gray-50">
                       <TableHead>User</TableHead>
                       <TableHead>System Type</TableHead>
-                      {users.filter(user => {
+                      {filteredUsers.filter(user => {
                         // Only filter out current user if they are a Super User
                         if (currentUser?.system_role === 'Super User') {
                           return user.id !== currentUser.id;
@@ -1385,7 +1552,7 @@ export default function SystemUsers() {
                     {isLoading ? (
                       Array(3).fill(0).map((_, i) => (
                         <TableRow key={i}>
-                          <TableCell colSpan={users.filter(user => {
+                          <TableCell colSpan={filteredUsers.filter(user => {
                             // Only filter out current user if they are a Super User
                             if (currentUser?.system_role === 'Super User') {
                               return user.id !== currentUser.id;
@@ -1400,7 +1567,7 @@ export default function SystemUsers() {
                         </TableRow>
                       ))
                     ) : (
-                      users.filter(user => {
+                      filteredUsers.filter(user => {
                         // Only filter out current user if they are a Super User
                         if (currentUser?.system_role === 'Super User') {
                           return user.id !== currentUser.id;
@@ -1438,7 +1605,7 @@ export default function SystemUsers() {
                                 <Shield className="w-3 h-3 mr-1" />{user.system_role}
                               </Badge>
                             </TableCell>
-                            {users.filter(user => {
+                            {filteredUsers.filter(user => {
                               // Only filter out current user if they are a Super User
                               if (currentUser?.system_role === 'Super User') {
                                 return user.id !== currentUser.id;
@@ -1534,12 +1701,18 @@ export default function SystemUsers() {
             </CardContent>
           </Card>
 
-          {users.length === 0 && !isLoading && !hasPermissionError && (
+          {filteredUsers.length === 0 && !isLoading && !hasPermissionError && (
             <Card>
               <CardContent className="p-12 text-center">
-                <Users className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">No Users Found</h3>
-                <p className="text-gray-500 mb-6">Add new users using the "Add New User" button.</p>
+                <UserPlus className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                  {searchTerm ? 'No Users Found' : 'No Users Found'}
+                </h3>
+                <p className="text-gray-500 mb-6">
+                  {searchTerm 
+                    ? `No users match your search "${searchTerm}". Try a different search term.`
+                    : 'Add new users using the "Add New System User" button.'}
+                </p>
               </CardContent>
             </Card>
           )}
