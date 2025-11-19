@@ -20,7 +20,8 @@ import {
   Clock,
   Download,
   Upload,
-  Search
+  Search,
+  Mail
 } from "lucide-react";
 import * as XLSX from 'xlsx';
 import {
@@ -32,7 +33,7 @@ import {
 } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import ProtectedRoute from "../components/common/ProtectedRoute";
-import { sendNewUserRequestEmail, createUserDirectly, deleteUserCompletely, updateUserAccess } from "@/api/functions";
+import { sendNewUserRequestEmail, createUserDirectly, deleteUserCompletely, updateUserAccess, sendUserReminderEmail } from "@/api/functions";
 import { format } from "date-fns";
 import { useToast } from "../components/common/Toast";
 import { Link } from "react-router-dom";
@@ -54,6 +55,8 @@ export default function SystemUsers() {
   const [isLoading, setIsLoading] = useState(true);
   const [hasPermissionError, setHasPermissionError] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedUsers, setSelectedUsers] = useState(new Set());
+  const [isSendingReminders, setIsSendingReminders] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
   const [partnerTypes, setPartnerTypes] = useState([]); // <-- State for dynamic partner types
@@ -1074,6 +1077,95 @@ export default function SystemUsers() {
       return [];
   }
 
+  const handleUserSelection = (userId, isSelected) => {
+    setSelectedUsers(prev => {
+      const newSet = new Set(prev);
+      if (isSelected) {
+        newSet.add(userId);
+      } else {
+        newSet.delete(userId);
+      }
+      return newSet;
+    });
+  };
+
+  const getVisibleUsers = () => {
+    return filteredUsers.filter(user => {
+      if (currentUser?.system_role === 'Super User') {
+        return user.id !== currentUser.id;
+      }
+      return true;
+    });
+  };
+
+  const handleSelectAll = (isSelected) => {
+    if (isSelected) {
+      const visibleUsers = getVisibleUsers();
+      setSelectedUsers(new Set(visibleUsers.map(u => u.id)));
+    } else {
+      setSelectedUsers(new Set());
+    }
+  };
+
+  const handleSendReminderEmails = async () => {
+    if (selectedUsers.size === 0) {
+      toast({
+        title: "No Users Selected",
+        description: "Please select at least one user to send reminder emails.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsSendingReminders(true);
+    const selectedUserIds = Array.from(selectedUsers);
+    const usersToEmail = getVisibleUsers().filter(user => selectedUserIds.includes(user.id));
+    
+    let successCount = 0;
+    let failureCount = 0;
+    const errors = [];
+
+    try {
+      // Send emails to all selected users
+      for (const user of usersToEmail) {
+        try {
+          await sendUserReminderEmail(user);
+          successCount++;
+        } catch (error) {
+          console.error(`Failed to send reminder email to ${user.email}:`, error);
+          failureCount++;
+          errors.push(`${user.email}: ${error.message}`);
+        }
+      }
+
+      // Clear selection after sending
+      setSelectedUsers(new Set());
+
+      if (failureCount === 0) {
+        toast({
+          title: "Reminder Emails Sent",
+          description: `Successfully sent reminder emails to ${successCount} user(s).`,
+          variant: "success"
+        });
+      } else {
+        toast({
+          title: "Partial Success",
+          description: `Sent to ${successCount} user(s), failed for ${failureCount} user(s). ${errors.slice(0, 3).join('; ')}${errors.length > 3 ? '...' : ''}`,
+          variant: "warning"
+        });
+      }
+    } catch (error) {
+      console.error('Error sending reminder emails:', error);
+      toast({
+        title: "Error",
+        description: "Failed to send reminder emails. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSendingReminders(false);
+    }
+  };
+
   if (hasPermissionError) {
     return (
       <ProtectedRoute pageName="SystemUsers">
@@ -1525,16 +1617,37 @@ export default function SystemUsers() {
 
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <UserPlus className="w-5 h-5" />
-                System Users ({filteredUsers.length})
-              </CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <UserPlus className="w-5 h-5" />
+                  System Users ({filteredUsers.length})
+                </CardTitle>
+                <Button
+                  variant="outline"
+                  className="flex items-center gap-2"
+                  onClick={handleSendReminderEmails}
+                  disabled={isSendingReminders || selectedUsers.size === 0}
+                >
+                  <Mail className="w-4 h-4" />
+                  {isSendingReminders ? 'Sending...' : `Resend Email (${selectedUsers.size})`}
+                </Button>
+              </div>
             </CardHeader>
             <CardContent className="p-0">
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-gray-50">
+                      <TableHead className="w-12">
+                        <Checkbox
+                          checked={(() => {
+                            const visibleUsers = getVisibleUsers();
+                            return visibleUsers.length > 0 && visibleUsers.every(user => selectedUsers.has(user.id));
+                          })()}
+                          onCheckedChange={handleSelectAll}
+                          aria-label="Select all users"
+                        />
+                      </TableHead>
                       <TableHead>User</TableHead>
                       <TableHead>System Type</TableHead>
                       {filteredUsers.filter(user => {
@@ -1555,14 +1668,7 @@ export default function SystemUsers() {
                     {isLoading ? (
                       Array(3).fill(0).map((_, i) => (
                         <TableRow key={i}>
-                          <TableCell colSpan={filteredUsers.filter(user => {
-                            // Only filter out current user if they are a Super User
-                            if (currentUser?.system_role === 'Super User') {
-                              return user.id !== currentUser.id;
-                            }
-                            // Admins can see all users including themselves
-                            return true;
-                          }).some(user => user.system_role === 'User') ? 7 : 6} className="h-16">
+                          <TableCell colSpan={getVisibleUsers().some(user => user.system_role === 'User') ? 8 : 7} className="h-16">
                             <div className="flex items-center justify-center">
                               <Loader size="small" />
                             </div>
@@ -1583,9 +1689,17 @@ export default function SystemUsers() {
                         const availableSlots = totalSlots - usedSlots;
                         const displayName = getDisplayName(user);
                         const isActive = user.account_status === 'active' || !user.account_status;
+                        const isSelected = selectedUsers.has(user.id);
 
                         return (
                           <TableRow key={user.id} className="hover:bg-gray-50">
+                            <TableCell>
+                              <Checkbox
+                                checked={isSelected}
+                                onCheckedChange={(checked) => handleUserSelection(user.id, checked)}
+                                aria-label={`Select ${displayName}`}
+                              />
+                            </TableCell>
                             <TableCell>
                               <div className="flex items-center gap-3">
                                 <Avatar className="w-10 h-10">

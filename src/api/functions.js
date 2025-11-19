@@ -25,7 +25,8 @@ import {
   verifyTurnstileToken,
   updateIsReset,
   updateUserAccess,
-  updateEmailTemplateStatus
+  updateEmailTemplateStatus,
+  sendUserReminderEmail
 } from './supabaseFunctions.js';
 
 // Export all functions
@@ -56,7 +57,8 @@ export {
   verifyTurnstileToken,
   updateIsReset,
   updateUserAccess,
-  updateEmailTemplateStatus
+  updateEmailTemplateStatus,
+  sendUserReminderEmail
 };
   
   

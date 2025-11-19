@@ -71,6 +71,43 @@ export const sendInvitationEmail = async ({ to_email, invitation_code }) => {
   }
 }
 
+export const sendUserReminderEmail = async (user) => {
+  try {
+    // Get user reminder email template
+    const templates = await EmailTemplate.filter({ name: 'user_reminder' })
+    const template = templates?.[0]
+    
+    if (!template) {
+      throw new Error('User reminder email template not found')
+    }
+
+    // Check if the email template is active
+    if (!template.is_active) {
+      console.log('User reminder email template is disabled, skipping email send')
+      return { success: true, message: 'Email template is disabled' }
+    }
+    
+    const loginUrl = `${window.location.origin}/login`
+    let subject = template.subject
+    let html = template.body
+      .replace(/{{preferred_name}}/g, user.preferred_name || user.full_name || 'User')
+      .replace(/{{email}}/g, user.email || '')
+      .replace(/{{company_name}}/g, user.company_name || 'N/A')
+      .replace(/{{system_role}}/g, user.system_role || 'User')
+      .replace(/{{user_type}}/g, (user.user_type && user.user_type !== 'N/A') ? user.user_type : 'N/A')
+      .replace(/{{login_url}}/g, loginUrl)
+    
+    return await emailService.send({
+      to: user.email,
+      subject,
+      html
+    })
+  } catch (error) {
+    console.error('Error sending user reminder email:', error)
+    throw error
+  }
+}
+
 export const sendModificationRequestEmail = async ({ to, subject, body }) => {
   try {
     return await emailService.sendModificationRequestEmail({

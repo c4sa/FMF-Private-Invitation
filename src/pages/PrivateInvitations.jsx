@@ -186,12 +186,24 @@ export default function PrivateInvitations() {
         invitation_code: invitationToSend.invitation_code
       });
       
-      // Update status to 'emailed' if not already used
+      // Update status to 'emailed' and last_sent timestamp if not already used
       if (!invitationToSend.is_used) {
         try {
-          await Invitation.update(invitationToSend.id, { status: 'emailed' });
+          await Invitation.update(invitationToSend.id, { 
+            status: 'emailed',
+            last_sent: new Date().toISOString()
+          });
         } catch (updateError) {
           console.error("Error updating invitation status:", updateError);
+        }
+      } else {
+        // Even if already used, update last_sent timestamp when email is sent
+        try {
+          await Invitation.update(invitationToSend.id, { 
+            last_sent: new Date().toISOString()
+          });
+        } catch (updateError) {
+          console.error("Error updating invitation last_sent:", updateError);
         }
       }
       
@@ -275,14 +287,15 @@ export default function PrivateInvitations() {
                     <TableHead>Status</TableHead>
                     <TableHead>Used By</TableHead>
                     <TableHead>Created</TableHead>
+                    <TableHead>Last Sent</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {isLoading ? (
-                    <TableRow><TableCell colSpan={6} className="text-center">Loading...</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={7} className="text-center">Loading...</TableCell></TableRow>
                   ) : invitations.length === 0 ? (
-                    <TableRow><TableCell colSpan={6} className="text-center">No invitations generated yet.</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={7} className="text-center">No invitations generated yet.</TableCell></TableRow>
                   ) : (
                     invitations.map(inv => (
                       <TableRow key={inv.id}>
@@ -301,6 +314,16 @@ export default function PrivateInvitations() {
                         </TableCell>
                         <TableCell className="text-sm">{inv.used_by_email || 'N/A'}</TableCell>
                         <TableCell className="text-sm">{format(new Date(inv.created_at), 'MMM d, yyyy')}</TableCell>
+                        <TableCell className="text-sm">
+                          {inv.last_sent ? (
+                            <div className="flex items-center gap-1">
+                              <Mail className="w-3 h-3 text-gray-400" />
+                              {format(new Date(inv.last_sent), 'MMM d, yyyy HH:mm')}
+                            </div>
+                          ) : (
+                            <span className="text-gray-400">Never</span>
+                          )}
+                        </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-1">
                             {inv.is_used ? (
