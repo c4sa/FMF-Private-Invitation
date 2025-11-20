@@ -1,47 +1,15 @@
-import nodemailer from 'nodemailer';
+import sgMail from '@sendgrid/mail';
 
-// SMTP Configuration from environment variables
-const smtpConfig = {
-  provider: process.env.SMTP_PROVIDER || 'gmail',
-  user: process.env.SMTP_USER,
-  pass: process.env.SMTP_PASS,
-  host: process.env.SMTP_HOST || 'smtp.gmail.com',
-  port: parseInt(process.env.SMTP_PORT) || 587,
-  secure: process.env.SMTP_SECURE === 'true',
-  from: process.env.SMTP_FROM || process.env.SMTP_USER
+// SendGrid Configuration from environment variables
+const sendGridConfig = {
+  apiKey: process.env.SENDGRID_API_KEY,
+  from: process.env.SMTP_FROM || process.env.SENDGRID_FROM || 'noreply@example.com'
 };
 
-// Create transporter based on provider
-const createTransporter = () => {
-  if (smtpConfig.provider === 'gmail') {
-    return nodemailer.createTransport({
-      service: 'gmail',
-      auth: {
-        user: smtpConfig.user,
-        pass: smtpConfig.pass
-      }
-    });
-  } else if (smtpConfig.provider === 'outlook') {
-    return nodemailer.createTransport({
-      service: 'hotmail',
-      auth: {
-        user: smtpConfig.user,
-        pass: smtpConfig.pass
-      }
-    });
-  } else {
-    // Custom SMTP configuration
-    return nodemailer.createTransport({
-      host: smtpConfig.host,
-      port: smtpConfig.port,
-      secure: smtpConfig.secure,
-      auth: {
-        user: smtpConfig.user,
-        pass: smtpConfig.pass
-      }
-    });
-  }
-};
+// Initialize SendGrid with API key
+if (sendGridConfig.apiKey) {
+  sgMail.setApiKey(sendGridConfig.apiKey);
+}
 
 export default async function handler(req, res) {
   // Only allow POST requests
@@ -59,26 +27,47 @@ export default async function handler(req, res) {
       });
     }
 
-    const transporter = createTransporter();
-    
-    const mailOptions = {
-      from: smtpConfig.from,
+    // Check if SendGrid API key is configured
+    if (!sendGridConfig.apiKey) {
+      console.log('📧 SendGrid API key not configured, simulating email sending');
+      return res.status(200).json({ 
+        success: true, 
+        messageId: 'sim-' + Date.now(),
+        response: 'Email simulated (SendGrid API key not configured)'
+      });
+    }
+
+    // Prepare SendGrid message
+    const msg = {
       to: to,
+      from: sendGridConfig.from,
       subject: subject,
       html: html,
       text: text || html.replace(/<[^>]*>/g, '') // Strip HTML tags for text version
     };
 
-    const result = await transporter.sendMail(mailOptions);
+    // Send email using SendGrid
+    const [result] = await sgMail.send(msg);
     
     return res.status(200).json({ 
       success: true, 
-      messageId: result.messageId,
-      response: result.response 
+      messageId: result.headers['x-message-id'] || `sg-${Date.now()}`,
+      response: `SendGrid status: ${result.statusCode}`
     });
 
   } catch (error) {
     console.error('Failed to send email:', error);
+    
+    // Handle SendGrid specific errors
+    if (error.response) {
+      const { body, statusCode } = error.response;
+      return res.status(statusCode || 500).json({ 
+        error: 'Failed to send email',
+        details: body?.errors?.[0]?.message || error.message,
+        sendGridErrors: body?.errors
+      });
+    }
+    
     return res.status(500).json({ 
       error: 'Failed to send email',
       details: error.message 
