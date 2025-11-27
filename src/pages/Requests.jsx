@@ -31,6 +31,8 @@ export default function RequestsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedAttendee, setSelectedAttendee] = useState(null);
   const [showReviewDialog, setShowReviewDialog] = useState(false);
+  const [selectedSlotRequest, setSelectedSlotRequest] = useState(null);
+  const [showSlotDetailsDialog, setShowSlotDetailsDialog] = useState(false);
   const { toast } = useToast();
 
   const loadRequests = useCallback(async () => {
@@ -111,6 +113,25 @@ export default function RequestsPage() {
     }
   };
   
+  // Helper function to check if request uses new format
+  const isNewFormat = (requestedSlots) => {
+    return requestedSlots && typeof requestedSlots === 'object' && requestedSlots.slots && Array.isArray(requestedSlots.slots);
+  };
+
+  // Helper function to get slot summary (works with both formats)
+  const getSlotSummary = (requestedSlots) => {
+    if (isNewFormat(requestedSlots)) {
+      return requestedSlots.summary || {};
+    }
+    // Old format - just return the object as-is
+    return requestedSlots || {};
+  };
+
+  const handleShowSlotDetails = (request) => {
+    setSelectedSlotRequest(request);
+    setShowSlotDetailsDialog(true);
+  };
+
   const handleSlotRequest = async (request, newStatus) => {
     try {
       const oldStatus = request.status;
@@ -120,8 +141,11 @@ export default function RequestsPage() {
           const currentSlots = user.registration_slots || {};
           const newSlots = { ...currentSlots };
           
-          Object.entries(request.requested_slots).forEach(([type, count]) => {
-              newSlots[type] = (newSlots[type] || 0) + count;
+          // Get summary - works with both old and new formats
+          const summary = getSlotSummary(request.requested_slots);
+          
+          Object.entries(summary).forEach(([type, count]) => {
+              newSlots[type] = (newSlots[type] || 0) + (count || 0);
           });
           
           await User.update(request.user_id, { registration_slots: newSlots });
@@ -157,21 +181,69 @@ export default function RequestsPage() {
         return;
       }
 
-      // Prepare data for export
-      const exportData = slotRequests.map(req => ({
-        'User Name': req.user_name || 'Unknown',
-        'User Email': req.user_email || '',
-        'Company Name': req.user_company_name || '',
-        'Reason': req.reason || '',
-        'VIP Slots': req.requested_slots?.VIP || 0,
-        'Partner Slots': req.requested_slots?.Partner || 0,
-        'Exhibitor Slots': req.requested_slots?.Exhibitor || 0,
-        'Media Slots': req.requested_slots?.Media || 0,
-        'Total Requested': Object.values(req.requested_slots || {}).reduce((sum, count) => sum + (count || 0), 0),
-        'Status': req.status || 'pending',
-        'Requested Date': req.created_at ? format(new Date(req.created_at), 'yyyy-MM-dd HH:mm:ss') : '',
-        'Request ID': req.id || ''
-      }));
+      // Helper function to check if request uses new format
+      const isNewFormat = (requestedSlots) => {
+        return requestedSlots && typeof requestedSlots === 'object' && requestedSlots.slots && Array.isArray(requestedSlots.slots);
+      };
+
+      // Helper function to get slot summary
+      const getSlotSummary = (requestedSlots) => {
+        if (isNewFormat(requestedSlots)) {
+          return requestedSlots.summary || {};
+        }
+        return requestedSlots || {};
+      };
+
+      // Prepare data for export - one row per slot (for new format) or one row per request (for old format)
+      const exportData = [];
+      
+      slotRequests.forEach(req => {
+        const summary = getSlotSummary(req.requested_slots);
+        const totalRequested = Object.values(summary).reduce((sum, count) => sum + (count || 0), 0);
+        
+        if (isNewFormat(req.requested_slots) && req.requested_slots.slots && req.requested_slots.slots.length > 0) {
+          // New format: one row per slot
+          req.requested_slots.slots.forEach((slot, index) => {
+            exportData.push({
+              'Request ID': req.id || '',
+              'User Name': req.user_name || 'Unknown',
+              'User Email': req.user_email || '',
+              'Company Name': req.user_company_name || '',
+              'Reason': req.reason || '',
+              'Status': req.status || 'pending',
+              'Requested Date': req.created_at ? format(new Date(req.created_at), 'yyyy-MM-dd HH:mm:ss') : '',
+              'Slot Type': slot.type || '',
+              'Slot Number': slot.slotNumber || index + 1,
+              'Slot Name': slot.name || '',
+              'Slot Email': slot.email || '',
+              'Slot Position': slot.position || '',
+              'Total Slots in Request': totalRequested
+            });
+          });
+        } else {
+          // Old format: one row per request
+          exportData.push({
+            'Request ID': req.id || '',
+            'User Name': req.user_name || 'Unknown',
+            'User Email': req.user_email || '',
+            'Company Name': req.user_company_name || '',
+            'Reason': req.reason || '',
+            'Status': req.status || 'pending',
+            'Requested Date': req.created_at ? format(new Date(req.created_at), 'yyyy-MM-dd HH:mm:ss') : '',
+            'VIP Slots': summary.VIP || 0,
+            'Partner Slots': summary.Partner || 0,
+            'Exhibitor Slots': summary.Exhibitor || 0,
+            'Media Slots': summary.Media || 0,
+            'Total Requested': totalRequested,
+            'Slot Type': 'N/A (Legacy Format)',
+            'Slot Number': 'N/A',
+            'Slot Name': 'N/A',
+            'Slot Email': 'N/A',
+            'Slot Position': 'N/A',
+            'Total Slots in Request': totalRequested
+          });
+        }
+      });
 
       // Create workbook and worksheet
       const wb = XLSX.utils.book_new();
@@ -179,18 +251,24 @@ export default function RequestsPage() {
 
       // Set column widths for better readability
       const colWidths = [
+        { wch: 40 }, // Request ID
         { wch: 25 }, // User Name
         { wch: 30 }, // User Email
         { wch: 30 }, // Company Name
         { wch: 40 }, // Reason
-        { wch: 12 }, // VIP Slots
-        { wch: 15 }, // Partner Slots
-        { wch: 18 }, // Exhibitor Slots
-        { wch: 15 }, // Media Slots
-        { wch: 15 }, // Total Requested
         { wch: 12 }, // Status
         { wch: 20 }, // Requested Date
-        { wch: 40 }  // Request ID
+        { wch: 12 }, // Slot Type
+        { wch: 12 }, // Slot Number
+        { wch: 25 }, // Slot Name
+        { wch: 30 }, // Slot Email
+        { wch: 20 }, // Slot Position
+        { wch: 20 }, // Total Slots in Request
+        { wch: 12 }, // VIP Slots (for legacy)
+        { wch: 15 }, // Partner Slots (for legacy)
+        { wch: 18 }, // Exhibitor Slots (for legacy)
+        { wch: 15 }, // Media Slots (for legacy)
+        { wch: 15 }  // Total Requested (for legacy)
       ];
       ws['!cols'] = colWidths;
 
@@ -323,8 +401,10 @@ export default function RequestsPage() {
                       <p className="font-semibold">{req.user_name} <span className="text-sm text-gray-500">({req.user_email})</span></p>
                       <p className="text-sm text-gray-600 mt-1">{req.reason}</p>
                       <div className="flex flex-wrap gap-2 mt-2">
-                        {Object.entries(req.requested_slots).map(([type, count]) => (
-                          <Badge key={type} variant="secondary">{count} x {type}</Badge>
+                        {Object.entries(getSlotSummary(req.requested_slots)).map(([type, count]) => (
+                          count > 0 && (
+                            <Badge key={type} variant="secondary">{count} x {type}</Badge>
+                          )
                         ))}
                       </div>
                       <p className="text-xs text-gray-400 mt-2">
@@ -332,10 +412,19 @@ export default function RequestsPage() {
                       </p>
                     </div>
                     <div className="flex gap-2 flex-shrink-0 ml-4">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => handleShowSlotDetails(req)}
+                        className="text-xs"
+                      >
+                        <Eye className="w-4 h-4 mr-1" />
+                        Details
+                      </Button>
                       <Button size="icon" className="bg-green-500 hover:bg-green-600 h-8 w-8" onClick={() => handleSlotRequest(req, 'approved')}>
                         <Check className="w-4 h-4" />
                       </Button>
-                      <Button size="icon" className="bg-red-500 hover:bg-red-600 h-8 w-8" onClick={() => handleSlotRequest(req, 'rejected')}>
+                      <Button size="icon" className="bg-red-500 hover:bg-red-600 h-8 w-8" onClick={() => handleSlotRequest(req, 'declined')}>
                         <X className="w-4 h-4" />
                       </Button>
                     </div>
@@ -394,6 +483,102 @@ export default function RequestsPage() {
 
         </div>
       </div>
+
+      {/* Slot Details Dialog */}
+      <Dialog open={showSlotDetailsDialog} onOpenChange={setShowSlotDetailsDialog}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Slot Request Details</DialogTitle>
+          </DialogHeader>
+          
+          {selectedSlotRequest && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Requested By</label>
+                  <p className="text-sm font-semibold">{selectedSlotRequest.user_name}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Email</label>
+                  <p className="text-sm">{selectedSlotRequest.user_email}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Company</label>
+                  <p className="text-sm">{selectedSlotRequest.user_company_name || 'N/A'}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Status</label>
+                  <Badge variant="outline" className="mt-1">
+                    {selectedSlotRequest.status}
+                  </Badge>
+                </div>
+                <div className="col-span-2">
+                  <label className="text-sm font-medium text-gray-500">Reason / Justification</label>
+                  <p className="text-sm text-gray-700 mt-1">{selectedSlotRequest.reason || 'No reason provided'}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Requested Date</label>
+                  <p className="text-sm">{safeFormatDate(selectedSlotRequest.created_at)}</p>
+                </div>
+              </div>
+
+              <div className="border-t pt-4">
+                <h3 className="font-semibold text-lg mb-4">Slot Details</h3>
+                {isNewFormat(selectedSlotRequest.requested_slots) ? (
+                  <div className="space-y-4">
+                    {selectedSlotRequest.requested_slots.slots && selectedSlotRequest.requested_slots.slots.length > 0 ? (
+                      <div className="space-y-3">
+                        {selectedSlotRequest.requested_slots.slots.map((slot, index) => (
+                          <div key={index} className="p-4 border rounded-lg bg-gray-50">
+                            <div className="flex items-center gap-2 mb-3">
+                              <Badge variant="secondary">{slot.type}</Badge>
+                              <span className="text-sm text-gray-600">Slot {slot.slotNumber}</span>
+                            </div>
+                            <div className="grid grid-cols-3 gap-4">
+                              <div>
+                                <label className="text-xs font-medium text-gray-500">Name</label>
+                                <p className="text-sm font-medium">{slot.name || 'N/A'}</p>
+                              </div>
+                              <div>
+                                <label className="text-xs font-medium text-gray-500">Email</label>
+                                <p className="text-sm">{slot.email || 'N/A'}</p>
+                              </div>
+                              <div>
+                                <label className="text-xs font-medium text-gray-500">Position</label>
+                                <p className="text-sm">{slot.position || 'N/A'}</p>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-gray-500">No slot details available.</p>
+                    )}
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <p className="text-sm text-gray-600 mb-2">Summary (Legacy Format):</p>
+                    <div className="flex flex-wrap gap-2">
+                      {Object.entries(getSlotSummary(selectedSlotRequest.requested_slots)).map(([type, count]) => (
+                        count > 0 && (
+                          <Badge key={type} variant="secondary">{count} x {type}</Badge>
+                        )
+                      ))}
+                    </div>
+                    <p className="text-xs text-gray-500 mt-2">This request was created before detailed slot information was available.</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowSlotDetailsDialog(false)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Review Dialog */}
       <Dialog open={showReviewDialog} onOpenChange={setShowReviewDialog}>
