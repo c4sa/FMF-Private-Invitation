@@ -515,6 +515,28 @@ app.delete('/api/delete-user', async (req, res) => {
       // Continue with deletion even if OTPs fail
     }
 
+    // Delete slot requests where user is the requester
+    const { error: slotRequestError } = await supabase
+      .from('slot_requests')
+      .delete()
+      .eq('user_id', userId);
+
+    if (slotRequestError) {
+      console.error('Error deleting slot requests:', slotRequestError);
+      // Continue with deletion even if slot requests fail
+    }
+
+    // Update slot requests where user is the reviewer (set reviewed_by to null)
+    const { error: slotRequestReviewerError } = await supabase
+      .from('slot_requests')
+      .update({ reviewed_by: null })
+      .eq('reviewed_by', userId);
+
+    if (slotRequestReviewerError) {
+      console.error('Error updating slot requests reviewed_by:', slotRequestReviewerError);
+      // Continue with deletion even if update fails
+    }
+
     // Update attendees to remove registered_by reference (set to null)
     const { error: attendeeError } = await supabase
       .from('attendees')
