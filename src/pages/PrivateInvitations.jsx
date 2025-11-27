@@ -530,12 +530,6 @@ export default function PrivateInvitations() {
                         </div>
                       )}
 
-                      {selectedAttendee.issue_date && (
-                        <div>
-                          <span className="text-sm text-gray-600">Issue Date:</span>
-                          <p className="font-medium">{format(new Date(selectedAttendee.issue_date), 'PPP')}</p>
-                        </div>
-                      )}
 
                       {selectedAttendee.id_type === 'Passport' && (
                         <>

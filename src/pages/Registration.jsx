@@ -125,7 +125,6 @@ export default function RegistrationPage() {
     work_country: '',
     id_type: '',
     id_number: '',
-    issue_date: '',
     need_visa: false,
     expiry_date: '',
     issue_place: '',
@@ -307,7 +306,7 @@ export default function RegistrationPage() {
           'Country Code', 'Mobile Number', 'Nationality', 'Country of Residence',
           'LinkedIn Account', 'Organization', 'Job Title', 'Level', 'Level Specify',
           'Work Address', 'Work City', 'Work Country', 'ID Type', 'ID Number',
-          'Issue Date', 'Need Visa', 'Expiry Date', 'Issue Place', 'Date of Birth',
+          'Need Visa', 'Expiry Date', 'Issue Place', 'Date of Birth',
           'Religion', 'Face Photo URL', 'ID Photo URL', 'Areas of Interest', 'Primary Nature of Business',
           'Previous Attendance', 'Previous Years'
         ],
@@ -349,7 +348,6 @@ export default function RegistrationPage() {
         { wch: 20 }, // Work Country
         { wch: 12 }, // ID Type
         { wch: 15 }, // ID Number
-        { wch: 12 }, // Issue Date
         { wch: 10 }, // Need Visa
         { wch: 12 }, // Expiry Date
         { wch: 15 }, // Issue Place
@@ -498,7 +496,7 @@ export default function RegistrationPage() {
         'Country Code', 'Mobile Number', 'Nationality', 'Country of Residence',
         'LinkedIn Account', 'Organization', 'Job Title', 'Level', 'Level Specify',
         'Work Address', 'Work City', 'Work Country', 'ID Type', 'ID Number',
-        'Issue Date', 'Need Visa', 'Expiry Date', 'Issue Place', 'Date of Birth',
+        'Need Visa', 'Expiry Date', 'Issue Place', 'Date of Birth',
         'Religion', 'Face Photo URL', 'ID Photo URL', 'Areas of Interest', 'Primary Nature of Business',
         'Previous Attendance', 'Previous Years'
       ];
@@ -564,7 +562,6 @@ export default function RegistrationPage() {
             'Work Country': 'work_country',
             'ID Type': 'id_type',
             'ID Number': 'id_number',
-            'Issue Date': 'issue_date',
             'Need Visa': 'need_visa',
             'Expiry Date': 'expiry_date',
             'Issue Place': 'issue_place',
@@ -589,7 +586,7 @@ export default function RegistrationPage() {
                 value = value === 'Yes' || value === true;
               } else if (fieldName === 'areas_of_interest' || fieldName === 'previous_years') {
                 value = typeof value === 'string' ? value.split(';').map(s => s.trim()).filter(s => s) : [];
-              } else if (fieldName === 'issue_date' || fieldName === 'expiry_date' || fieldName === 'date_of_birth') {
+              } else if (fieldName === 'expiry_date' || fieldName === 'date_of_birth') {
                 if (value && value !== '') {
                   // Handle Excel date formats
                   if (typeof value === 'number') {
@@ -617,7 +614,7 @@ export default function RegistrationPage() {
             'attendee_type', 'title', 'first_name', 'last_name', 'email',
             'mobile_number', 'country_code', 'nationality', 'country_of_residence',
             'organization', 'job_title', 'level', 'work_address', 'work_city',
-            'work_country', 'id_type', 'id_number', 'issue_date', 'date_of_birth',
+            'work_country', 'id_type', 'id_number', 'date_of_birth',
             'face_photo_url', 'id_photo_url'
           ];
 
@@ -685,6 +682,9 @@ export default function RegistrationPage() {
           attendeeData.status = isAdminUser ? 'pending' : 'approved';
           attendeeData.registration_method = 'manual'; // Use 'manual' as 'bulk' is not allowed by DB constraint
           attendeeData.registered_by = currentUser?.id;
+          
+          // Set default issue_date to today's date
+          attendeeData.issue_date = new Date().toISOString().split('T')[0];
 
           processedAttendees.push(attendeeData);
 
@@ -836,7 +836,6 @@ export default function RegistrationPage() {
     if (!formData.work_city) { newFieldErrors.work_city = "Work City is required."; hasErrors = true; }
     if (!formData.work_country) { newFieldErrors.work_country = "Work Country is required."; hasErrors = true; }
     if (!formData.id_type) { newFieldErrors.id_type = "ID Type is required."; hasErrors = true; }
-    if (!formData.issue_date) { newFieldErrors.issue_date = "Issue Date is required."; hasErrors = true; }
     if (!formData.date_of_birth) { newFieldErrors.date_of_birth = "Date of Birth is required."; hasErrors = true; }
     
     // Age validation
@@ -950,12 +949,15 @@ export default function RegistrationPage() {
       delete payload.confirm_email;
 
       // Convert empty string date fields to null for PostgreSQL compatibility
-      const dateFields = ['date_of_birth', 'issue_date', 'expiry_date'];
+      const dateFields = ['date_of_birth', 'expiry_date'];
       dateFields.forEach(field => {
         if (payload[field] === '') {
           payload[field] = null;
         }
       });
+      
+      // Set default issue_date to today's date
+      payload.issue_date = new Date().toISOString().split('T')[0];
 
       if (editingId) {
         await Attendee.update(editingId, payload);
@@ -1494,11 +1496,6 @@ export default function RegistrationPage() {
                           <Input id="id_number" value={formData.id_number} onChange={(e) => handleInputChange('id_number', e.target.value)} required className={fieldErrors.id_number ? 'border-red-500' : ''} />
                           {fieldErrors.id_number && <p className="text-red-500 text-sm mt-1">{fieldErrors.id_number}</p>}
                         </div>
-                      </div>
-                      <div>
-                        <Label htmlFor="issue_date">Issue Date *</Label>
-                        <Input id="issue_date" type="date" value={formData.issue_date} onChange={(e) => handleInputChange('issue_date', e.target.value)} required className={fieldErrors.issue_date ? 'border-red-500' : ''} />
-                        {fieldErrors.issue_date && <p className="text-red-500 text-sm mt-1">{fieldErrors.issue_date}</p>}
                       </div>
                       {formData.id_type === 'Passport' && (
                         <div>

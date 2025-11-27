@@ -230,7 +230,7 @@ export default function Attendees() {
     { key: 'personal_info', label: 'Personal Information', fields: ['title', 'first_name', 'last_name', 'date_of_birth', 'nationality', 'country_of_residence', 'religion'] },
     { key: 'contact_info', label: 'Contact Information', fields: ['email', 'mobile_number'] },
     { key: 'professional_info', label: 'Professional Information', fields: ['organization', 'job_title', 'level', 'work_address', 'work_city', 'work_country', 'linkedin_account'] },
-    { key: 'documents', label: 'Documents & Photos', fields: ['face_photo_url', 'id_photo_url', 'id_type', 'issue_date'] },
+    { key: 'documents', label: 'Documents & Photos', fields: ['face_photo_url', 'id_photo_url', 'id_type'] },
   ];
 
   const handleRequestModification = async () => {
@@ -377,7 +377,6 @@ export default function Attendees() {
       'Iqama number': a.iqama_number || '',
       'Passport number': a.passport_number || '',
       'Do you need a Visa?': a.need_visa ? 'Yes' : 'No',
-      'Issue Date': a.issue_date ? format(new Date(a.issue_date), 'yyyy-MM-dd') : '',
       'Expiry Date': a.expiry_date ? format(new Date(a.expiry_date), 'yyyy-MM-dd') : '',
       'Issue place': a.issue_place || '',
       'Date of Birth': a.date_of_birth ? format(new Date(a.date_of_birth), 'yyyy-MM-dd') : '',
@@ -501,7 +500,7 @@ export default function Attendees() {
     const {
         title, first_name, last_name, email, mobile_number, country_code, nationality, country_of_residence,
         organization, job_title, level, linkedin_account, work_address, work_city, work_country,
-        id_type, id_number, issue_date, expiry_date, issue_place, need_visa,
+        id_type, id_number, expiry_date, issue_place, need_visa,
         date_of_birth, religion, face_photo_url, id_photo_url, status, attendee_type,
         areas_of_interest, primary_nature_of_business, previous_attendance, previous_years,
         registration_method, created_at
@@ -647,7 +646,6 @@ export default function Attendees() {
                 <div class="grid">
                   <div class="grid-item"><label>ID Type</label><p>${id_type || 'N/A'}</p></div>
                   <div class="grid-item"><label>ID Number</label><p>${id_number || 'N/A'}</p></div>
-                  <div class="grid-item"><label>Issue Date</label><p>${issue_date ? format(new Date(issue_date), 'PPP') : 'N/A'}</p></div>
                   ${id_type === 'Passport' ? `
                   <div class="grid-item"><label>Expiry Date</label><p>${expiry_date ? format(new Date(expiry_date), 'PPP') : 'N/A'}</p></div>
                   <div class="grid-item"><label>Issue Place</label><p>${issue_place || 'N/A'}</p></div>
@@ -973,12 +971,6 @@ export default function Attendees() {
                             </div>
                           )}
 
-                          {selectedAttendee.issue_date && (
-                            <div>
-                              <span className="text-sm text-gray-600">Issue Date:</span>
-                              <p className="font-medium">{format(new Date(selectedAttendee.issue_date), 'PPP')}</p>
-                            </div>
-                          )}
 
                           {selectedAttendee.id_type === 'Passport' && (
                             <>

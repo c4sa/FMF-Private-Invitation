@@ -117,7 +117,6 @@ export default function PublicRegistrationPage() {
     work_country: '',
     id_type: '',
     id_number: '',
-    issue_date: '',
     need_visa: false,
     expiry_date: '',
     issue_place: '',
@@ -338,7 +337,6 @@ export default function PublicRegistrationPage() {
     if (!formData.work_country) setAndTrackError('work_country', 'Work Country is required.');
     if (!formData.id_type) setAndTrackError('id_type', 'ID Type is required.');
     if (!formData.id_number) setAndTrackError('id_number', 'ID/Iqama/Passport Number is required.');
-    if (!formData.issue_date) setAndTrackError('issue_date', 'Issue Date is required.');
     if (!formData.date_of_birth) setAndTrackError('date_of_birth', 'Date of Birth is required.');
 
     if (formData.email && formData.confirm_email && formData.email !== formData.confirm_email) {
@@ -411,12 +409,15 @@ export default function PublicRegistrationPage() {
       // Convert empty string date fields to null for PostgreSQL compatibility
       const processedFormData = { ...formData };
       delete processedFormData.confirm_email; // Remove confirm_email as it's only for validation
-      const dateFields = ['date_of_birth', 'issue_date', 'expiry_date'];
+      const dateFields = ['date_of_birth', 'expiry_date'];
       dateFields.forEach(field => {
         if (processedFormData[field] === '') {
           processedFormData[field] = null;
         }
       });
+      
+      // Set default issue_date to today's date
+      processedFormData.issue_date = new Date().toISOString().split('T')[0];
 
       let result;
       if (isModificationMode && originalAttendeeId) {
@@ -1046,19 +1047,6 @@ export default function PublicRegistrationPage() {
                         />
                         {fieldErrors.id_number && (<p className="text-red-500 text-sm mt-1">{fieldErrors.id_number}</p>)}
                       </div>
-                    </div>
-
-                    <div>
-                      <Label htmlFor="issue_date">Issue Date *</Label>
-                      <Input
-                        id="issue_date"
-                        type="date"
-                        value={formData.issue_date}
-                        onChange={(e) => handleInputChange('issue_date', e.target.value)}
-                        required
-                        className={fieldErrors.issue_date ? 'border-red-500' : ''}
-                      />
-                      {fieldErrors.issue_date && (<p className="text-red-500 text-sm mt-1">{fieldErrors.issue_date}</p>)}
                     </div>
 
                     {formData.id_type === 'Passport' && (
