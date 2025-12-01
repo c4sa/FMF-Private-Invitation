@@ -8,7 +8,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Loader from "@/components/ui/loader";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/components/common/Toast";
 import NotificationService from "@/services/notificationService";
 import { 
@@ -18,8 +17,7 @@ import {
   FileText,
   Users,
   PlusCircle,
-  ChevronLeft,
-  ChevronRight
+  UserPlus
 } from "lucide-react";
 
 const attendeeTypeConfig = {
@@ -35,13 +33,12 @@ export default function AccessLevels() {
   const [currentUser, setCurrentUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showRequestDialog, setShowRequestDialog] = useState(false);
-  const [formStep, setFormStep] = useState(1); // 1 = slot selection, 2 = slot details
+  const [showVipDetailsDialog, setShowVipDetailsDialog] = useState(false);
   const [requestData, setRequestData] = useState({
     slots: { VIP: 0, Partner: 0, Exhibitor: 0, Media: 0 },
     reason: ''
   });
-  const [slotDetails, setSlotDetails] = useState({}); // { "VIP-1": { name: "", email: "", position: "" }, ... }
-  const [selectedSlotForDetails, setSelectedSlotForDetails] = useState({}); // { "VIP": "VIP-1", "Partner": "Partner-1", ... }
+  const [vipSlotDetails, setVipSlotDetails] = useState({}); // { "VIP-1": { name: "", email: "", position: "" }, ... }
   const { toast } = useToast();
 
   useEffect(() => {
@@ -66,43 +63,26 @@ export default function AccessLevels() {
       slots: { ...prev.slots, [type]: newCount }
     }));
     
-    // Clean up slot details if count is reduced
-    if (newCount === 0) {
-      setSlotDetails(prev => {
+    // Clean up VIP slot details if VIP count is reduced
+    if (type === 'VIP' && newCount === 0) {
+      setVipSlotDetails({});
+    } else if (type === 'VIP' && newCount < (requestData.slots.VIP || 0)) {
+      // Remove details for slots beyond the new count
+      setVipSlotDetails(prev => {
         const updated = { ...prev };
         Object.keys(updated).forEach(key => {
-          if (key.startsWith(`${type}-`)) {
+          const slotNum = parseInt(key.split('-')[1]);
+          if (slotNum > newCount) {
             delete updated[key];
           }
         });
         return updated;
       });
-      setSelectedSlotForDetails(prev => {
-        const updated = { ...prev };
-        delete updated[type];
-        return updated;
-      });
     }
   };
 
-  const handleNextStep = () => {
-    if (Object.values(requestData.slots).every(v => v === 0)) {
-      toast({ title: "Error", description: "Please request at least one slot.", variant: "destructive" });
-      return;
-    }
-    if (!requestData.reason) {
-      toast({ title: "Error", description: "A reason for the request is required.", variant: "destructive" });
-      return;
-    }
-    setFormStep(2);
-  };
-
-  const handleBackStep = () => {
-    setFormStep(1);
-  };
-
-  const handleSlotDetailChange = (slotKey, field, value) => {
-    setSlotDetails(prev => ({
+  const handleVipSlotDetailChange = (slotKey, field, value) => {
+    setVipSlotDetails(prev => ({
       ...prev,
       [slotKey]: {
         ...prev[slotKey],
@@ -111,42 +91,48 @@ export default function AccessLevels() {
     }));
   };
 
-  const handleSelectedSlotChange = (type, slotKey) => {
-    setSelectedSlotForDetails(prev => ({
-      ...prev,
-      [type]: slotKey
-    }));
-  };
-
   const handleSubmitRequest = async () => {
     if (!currentUser) return;
     
-    // Validate that all slots have details filled
-    const totalSlots = Object.values(requestData.slots).reduce((sum, count) => sum + count, 0);
-    const slotsWithDetails = Object.keys(slotDetails).filter(key => {
-      const detail = slotDetails[key];
-      return detail?.name && detail?.email && detail?.position;
-    });
+    // Validate basic requirements
+    if (Object.values(requestData.slots).every(v => v === 0)) {
+      toast({ title: "Error", description: "Please request at least one slot.", variant: "destructive" });
+      return;
+    }
     
-    if (slotsWithDetails.length < totalSlots) {
-      toast({ 
-        title: "Error", 
-        description: `Please fill in details (name, email, position) for all ${totalSlots} requested slot(s).`, 
-        variant: "destructive" 
-      });
+    if (!requestData.reason) {
+      toast({ title: "Error", description: "A reason for the request is required.", variant: "destructive" });
       return;
     }
 
+    // Validate VIP slots have details if VIP slots are requested
+    const vipCount = requestData.slots.VIP || 0;
+    if (vipCount > 0) {
+      const vipSlotsWithDetails = Object.keys(vipSlotDetails).filter(key => {
+        const detail = vipSlotDetails[key];
+        return detail?.name && detail?.email && detail?.position;
+      });
+      
+      if (vipSlotsWithDetails.length < vipCount) {
+        toast({ 
+          title: "Error", 
+          description: `Please fill in details (name, email, position) for all ${vipCount} VIP slot(s). Click "Add Details" to add VIP slot information.`, 
+          variant: "destructive" 
+        });
+        return;
+      }
+    }
+
     try {
-      // Build slots array
-      const slotsArray = [];
-      Object.entries(requestData.slots).forEach(([type, count]) => {
-        for (let i = 1; i <= count; i++) {
-          const slotKey = `${type}-${i}`;
-          const detail = slotDetails[slotKey];
+      // Build VIP slots array with details
+      const vipSlotsArray = [];
+      if (vipCount > 0) {
+        for (let i = 1; i <= vipCount; i++) {
+          const slotKey = `VIP-${i}`;
+          const detail = vipSlotDetails[slotKey];
           if (detail) {
-            slotsArray.push({
-              type: type,
+            vipSlotsArray.push({
+              type: 'VIP',
               slotNumber: i,
               name: detail.name,
               email: detail.email,
@@ -154,13 +140,15 @@ export default function AccessLevels() {
             });
           }
         }
-      });
+      }
 
-      // Format data in new structure
-      const requestedSlotsData = {
-        slots: slotsArray,
-        summary: requestData.slots
-      };
+      // Format data: VIP slots with details, others as simple counts
+      const requestedSlotsData = vipCount > 0 && vipSlotsArray.length > 0
+        ? {
+            slots: vipSlotsArray,
+            summary: requestData.slots
+          }
+        : requestData.slots; // Old format for non-VIP requests
 
       const slotRequest = await SlotRequest.create({
         user_id: currentUser.id,
@@ -179,10 +167,8 @@ export default function AccessLevels() {
       
       toast({ title: "Request Sent", description: "Your request for additional slots has been sent for approval.", variant: "success" });
       setShowRequestDialog(false);
-      setFormStep(1);
       setRequestData({ slots: { VIP: 0, Partner: 0, Exhibitor: 0, Media: 0 }, reason: '' });
-      setSlotDetails({});
-      setSelectedSlotForDetails({});
+      setVipSlotDetails({});
     } catch (error) {
       console.error("Failed to submit slot request:", error);
       toast({ title: "Submission Failed", description: "Could not send your request. Please try again.", variant: "destructive" });
@@ -192,10 +178,14 @@ export default function AccessLevels() {
   const handleDialogClose = (open) => {
     if (!open) {
       setShowRequestDialog(false);
-      setFormStep(1);
       setRequestData({ slots: { VIP: 0, Partner: 0, Exhibitor: 0, Media: 0 }, reason: '' });
-      setSlotDetails({});
-      setSelectedSlotForDetails({});
+      setVipSlotDetails({});
+    }
+  };
+
+  const handleVipDetailsDialogClose = (open) => {
+    if (!open) {
+      setShowVipDetailsDialog(false);
     }
   };
 
@@ -269,117 +259,129 @@ export default function AccessLevels() {
       </div>
 
       <Dialog open={showRequestDialog} onOpenChange={handleDialogClose}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>Request Additional Slots</DialogTitle>
             <DialogDescription>
-              {formStep === 1 
-                ? "Select the number of slots you need for each attendee type."
-                : "Fill in the details for each requested slot."}
+              Select the number of slots you need for each attendee type. VIP slots require additional details.
             </DialogDescription>
           </DialogHeader>
-          
-          {formStep === 1 ? (
-            <>
-              <div className="py-4 space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  {attendeeTypes.map(type => (
-                    <div key={type} className="space-y-2">
-                      <Label htmlFor={`slots-${type}`}>{type}</Label>
-                      <Input 
-                        id={`slots-${type}`}
-                        type="number"
-                        min="0"
-                        value={requestData.slots[type]}
-                        onChange={(e) => handleSlotRequestChange(type, e.target.value)}
-                      />
-                    </div>
-                  ))}
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="reason">Justification / Note for Request</Label>
-                  <Textarea 
-                    id="reason"
-                    placeholder="Please provide a clear justification for this slot request..."
-                    value={requestData.reason}
-                    onChange={(e) => setRequestData(prev => ({...prev, reason: e.target.value}))}
+          <div className="py-4 space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              {attendeeTypes.map(type => (
+                <div key={type} className="space-y-2">
+                  <Label htmlFor={`slots-${type}`}>{type}</Label>
+                  <Input 
+                    id={`slots-${type}`}
+                    type="number"
+                    min="0"
+                    value={requestData.slots[type]}
+                    onChange={(e) => handleSlotRequestChange(type, e.target.value)}
                   />
                 </div>
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => handleDialogClose(false)}>Cancel</Button>
-                <Button onClick={handleNextStep}>
-                  Next
-                  <ChevronRight className="w-4 h-4 ml-2" />
+              ))}
+            </div>
+            {requestData.slots.VIP > 0 && (
+              <div className="flex items-center gap-2 p-3 bg-purple-50 border border-purple-200 rounded-lg">
+                <Crown className="w-5 h-5 text-purple-600" />
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-purple-900">
+                    {requestData.slots.VIP} VIP slot{requestData.slots.VIP > 1 ? 's' : ''} requested
+                  </p>
+                  <p className="text-xs text-purple-700">
+                    {Object.keys(vipSlotDetails).filter(key => {
+                      const detail = vipSlotDetails[key];
+                      return detail?.name && detail?.email && detail?.position;
+                    }).length} of {requestData.slots.VIP} slot{requestData.slots.VIP > 1 ? 's' : ''} with details
+                  </p>
+                </div>
+                <Button 
+                  type="button"
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => setShowVipDetailsDialog(true)}
+                  className="border-purple-300 text-purple-700 hover:bg-purple-100"
+                >
+                  <UserPlus className="w-4 h-4 mr-2" />
+                  Add Details
                 </Button>
-              </DialogFooter>
-            </>
-          ) : (
-            <>
-              <div className="py-4 space-y-6">
-                {attendeeTypes.map(type => {
-                  const count = requestData.slots[type] || 0;
-                  if (count === 0) return null;
-                  
-                  return (
-                    <div key={type} className="space-y-4 border-b pb-4 last:border-b-0">
-                      <h3 className="font-semibold text-lg">{type} Slots ({count})</h3>
-                      {Array.from({ length: count }, (_, i) => {
-                        const slotNumber = i + 1;
-                        const slotKey = `${type}-${slotNumber}`;
-                        const detail = slotDetails[slotKey] || { name: '', email: '', position: '' };
-                        
-                        return (
-                          <div key={slotKey} className="space-y-3 pl-4 border-l-2 border-gray-200">
-                            <div className="flex items-center gap-2 mb-2">
-                              <span className="font-medium text-sm text-gray-700">{type} Slot {slotNumber}</span>
-                            </div>
-                            <div className="grid grid-cols-1 gap-3">
-                              <div className="space-y-2">
-                                <Label htmlFor={`name-${slotKey}`}>Name *</Label>
-                                <Input 
-                                  id={`name-${slotKey}`}
-                                  placeholder="Enter name"
-                                  value={detail.name}
-                                  onChange={(e) => handleSlotDetailChange(slotKey, 'name', e.target.value)}
-                                />
-                              </div>
-                              <div className="space-y-2">
-                                <Label htmlFor={`email-${slotKey}`}>Email *</Label>
-                                <Input 
-                                  id={`email-${slotKey}`}
-                                  type="email"
-                                  placeholder="Enter email"
-                                  value={detail.email}
-                                  onChange={(e) => handleSlotDetailChange(slotKey, 'email', e.target.value)}
-                                />
-                              </div>
-                              <div className="space-y-2">
-                                <Label htmlFor={`position-${slotKey}`}>Position *</Label>
-                                <Input 
-                                  id={`position-${slotKey}`}
-                                  placeholder="Enter position"
-                                  value={detail.position}
-                                  onChange={(e) => handleSlotDetailChange(slotKey, 'position', e.target.value)}
-                                />
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
+              </div>
+            )}
+            <div className="space-y-2">
+              <Label htmlFor="reason">Justification / Note for Request</Label>
+              <Textarea 
+                id="reason"
+                placeholder="Please provide a clear justification for this slot request..."
+                value={requestData.reason}
+                onChange={(e) => setRequestData(prev => ({...prev, reason: e.target.value}))}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => handleDialogClose(false)}>Cancel</Button>
+            <Button onClick={handleSubmitRequest}>Submit Request</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* VIP Details Dialog */}
+      <Dialog open={showVipDetailsDialog} onOpenChange={handleVipDetailsDialogClose}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Add VIP Slot Details</DialogTitle>
+            <DialogDescription>
+              Fill in the details for each VIP slot. All fields are required.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4 space-y-6">
+            {Array.from({ length: requestData.slots.VIP || 0 }, (_, i) => {
+              const slotNumber = i + 1;
+              const slotKey = `VIP-${slotNumber}`;
+              const detail = vipSlotDetails[slotKey] || { name: '', email: '', position: '' };
+              
+              return (
+                <div key={slotKey} className="space-y-3 p-4 border rounded-lg bg-purple-50/50">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Crown className="w-4 h-4 text-purple-600" />
+                    <span className="font-semibold text-sm text-gray-900">VIP Slot {slotNumber}</span>
+                  </div>
+                  <div className="grid grid-cols-1 gap-3">
+                    <div className="space-y-2">
+                      <Label htmlFor={`vip-name-${slotKey}`}>Name *</Label>
+                      <Input 
+                        id={`vip-name-${slotKey}`}
+                        placeholder="Enter name"
+                        value={detail.name}
+                        onChange={(e) => handleVipSlotDetailChange(slotKey, 'name', e.target.value)}
+                      />
                     </div>
-                  );
-                })}
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={handleBackStep}>
-                  <ChevronLeft className="w-4 h-4 mr-2" />
-                  Back
-                </Button>
-                <Button onClick={handleSubmitRequest}>Submit Request</Button>
-              </DialogFooter>
-            </>
-          )}
+                    <div className="space-y-2">
+                      <Label htmlFor={`vip-email-${slotKey}`}>Email *</Label>
+                      <Input 
+                        id={`vip-email-${slotKey}`}
+                        type="email"
+                        placeholder="Enter email"
+                        value={detail.email}
+                        onChange={(e) => handleVipSlotDetailChange(slotKey, 'email', e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor={`vip-position-${slotKey}`}>Position *</Label>
+                      <Input 
+                        id={`vip-position-${slotKey}`}
+                        placeholder="Enter position"
+                        value={detail.position}
+                        onChange={(e) => handleVipSlotDetailChange(slotKey, 'position', e.target.value)}
+                      />
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowVipDetailsDialog(false)}>Close</Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

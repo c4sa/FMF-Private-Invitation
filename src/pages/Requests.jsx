@@ -194,7 +194,7 @@ export default function RequestsPage() {
         return requestedSlots || {};
       };
 
-      // Prepare data for export - one row per slot (for new format) or one row per request (for old format)
+      // Prepare data for export - one row per VIP slot with details, plus summary row for all slots
       const exportData = [];
       
       slotRequests.forEach(req => {
@@ -202,7 +202,7 @@ export default function RequestsPage() {
         const totalRequested = Object.values(summary).reduce((sum, count) => sum + (count || 0), 0);
         
         if (isNewFormat(req.requested_slots) && req.requested_slots.slots && req.requested_slots.slots.length > 0) {
-          // New format: one row per slot
+          // New format: VIP slots have details, show one row per VIP slot
           req.requested_slots.slots.forEach((slot, index) => {
             exportData.push({
               'Request ID': req.id || '',
@@ -217,9 +217,37 @@ export default function RequestsPage() {
               'Slot Name': slot.name || '',
               'Slot Email': slot.email || '',
               'Slot Position': slot.position || '',
-              'Total Slots in Request': totalRequested
+              'VIP Slots': summary.VIP || 0,
+              'Partner Slots': summary.Partner || 0,
+              'Exhibitor Slots': summary.Exhibitor || 0,
+              'Media Slots': summary.Media || 0,
+              'Total Requested': totalRequested
             });
           });
+          
+          // If there are non-VIP slots, add a summary row
+          const nonVipTotal = (summary.Partner || 0) + (summary.Exhibitor || 0) + (summary.Media || 0);
+          if (nonVipTotal > 0) {
+            exportData.push({
+              'Request ID': req.id || '',
+              'User Name': req.user_name || 'Unknown',
+              'User Email': req.user_email || '',
+              'Company Name': req.user_company_name || '',
+              'Reason': req.reason || '',
+              'Status': req.status || 'pending',
+              'Requested Date': req.created_at ? format(new Date(req.created_at), 'yyyy-MM-dd HH:mm:ss') : '',
+              'Slot Type': 'Other Slots',
+              'Slot Number': 'N/A',
+              'Slot Name': 'N/A',
+              'Slot Email': 'N/A',
+              'Slot Position': 'N/A',
+              'VIP Slots': summary.VIP || 0,
+              'Partner Slots': summary.Partner || 0,
+              'Exhibitor Slots': summary.Exhibitor || 0,
+              'Media Slots': summary.Media || 0,
+              'Total Requested': totalRequested
+            });
+          }
         } else {
           // Old format: one row per request
           exportData.push({
@@ -230,17 +258,16 @@ export default function RequestsPage() {
             'Reason': req.reason || '',
             'Status': req.status || 'pending',
             'Requested Date': req.created_at ? format(new Date(req.created_at), 'yyyy-MM-dd HH:mm:ss') : '',
-            'VIP Slots': summary.VIP || 0,
-            'Partner Slots': summary.Partner || 0,
-            'Exhibitor Slots': summary.Exhibitor || 0,
-            'Media Slots': summary.Media || 0,
-            'Total Requested': totalRequested,
-            'Slot Type': 'N/A (Legacy Format)',
+            'Slot Type': 'N/A',
             'Slot Number': 'N/A',
             'Slot Name': 'N/A',
             'Slot Email': 'N/A',
             'Slot Position': 'N/A',
-            'Total Slots in Request': totalRequested
+            'VIP Slots': summary.VIP || 0,
+            'Partner Slots': summary.Partner || 0,
+            'Exhibitor Slots': summary.Exhibitor || 0,
+            'Media Slots': summary.Media || 0,
+            'Total Requested': totalRequested
           });
         }
       });
@@ -258,17 +285,16 @@ export default function RequestsPage() {
         { wch: 40 }, // Reason
         { wch: 12 }, // Status
         { wch: 20 }, // Requested Date
-        { wch: 12 }, // Slot Type
+        { wch: 15 }, // Slot Type
         { wch: 12 }, // Slot Number
         { wch: 25 }, // Slot Name
         { wch: 30 }, // Slot Email
         { wch: 20 }, // Slot Position
-        { wch: 20 }, // Total Slots in Request
-        { wch: 12 }, // VIP Slots (for legacy)
-        { wch: 15 }, // Partner Slots (for legacy)
-        { wch: 18 }, // Exhibitor Slots (for legacy)
-        { wch: 15 }, // Media Slots (for legacy)
-        { wch: 15 }  // Total Requested (for legacy)
+        { wch: 12 }, // VIP Slots
+        { wch: 15 }, // Partner Slots
+        { wch: 18 }, // Exhibitor Slots
+        { wch: 15 }, // Media Slots
+        { wch: 15 }  // Total Requested
       ];
       ws['!cols'] = colWidths;
 
@@ -528,10 +554,13 @@ export default function RequestsPage() {
                   <div className="space-y-4">
                     {selectedSlotRequest.requested_slots.slots && selectedSlotRequest.requested_slots.slots.length > 0 ? (
                       <div className="space-y-3">
+                        <p className="text-sm text-gray-600 mb-3">
+                          VIP slots with detailed information:
+                        </p>
                         {selectedSlotRequest.requested_slots.slots.map((slot, index) => (
-                          <div key={index} className="p-4 border rounded-lg bg-gray-50">
+                          <div key={index} className="p-4 border rounded-lg bg-purple-50/50">
                             <div className="flex items-center gap-2 mb-3">
-                              <Badge variant="secondary">{slot.type}</Badge>
+                              <Badge variant="secondary" className="bg-purple-100 text-purple-800">{slot.type}</Badge>
                               <span className="text-sm text-gray-600">Slot {slot.slotNumber}</span>
                             </div>
                             <div className="grid grid-cols-3 gap-4">
@@ -550,6 +579,20 @@ export default function RequestsPage() {
                             </div>
                           </div>
                         ))}
+                        {selectedSlotRequest.requested_slots.summary && (
+                          <div className="mt-4 pt-4 border-t">
+                            <p className="text-sm text-gray-600 mb-2">All requested slots summary:</p>
+                            <div className="flex flex-wrap gap-2">
+                              {Object.entries(selectedSlotRequest.requested_slots.summary).map(([type, count]) => (
+                                count > 0 && (
+                                  <Badge key={type} variant="secondary">
+                                    {count} x {type}
+                                  </Badge>
+                                )
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     ) : (
                       <p className="text-sm text-gray-500">No slot details available.</p>
@@ -557,7 +600,7 @@ export default function RequestsPage() {
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    <p className="text-sm text-gray-600 mb-2">Summary (Legacy Format):</p>
+                    <p className="text-sm text-gray-600 mb-2">Requested slots summary:</p>
                     <div className="flex flex-wrap gap-2">
                       {Object.entries(getSlotSummary(selectedSlotRequest.requested_slots)).map(([type, count]) => (
                         count > 0 && (
@@ -565,7 +608,7 @@ export default function RequestsPage() {
                         )
                       ))}
                     </div>
-                    <p className="text-xs text-gray-500 mt-2">This request was created before detailed slot information was available.</p>
+                    <p className="text-xs text-gray-500 mt-2">This request does not include detailed slot information.</p>
                   </div>
                 )}
               </div>
