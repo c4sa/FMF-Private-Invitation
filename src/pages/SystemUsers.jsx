@@ -734,6 +734,11 @@ export default function SystemUsers() {
         // Get user type (Partner Type)
         const userType = (user.user_type && user.user_type !== 'N/A') ? user.user_type : 'N/A';
 
+        // Trophy details
+        const trophyAwarded = user.trophy_given ? 'Yes' : 'No';
+        const formSubmitted = user.complete_company_name ? 'Yes' : 'No';
+        const completeCompanyName = user.complete_company_name || '';
+
         return {
           'Company Name': user.company_name || '',
           'Name': displayName,
@@ -741,7 +746,10 @@ export default function SystemUsers() {
           'Logged In': loggedIn,
           'User Type': userType,
           'Slots Used': slotsUsed,
-          'Slots Remaining': slotsRemaining
+          'Slots Remaining': slotsRemaining,
+          'Trophy Awarded': trophyAwarded,
+          'Form Submitted': formSubmitted,
+          'Complete Company Name': completeCompanyName
         };
       });
 
@@ -756,7 +764,10 @@ export default function SystemUsers() {
         { wch: 15 }, // Logged In
         { wch: 25 }, // User Type
         { wch: 15 }, // Slots Used
-        { wch: 18 }  // Slots Remaining
+        { wch: 18 }, // Slots Remaining
+        { wch: 15 }, // Trophy Awarded
+        { wch: 15 }, // Form Submitted
+        { wch: 35 }  // Complete Company Name
       ];
       ws['!cols'] = colWidths;
 
@@ -1134,6 +1145,17 @@ export default function SystemUsers() {
       for (const user of usersToEmail) {
         try {
           await sendUserReminderEmail(user);
+          
+          // Update resend_email_sent_at timestamp after successful email send
+          try {
+            await User.update(user.id, { 
+              resend_email_sent_at: new Date().toISOString() 
+            });
+          } catch (updateError) {
+            console.error(`Failed to update resend_email_sent_at for ${user.email}:`, updateError);
+            // Don't fail the entire operation if timestamp update fails
+          }
+          
           successCount++;
         } catch (error) {
           console.error(`Failed to send reminder email to ${user.email}:`, error);
