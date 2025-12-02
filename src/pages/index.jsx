@@ -28,6 +28,8 @@ import AccessLevels from "./AccessLevels";
 
 import PrivateInvitations from "./PrivateInvitations";
 
+import Trophy from "./Trophy";
+
 import TestDataSetup from "./TestDataSetup";
 
 import Login from "./Login";
@@ -66,6 +68,8 @@ const PAGES = {
     AccessLevels: AccessLevels,
     
     PrivateInvitations: PrivateInvitations,
+    
+    Trophy: Trophy,
     
     TestDataSetup: TestDataSetup,
     
@@ -137,6 +141,8 @@ function PagesContent() {
                 <Route path="/AccessLevels" element={<AccessLevels />} />
                 
                 <Route path="/PrivateInvitations" element={<PrivateInvitations />} />
+                
+                <Route path="/Trophy" element={<Trophy />} />
                 
                 <Route path="/TestDataSetup" element={<TestDataSetup />} />
                 

@@ -21,7 +21,10 @@ import {
   Download,
   Upload,
   Search,
-  Mail
+  Mail,
+  Trophy,
+  CheckCircle,
+  FileText
 } from "lucide-react";
 import * as XLSX from 'xlsx';
 import {
@@ -57,6 +60,7 @@ export default function SystemUsers() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedUsers, setSelectedUsers] = useState(new Set());
   const [isSendingReminders, setIsSendingReminders] = useState(false);
+  const [isGivingTrophy, setIsGivingTrophy] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
   const [partnerTypes, setPartnerTypes] = useState([]); // <-- State for dynamic partner types
@@ -1166,6 +1170,68 @@ export default function SystemUsers() {
     }
   };
 
+  const handleGiveTrophy = async () => {
+    if (selectedUsers.size === 0) {
+      toast({
+        title: "No Users Selected",
+        description: "Please select at least one user to give a trophy.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsGivingTrophy(true);
+    const selectedUserIds = Array.from(selectedUsers);
+    const usersToAward = getVisibleUsers().filter(user => selectedUserIds.includes(user.id));
+    
+    let successCount = 0;
+    let failureCount = 0;
+    const errors = [];
+
+    try {
+      // Update trophy_given for all selected users
+      for (const user of usersToAward) {
+        try {
+          await User.update(user.id, { trophy_given: true });
+          successCount++;
+        } catch (error) {
+          console.error(`Failed to give trophy to ${user.email}:`, error);
+          failureCount++;
+          errors.push(`${user.email}: ${error.message}`);
+        }
+      }
+
+      // Clear selection after awarding
+      setSelectedUsers(new Set());
+
+      // Reload data to reflect changes
+      await loadData();
+
+      if (failureCount === 0) {
+        toast({
+          title: "Trophies Awarded",
+          description: `Successfully awarded trophies to ${successCount} user(s).`,
+          variant: "success"
+        });
+      } else {
+        toast({
+          title: "Partial Success",
+          description: `Awarded to ${successCount} user(s), failed for ${failureCount} user(s). ${errors.slice(0, 3).join('; ')}${errors.length > 3 ? '...' : ''}`,
+          variant: "warning"
+        });
+      }
+    } catch (error) {
+      console.error('Error giving trophies:', error);
+      toast({
+        title: "Error",
+        description: "Failed to give trophies. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsGivingTrophy(false);
+    }
+  };
+
   if (hasPermissionError) {
     return (
       <ProtectedRoute pageName="SystemUsers">
@@ -1622,15 +1688,26 @@ export default function SystemUsers() {
                   <UserPlus className="w-5 h-5" />
                   System Users ({filteredUsers.length})
                 </CardTitle>
-                <Button
-                  variant="outline"
-                  className="flex items-center gap-2"
-                  onClick={handleSendReminderEmails}
-                  disabled={isSendingReminders || selectedUsers.size === 0}
-                >
-                  <Mail className="w-4 h-4" />
-                  {isSendingReminders ? 'Sending...' : `Resend Email (${selectedUsers.size})`}
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    className="flex items-center gap-2"
+                    onClick={handleSendReminderEmails}
+                    disabled={isSendingReminders || selectedUsers.size === 0}
+                  >
+                    <Mail className="w-4 h-4" />
+                    {isSendingReminders ? 'Sending...' : `Resend Email (${selectedUsers.size})`}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="flex items-center gap-2"
+                    onClick={handleGiveTrophy}
+                    disabled={isGivingTrophy || selectedUsers.size === 0}
+                  >
+                    <Trophy className="w-4 h-4" />
+                    {isGivingTrophy ? 'Awarding...' : `Give Trophy (${selectedUsers.size})`}
+                  </Button>
+                </div>
               </div>
             </CardHeader>
             <CardContent className="p-0">
@@ -1661,6 +1738,7 @@ export default function SystemUsers() {
                       <TableHead>Status</TableHead>
                       <TableHead>Last Login</TableHead>
                       <TableHead>Slots (Avail/Total)</TableHead>
+                      <TableHead>Trophy Status</TableHead>
                       <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -1668,7 +1746,7 @@ export default function SystemUsers() {
                     {isLoading ? (
                       Array(3).fill(0).map((_, i) => (
                         <TableRow key={i}>
-                          <TableCell colSpan={getVisibleUsers().some(user => user.system_role === 'User') ? 8 : 7} className="h-16">
+                          <TableCell colSpan={getVisibleUsers().some(user => user.system_role === 'User') ? 9 : 8} className="h-16">
                             <div className="flex items-center justify-center">
                               <Loader size="small" />
                             </div>
@@ -1710,8 +1788,13 @@ export default function SystemUsers() {
                                     {displayName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
                                   </AvatarFallback>
                                 </Avatar>
-                                <div>
-                                  <p className="font-semibold text-gray-900">{displayName}</p>
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2">
+                                    <p className="font-semibold text-gray-900">{displayName}</p>
+                                    {user.trophy_given && (
+                                      <Trophy className="w-4 h-4 text-yellow-500" title="Trophy Awarded" />
+                                    )}
+                                  </div>
                                   <p className="text-sm text-gray-500">{user.email}</p>
                                   {user.company_name && <p className="text-xs text-gray-400">{user.company_name}</p>}
                                 </div>
@@ -1768,6 +1851,38 @@ export default function SystemUsers() {
                                         {availableSlots}/{totalSlots}
                                     </span>
                                 )}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex flex-col gap-1">
+                                {user.trophy_given ? (
+                                  <div className="flex items-center gap-1">
+                                    <Trophy className="w-3 h-3 text-yellow-500" />
+                                    <span className="text-xs text-gray-600">Trophy Awarded</span>
+                                  </div>
+                                ) : (
+                                  <span className="text-xs text-gray-400">-</span>
+                                )}
+                                {user.complete_company_name ? (
+                                  <div className="flex items-center gap-1 mt-1">
+                                    <CheckCircle className="w-3 h-3 text-green-500" />
+                                    <span className="text-xs text-gray-600">Form Submitted</span>
+                                  </div>
+                                ) : user.trophy_given ? (
+                                  <div className="flex items-center gap-1 mt-1">
+                                    <FileText className="w-3 h-3 text-orange-500" />
+                                    <span className="text-xs text-orange-600">Pending</span>
+                                  </div>
+                                ) : null}
+                                {user.complete_company_name && (
+                                  <div className="mt-1">
+                                    <span className="text-xs text-gray-500" title={user.complete_company_name}>
+                                      {user.complete_company_name.length > 30 
+                                        ? `${user.complete_company_name.substring(0, 30)}...` 
+                                        : user.complete_company_name}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
                             </TableCell>
                             <TableCell>
                               {canPerformAction(user) ? (

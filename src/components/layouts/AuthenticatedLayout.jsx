@@ -25,6 +25,7 @@ import {
   Briefcase,
   Bell,
   User as UserIcon,
+  Trophy,
 } from "lucide-react";
 import {
   Sidebar,
@@ -191,7 +192,8 @@ export default function AuthenticatedLayout({ children, currentPageName }) {
     { title: "System Users", url: createPageUrl("SystemUsers"), icon: GanttChartSquare, module: "system_users" },
     { title: "Requests", url: createPageUrl("Requests"), icon: Bell, module: "requests" },
     { title: "Settings", url: createPageUrl("Settings"), icon: SettingsIcon, module: "settings" },
-    { title: "My Access", url: createPageUrl("AccessLevels"), icon: ClipboardList, module: "access_levels" }
+    { title: "My Access", url: createPageUrl("AccessLevels"), icon: ClipboardList, module: "access_levels" },
+    { title: "Trophy", url: createPageUrl("Trophy"), icon: Trophy, module: "trophy", requiresTrophy: true }
   ];
 
   // Get default navigation items for this user type
@@ -220,8 +222,15 @@ export default function AuthenticatedLayout({ children, currentPageName }) {
     return defaultModules.includes(moduleName);
   };
 
-  // Filter navigation items based on module settings
-  const navigationItems = allNavigationItems.filter(item => isModuleEnabled(item.module, systemUserType));
+  // Filter navigation items based on module settings and trophy requirement
+  const navigationItems = allNavigationItems.filter(item => {
+    // Check if item requires trophy and user has trophy
+    if (item.requiresTrophy) {
+      return currentUser?.trophy_given === true;
+    }
+    // Otherwise, check module settings
+    return isModuleEnabled(item.module, systemUserType);
+  });
 
   return (
     <SidebarProvider>
