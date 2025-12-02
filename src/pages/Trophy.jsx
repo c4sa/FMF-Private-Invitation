@@ -143,7 +143,7 @@ export default function Trophy() {
           <div className="mb-6">
             <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
               <TrophyIcon className="w-8 h-8 text-yellow-500" />
-              Trophy Award
+              Recognition Award
             </h1>
             <p className="text-gray-500 mt-2">Congratulations on receiving a trophy during the event!</p>
           </div>
@@ -153,7 +153,7 @@ export default function Trophy() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <TrophyIcon className="w-5 h-5 text-yellow-500" />
-                Complete Company Name
+                Provide Company Name
               </CardTitle>
               <CardDescription>
                 You have received a trophy during the event. Please provide your complete and correct company name below.
@@ -187,7 +187,7 @@ export default function Trophy() {
                 <form onSubmit={handleSubmit} className="space-y-6">
                   <div>
                     <Label htmlFor="company_name" className="text-base font-semibold">
-                      Complete Company Name
+                      Company Name
                     </Label>
                     <p className="text-sm text-gray-500 mt-1 mb-3">
                       Please enter the complete and correct name of your company as it should appear in official records.
@@ -235,8 +235,8 @@ export default function Trophy() {
                 <div>
                   <h3 className="font-semibold text-gray-900 mb-2">About Your Trophy</h3>
                   <p className="text-sm text-gray-600">
-                    You have been awarded a trophy for your participation during the event. This recognition is a testament to your valuable contribution. 
-                    Please ensure that your complete company name is accurately recorded for our records.
+                    You have been awarded a trophy for your participation in the event. This recognition is a testament to your valuable contribution. 
+                    Please ensure that your company name is accurately submitted for our records.
                   </p>
                 </div>
               </div>
