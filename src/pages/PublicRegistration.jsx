@@ -485,7 +485,7 @@ export default function PublicRegistrationPage() {
         });
         if (result.success) {
           setSubmissionSuccess(true);
-          toast({ title: "Registration Submitted", description: "Your registration has been submitted and is pending review.", variant: "success" });
+          toast({ title: "Registration Approved", description: "Your registration has been approved! Welcome to the Future Minerals Forum.", variant: "success" });
           
           // Send confirmation email
           try {
@@ -511,7 +511,7 @@ export default function PublicRegistrationPage() {
               .replace(/{{organization}}/g, formData.organization || '')
               .replace(/{{job_title}}/g, formData.job_title || '')
               .replace(/{{attendee_type}}/g, formData.attendee_type || '')
-              .replace(/{{is_approved}}/g, 'false');
+              .replace(/{{is_approved}}/g, 'true'); // Auto-approved for invitation registrations
             
             await emailService.send({
               to: formData.email,

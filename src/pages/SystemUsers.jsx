@@ -730,6 +730,11 @@ export default function SystemUsers() {
           ? format(new Date(user.last_login_date), 'yyyy-MM-dd')
           : 'Never';
         
+        // Format resend email sent date
+        const resendEmailSentAt = user.resend_email_sent_at 
+          ? format(new Date(user.resend_email_sent_at), 'yyyy-MM-dd HH:mm:ss')
+          : 'Never';
+        
         // Get user type (Partner Type)
         const userType = (user.user_type && user.user_type !== 'N/A') ? user.user_type : 'N/A';
 
@@ -748,7 +753,8 @@ export default function SystemUsers() {
           'Slots Remaining': slotsRemaining,
           'Trophy Awarded': trophyAwarded,
           'Form Submitted': formSubmitted,
-          'Complete Company Name': completeCompanyName
+          'Complete Company Name': completeCompanyName,
+          'Resend Email Sent At': resendEmailSentAt
         };
       });
 
@@ -766,7 +772,8 @@ export default function SystemUsers() {
         { wch: 18 }, // Slots Remaining
         { wch: 15 }, // Trophy Awarded
         { wch: 15 }, // Form Submitted
-        { wch: 35 }  // Complete Company Name
+        { wch: 35 }, // Complete Company Name
+        { wch: 20 }  // Resend Email Sent At
       ];
       ws['!cols'] = colWidths;
 

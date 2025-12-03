@@ -208,12 +208,12 @@ export const registerWithInvitation = async ({ invitationCode, attendeeData }) =
       throw new Error('Invitation code has already been used')
     }
     
-    // Create attendee record
+    // Create attendee record with auto-approval for invitation registrations
     const attendee = await Attendee.create({
       ...attendeeData,
       attendee_type: invitation.attendee_type,
       registration_method: 'invitation',
-      status: 'pending'
+      status: 'approved' // Auto-approve attendees registering with invitation codes
     })
     
     // Mark invitation as used
