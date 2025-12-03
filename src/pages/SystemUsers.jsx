@@ -22,7 +22,6 @@ import {
   Upload,
   Search,
   Mail,
-  Trophy,
   CheckCircle,
   FileText
 } from "lucide-react";
@@ -1726,7 +1725,6 @@ export default function SystemUsers() {
                     onClick={handleGiveTrophy}
                     disabled={isGivingTrophy || selectedUsers.size === 0}
                   >
-                    <Trophy className="w-4 h-4" />
                     {isGivingTrophy ? 'Awarding...' : `Give Trophy (${selectedUsers.size})`}
                   </Button>
                 </div>
@@ -1813,9 +1811,6 @@ export default function SystemUsers() {
                                 <div className="flex-1">
                                   <div className="flex items-center gap-2">
                                     <p className="font-semibold text-gray-900">{displayName}</p>
-                                    {user.trophy_given && (
-                                      <Trophy className="w-4 h-4 text-yellow-500" title="Trophy Awarded" />
-                                    )}
                                   </div>
                                   <p className="text-sm text-gray-500">{user.email}</p>
                                   {user.company_name && <p className="text-xs text-gray-400">{user.company_name}</p>}
@@ -1878,7 +1873,6 @@ export default function SystemUsers() {
                               <div className="flex flex-col gap-1">
                                 {user.trophy_given ? (
                                   <div className="flex items-center gap-1">
-                                    <Trophy className="w-3 h-3 text-yellow-500" />
                                     <span className="text-xs text-gray-600">Trophy Awarded</span>
                                   </div>
                                 ) : (

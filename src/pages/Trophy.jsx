@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/common/Toast";
-import { Trophy as TrophyIcon, CheckCircle, Shield } from "lucide-react";
+import { CheckCircle, Shield } from "lucide-react";
 import Loader from "@/components/ui/loader";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
@@ -141,8 +141,7 @@ export default function Trophy() {
         <div className="max-w-4xl mx-auto">
           {/* Header */}
           <div className="mb-6">
-            <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-              <TrophyIcon className="w-8 h-8 text-yellow-500" />
+            <h1 className="text-3xl font-bold text-gray-900">
               Recognition Award
             </h1>
             <p className="text-gray-500 mt-2">Congratulations on receiving a trophy during the event!</p>
@@ -151,8 +150,7 @@ export default function Trophy() {
           {/* Main Card */}
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <TrophyIcon className="w-5 h-5 text-yellow-500" />
+              <CardTitle>
                 Provide Company Name
               </CardTitle>
               <CardDescription>
@@ -230,7 +228,6 @@ export default function Trophy() {
             <CardContent className="pt-6">
               <div className="flex items-start gap-4">
                 <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center flex-shrink-0">
-                  <TrophyIcon className="w-6 h-6 text-yellow-600" />
                 </div>
                 <div>
                   <h3 className="font-semibold text-gray-900 mb-2">About Your Trophy</h3>
