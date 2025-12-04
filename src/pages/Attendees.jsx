@@ -337,56 +337,60 @@ export default function Attendees() {
 
   const handleExport = () => {
     const dataToExport = filteredAttendees.map(a => ({
-      'CATEGORY TITLE': a.attendee_type,
-      'ACCESS LEVEL': a.level || '',
+      // Basic Information
+      'ID': a.id,
+      'REFERENCE': a.id.slice(-8).toUpperCase(),
+      'ATTENDEE TYPE': a.attendee_type,
+      'STATUS': a.status,
+      'REGISTRATION METHOD': a.registration_method || 'manual',
+      'DATE CREATED': format(new Date(a.created_at), 'yyyy-MM-dd HH:mm'),
+      'DATE UPDATED': a.updated_at ? format(new Date(a.updated_at), 'yyyy-MM-dd HH:mm') : '',
+      
+      // Personal Information
+      'TITLE': a.title || '',
       'FIRST NAME': a.first_name,
       'LAST NAME': a.last_name,
       'EMAIL': a.email,
-      'REFERENCE': a.id.slice(-8).toUpperCase(),
-      'DATE CREATED': format(new Date(a.created_at), 'yyyy-MM-dd HH:mm'),
-      'STATUS': a.status,
-      'What are the areas you are most interested in?': a.areas_of_interest?.join('; ') || '',
-      'Have you attended previous FMF Edition?': a.previous_attendance ? 'Yes' : 'No',
-      'Which year(S)?:': a.previous_years || '',
-      'Organization Type': a.organization_type || '',
-      'What is your primary Nature of Business?': a.primary_nature_of_business || '',
-      'What type of Association / Organisation? (Select all that apply)': a.association_organization_type?.join('; ') || '',
-      'I am a member of:': a.member_of || '',
-      'What type of Education and Research? (Select all that apply)': a.education_research_type?.join('; ') || '',
-      'What type of Energy Company? (Select all that apply)': a.energy_company_type?.join('; ') || '',
-      'What type of Energy Services? (Select all that apply)': a.energy_services_type?.join('; ') || '',
-      'Please provide your primary area of specialty (Select all that apply)': a.primary_specialty_area?.join('; ') || '',
-      'Please Indicate Your Department': a.department || '',
-      'Please Indicate Your Department Focus': a.department_focus || '',
-      'What stage are your mining projects? (Select all that apply)': a.mining_project_stage?.join('; ') || '',
-      'What are your primary commodities? (Select all that apply)': a.primary_commodities?.join('; ') || '',
-      'What type of Mining Services/Supplier? (Select all that apply)': a.mining_services_type?.join('; ') || '',
-      'Title': a.title || '',
-      'Mobile Number': a.mobile_number || '',
-      'Nationality': a.nationality || '',
-      'Country of Residence': a.country_of_residence || '',
-      'LinkedIn Account': a.linkedin_account || '',
-      'Organization': a.organization || '',
-      'Job Title': a.job_title || '',
-      'Level Specify': a.level_specify || '',
-      'Work Address': a.work_address || '',
-      'Work City': a.work_city || '',
-      'Work Country': a.work_country || '',
-      'ID Type': a.id_type || '',
-      'National ID number': a.national_id_number || '',
-      'Iqama number': a.iqama_number || '',
-      'Passport number': a.passport_number || '',
-      'Do you need a Visa?': a.need_visa ? 'Yes' : 'No',
-      'Expiry Date': a.expiry_date ? format(new Date(a.expiry_date), 'yyyy-MM-dd') : '',
-      'Issue place': a.issue_place || '',
-      'Date of Birth': a.date_of_birth ? format(new Date(a.date_of_birth), 'yyyy-MM-dd') : '',
-      'Religion': a.religion || '',
-      'Face Photo URL': a.face_photo_url || '',
-      'ID Photo URL': a.id_photo_url || '',
-      'Industry': a.industry || '',
-      'Registered By': getRegistererName(a),
-      'Registration Method': a.registration_method || 'Manual',
-      'Badge Generated': a.badge_generated ? 'Yes' : 'No',
+      'MOBILE NUMBER': a.mobile_number || '',
+      'COUNTRY CODE': a.country_code || '',
+      'NATIONALITY': a.nationality || '',
+      'COUNTRY OF RESIDENCE': a.country_of_residence || '',
+      'DATE OF BIRTH': a.date_of_birth ? format(new Date(a.date_of_birth), 'yyyy-MM-dd') : '',
+      'RELIGION': a.religion || '',
+      
+      // Professional Information
+      'ORGANIZATION': a.organization || '',
+      'JOB TITLE': a.job_title || '',
+      'LEVEL': a.level || '',
+      'LEVEL SPECIFY': a.level_specify || '',
+      'WORK ADDRESS': a.work_address || '',
+      'WORK CITY': a.work_city || '',
+      'WORK COUNTRY': a.work_country || '',
+      'LINKEDIN ACCOUNT': a.linkedin_account || '',
+      
+      // ID Information
+      'ID TYPE': a.id_type || '',
+      'ID NUMBER': a.id_number || '',
+      'ISSUE DATE': a.issue_date ? format(new Date(a.issue_date), 'yyyy-MM-dd') : '',
+      'EXPIRY DATE': a.expiry_date ? format(new Date(a.expiry_date), 'yyyy-MM-dd') : '',
+      'ISSUE PLACE': a.issue_place || '',
+      'NEED VISA': a.need_visa ? 'Yes' : 'No',
+      
+      // Photos and Documents
+      'FACE PHOTO URL': a.face_photo_url || '',
+      'ID PHOTO URL': a.id_photo_url || '',
+      
+      // Survey Information
+      'AREAS OF INTEREST': a.areas_of_interest?.join('; ') || '',
+      'PRIMARY NATURE OF BUSINESS': a.primary_nature_of_business || '',
+      'PREVIOUS ATTENDANCE': a.previous_attendance ? 'Yes' : 'No',
+      'PREVIOUS YEARS': a.previous_years?.join('; ') || '',
+      
+      // System Information
+      'REGISTERED BY': getRegistererName(a),
+      'BADGE GENERATED': a.badge_generated ? 'Yes' : 'No',
+      'BADGE QR CODE': a.badge_qr_code || '',
+      'MODIFICATION TOKEN': a.modification_token || '',
     }));
     exportToCsv(`attendees-${new Date().toISOString().split('T')[0]}.csv`, dataToExport);
   };
@@ -1273,7 +1277,7 @@ export default function Attendees() {
                       <TableHead>Category</TableHead>
                       <TableHead>Ref</TableHead>
                       <TableHead>Info</TableHead>
-                      <TableHead>Status</TableHead>
+                      {/* <TableHead>Status</TableHead> */}
                       <TableHead>Registered By</TableHead>
                       <TableHead>Actions</TableHead>
                     </TableRow>
@@ -1282,7 +1286,7 @@ export default function Attendees() {
                     {isLoading ? (
                       Array(5).fill(0).map((_, i) => (
                         <TableRow key={i}>
-                          <TableCell colSpan={7} className="h-16">
+                          <TableCell colSpan={6} className="h-16">
                             <div className="flex items-center justify-center">
                               <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
                             </div>
@@ -1322,11 +1326,11 @@ export default function Attendees() {
                               )}
                             </div>
                           </TableCell>
-                          <TableCell>
+                          {/* <TableCell>
                             <Badge className={statusColors[attendee.status]}>
                               {attendee.status}
                             </Badge>
-                          </TableCell>
+                          </TableCell> */}
                           <TableCell>
                             <div className="text-sm">
                               <span className="font-medium text-gray-700">
