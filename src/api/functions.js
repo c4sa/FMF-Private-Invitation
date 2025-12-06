@@ -26,7 +26,8 @@ import {
   updateIsReset,
   updateUserAccess,
   updateEmailTemplateStatus,
-  sendUserReminderEmail
+  sendUserReminderEmail,
+  sendTrophyAwardEmail
 } from './supabaseFunctions.js';
 
 // Export all functions
@@ -58,7 +59,8 @@ export {
   updateIsReset,
   updateUserAccess,
   updateEmailTemplateStatus,
-  sendUserReminderEmail
+  sendUserReminderEmail,
+  sendTrophyAwardEmail
 };
   
   

@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase.js'
 import { supabaseHelpers } from '../lib/supabase.js'
 import { User, Attendee, Invitation, EmailTemplate, Notification } from './supabaseClient.js'
 import NotificationService from '../services/notificationService.js'
+import { createPageUrl } from '../utils'
 
 // Email functions
 export const sendWelcomeEmail = async ({ attendeeData }) => {
@@ -104,6 +105,42 @@ export const sendUserReminderEmail = async (user) => {
     })
   } catch (error) {
     console.error('Error sending user reminder email:', error)
+    throw error
+  }
+}
+
+export const sendTrophyAwardEmail = async (user) => {
+  try {
+    // Get trophy award email template
+    const templates = await EmailTemplate.filter({ name: 'trophy_award' })
+    const template = templates?.[0]
+    
+    if (!template) {
+      throw new Error('Trophy award email template not found')
+    }
+
+    // Check if the email template is active
+    if (!template.is_active) {
+      console.log('Trophy award email template is disabled, skipping email send')
+      return { success: true, message: 'Email template is disabled' }
+    }
+    
+    const loginUrl = `${window.location.origin}${createPageUrl('Trophy')}`
+    let subject = template.subject
+    let html = template.body
+      .replace(/{{preferred_name}}/g, user.preferred_name || user.full_name || 'User')
+      .replace(/{{email}}/g, user.email || '')
+      .replace(/{{company_name}}/g, user.company_name || 'N/A')
+      .replace(/{{system_role}}/g, user.system_role || 'User')
+      .replace(/{{login_url}}/g, loginUrl)
+    
+    return await emailService.send({
+      to: user.email,
+      subject,
+      html
+    })
+  } catch (error) {
+    console.error('Error sending trophy award email:', error)
     throw error
   }
 }

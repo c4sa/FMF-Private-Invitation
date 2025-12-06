@@ -8,6 +8,8 @@ import { useToast } from '@/components/common/Toast';
 import { format } from 'date-fns';
 import { Check, X, Eye, Inbox, UserPlus, Download } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import NotificationService from '@/services/notificationService';
 import * as XLSX from 'xlsx';
 
@@ -33,6 +35,9 @@ export default function RequestsPage() {
   const [showReviewDialog, setShowReviewDialog] = useState(false);
   const [selectedSlotRequest, setSelectedSlotRequest] = useState(null);
   const [showSlotDetailsDialog, setShowSlotDetailsDialog] = useState(false);
+  const [showApprovalDialog, setShowApprovalDialog] = useState(false);
+  const [approvalAmounts, setApprovalAmounts] = useState({});
+  const [requestToApprove, setRequestToApprove] = useState(null);
   const { toast } = useToast();
 
   const loadRequests = useCallback(async () => {
@@ -132,7 +137,19 @@ export default function RequestsPage() {
     setShowSlotDetailsDialog(true);
   };
 
-  const handleSlotRequest = async (request, newStatus) => {
+  const handleOpenApprovalDialog = (request) => {
+    setRequestToApprove(request);
+    const summary = getSlotSummary(request.requested_slots);
+    // Initialize approval amounts with requested amounts (admin can reduce)
+    const initialAmounts = {};
+    Object.entries(summary).forEach(([type, count]) => {
+      initialAmounts[type] = count || 0;
+    });
+    setApprovalAmounts(initialAmounts);
+    setShowApprovalDialog(true);
+  };
+
+  const handleSlotRequest = async (request, newStatus, approvedAmounts = null) => {
     try {
       const oldStatus = request.status;
       
@@ -141,11 +158,14 @@ export default function RequestsPage() {
           const currentSlots = user.registration_slots || {};
           const newSlots = { ...currentSlots };
           
-          // Get summary - works with both old and new formats
-          const summary = getSlotSummary(request.requested_slots);
+          // Use approved amounts if provided, otherwise approve all requested slots
+          const amountsToApprove = approvedAmounts || getSlotSummary(request.requested_slots);
           
-          Object.entries(summary).forEach(([type, count]) => {
-              newSlots[type] = (newSlots[type] || 0) + (count || 0);
+          Object.entries(amountsToApprove).forEach(([type, count]) => {
+              const approvedCount = parseInt(count) || 0;
+              if (approvedCount > 0) {
+                  newSlots[type] = (newSlots[type] || 0) + approvedCount;
+              }
           });
           
           await User.update(request.user_id, { registration_slots: newSlots });
@@ -162,12 +182,52 @@ export default function RequestsPage() {
         // Don't fail the request if notification fails
       }
       
-      toast({ title: "Success", description: `Slot request has been ${newStatus}.`, variant: "success" });
+      const approvedMessage = approvedAmounts 
+        ? `Slot request has been ${newStatus} with partial approval.`
+        : `Slot request has been ${newStatus}.`;
+      
+      toast({ title: "Success", description: approvedMessage, variant: "success" });
       loadRequests();
     } catch(error) {
       console.error("Failed to handle slot request:", error);
       toast({ title: "Error", description: "Could not process the slot request.", variant: "destructive" });
     }
+  };
+
+  const handleConfirmApproval = async () => {
+    if (!requestToApprove) return;
+
+    // Validate that at least one slot type has a positive approval amount
+    const hasApproval = Object.values(approvalAmounts).some(count => parseInt(count) > 0);
+    if (!hasApproval) {
+      toast({
+        title: "Validation Error",
+        description: "Please approve at least one slot.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Validate that approval amounts don't exceed requested amounts
+    const summary = getSlotSummary(requestToApprove.requested_slots);
+    const hasExceeded = Object.entries(approvalAmounts).some(([type, count]) => {
+      const requestedCount = summary[type] || 0;
+      return parseInt(count) > requestedCount;
+    });
+
+    if (hasExceeded) {
+      toast({
+        title: "Validation Error",
+        description: "Approval amounts cannot exceed requested amounts.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    await handleSlotRequest(requestToApprove, 'approved', approvalAmounts);
+    setShowApprovalDialog(false);
+    setRequestToApprove(null);
+    setApprovalAmounts({});
   };
 
   const handleExportSlotRequests = () => {
@@ -447,7 +507,7 @@ export default function RequestsPage() {
                         <Eye className="w-4 h-4 mr-1" />
                         Details
                       </Button>
-                      <Button size="icon" className="bg-green-500 hover:bg-green-600 h-8 w-8" onClick={() => handleSlotRequest(req, 'approved')}>
+                      <Button size="icon" className="bg-green-500 hover:bg-green-600 h-8 w-8" onClick={() => handleOpenApprovalDialog(req)}>
                         <Check className="w-4 h-4" />
                       </Button>
                       <Button size="icon" className="bg-red-500 hover:bg-red-600 h-8 w-8" onClick={() => handleSlotRequest(req, 'declined')}>
@@ -691,6 +751,104 @@ export default function RequestsPage() {
             >
               <Check className="w-4 h-4 mr-2" />
               Approve
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Slot Approval Dialog */}
+      <Dialog open={showApprovalDialog} onOpenChange={setShowApprovalDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Approve Slot Request</DialogTitle>
+          </DialogHeader>
+          
+          {requestToApprove && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Requested By</label>
+                  <p className="text-sm font-semibold">{requestToApprove.user_name}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Email</label>
+                  <p className="text-sm">{requestToApprove.user_email}</p>
+                </div>
+                <div className="col-span-2">
+                  <label className="text-sm font-medium text-gray-500">Reason</label>
+                  <p className="text-sm text-gray-700 mt-1">{requestToApprove.reason || 'No reason provided'}</p>
+                </div>
+              </div>
+
+              <div className="border-t pt-4">
+                <h3 className="font-semibold text-lg mb-4">Select Number of Slots to Approve</h3>
+                <p className="text-sm text-gray-600 mb-4">
+                  You can approve fewer slots than requested. Enter the number of slots you want to approve for each type.
+                </p>
+                
+                <div className="space-y-4">
+                  {Object.entries(getSlotSummary(requestToApprove.requested_slots)).map(([type, requestedCount]) => {
+                    if (requestedCount <= 0) return null;
+                    
+                    return (
+                      <div key={type} className="flex items-center justify-between p-3 border rounded-lg">
+                        <div className="flex-1">
+                          <Label htmlFor={`approve-${type}`} className="text-sm font-medium">
+                            {type} Slots
+                          </Label>
+                          <p className="text-xs text-gray-500 mt-1">
+                            Requested: {requestedCount}
+                          </p>
+                        </div>
+                        <div className="w-32">
+                          <Input
+                            id={`approve-${type}`}
+                            type="number"
+                            min="0"
+                            max={requestedCount}
+                            value={approvalAmounts[type] || 0}
+                            onChange={(e) => {
+                              const value = Math.max(0, Math.min(requestedCount, parseInt(e.target.value) || 0));
+                              setApprovalAmounts(prev => ({
+                                ...prev,
+                                [type]: value
+                              }));
+                            }}
+                            className="text-center"
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <p className="text-sm text-blue-800">
+                    <strong>Total to Approve:</strong>{' '}
+                    {Object.values(approvalAmounts).reduce((sum, count) => sum + (parseInt(count) || 0), 0)} slots
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          <DialogFooter className="flex gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setShowApprovalDialog(false);
+                setRequestToApprove(null);
+                setApprovalAmounts({});
+              }}
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleConfirmApproval}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              <Check className="w-4 h-4 mr-2" />
+              Approve Selected Slots
             </Button>
           </DialogFooter>
         </DialogContent>

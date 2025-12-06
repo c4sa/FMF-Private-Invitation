@@ -35,7 +35,7 @@ import {
 } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import ProtectedRoute from "../components/common/ProtectedRoute";
-import { sendNewUserRequestEmail, createUserDirectly, deleteUserCompletely, updateUserAccess, sendUserReminderEmail } from "@/api/functions";
+import { sendNewUserRequestEmail, createUserDirectly, deleteUserCompletely, updateUserAccess, sendUserReminderEmail, sendTrophyAwardEmail } from "@/api/functions";
 import { format } from "date-fns";
 import { useToast } from "../components/common/Toast";
 import { Link } from "react-router-dom";
@@ -1217,10 +1217,19 @@ export default function SystemUsers() {
     const errors = [];
 
     try {
-      // Update trophy_given for all selected users
+      // Update trophy_given for all selected users and send emails
       for (const user of usersToAward) {
         try {
           await User.update(user.id, { trophy_given: true });
+          
+          // Send trophy award email to the user
+          try {
+            await sendTrophyAwardEmail(user);
+          } catch (emailError) {
+            console.error(`Failed to send trophy award email to ${user.email}:`, emailError);
+            // Don't fail the entire operation if email fails, just log it
+          }
+          
           successCount++;
         } catch (error) {
           console.error(`Failed to give trophy to ${user.email}:`, error);

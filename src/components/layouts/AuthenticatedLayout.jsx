@@ -25,6 +25,7 @@ import {
   Briefcase,
   Bell,
   User as UserIcon,
+  Trophy,
 } from "lucide-react";
 import {
   Sidebar,
@@ -192,7 +193,7 @@ export default function AuthenticatedLayout({ children, currentPageName }) {
     { title: "Requests", url: createPageUrl("Requests"), icon: Bell, module: "requests" },
     { title: "Settings", url: createPageUrl("Settings"), icon: SettingsIcon, module: "settings" },
     { title: "My Access", url: createPageUrl("AccessLevels"), icon: ClipboardList, module: "access_levels" },
-    { title: "Sponsor Trophy", url: createPageUrl("Trophy"), icon: null, module: "trophy", requiresTrophy: true }
+    { title: "Sponsor Trophy", url: createPageUrl("Trophy"), icon: Trophy, module: "trophy", requiresTrophy: true }
   ];
 
   // Get default navigation items for this user type
