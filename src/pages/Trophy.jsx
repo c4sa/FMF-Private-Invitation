@@ -154,7 +154,7 @@ export default function Trophy() {
                 Provide Company Name
               </CardTitle>
               <CardDescription>
-                You have received a trophy during the event. Please provide your complete and correct company name below.
+                Please provide your complete and correct company name below.
               </CardDescription>
             </CardHeader>
             <CardContent>
