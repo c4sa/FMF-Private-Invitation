@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import ProtectedRoute from "@/components/common/ProtectedRoute";
 import { User } from "@/api/entities";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -137,27 +137,19 @@ export default function Trophy() {
 
   return (
     <ProtectedRoute pageName="Trophy">
-      <div className="p-6 space-y-6 bg-slate-50 min-h-screen">
-        <div className="max-w-4xl mx-auto">
+      <div className="bg-white min-h-screen">
+        <div className="max-w-4xl mx-auto px-6 py-8">
           {/* Header */}
-          <div className="mb-6">
-            <h1 className="text-3xl font-bold text-gray-900">
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold text-black">
               Recognition Award
             </h1>
-            <p className="text-gray-500 mt-2">Congratulations on receiving a trophy during the event!</p>
+            <p className="text-black mt-2 text-lg">Congratulations!</p>
           </div>
 
           {/* Main Card */}
-          <Card>
-            <CardHeader>
-              <CardTitle>
-                Provide Company Name
-              </CardTitle>
-              <CardDescription>
-                Please provide your complete and correct company name below.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
+          <Card className="bg-white shadow-lg rounded-lg border-0">
+            <CardContent className="p-8">
               {isSubmitted ? (
                 <div className="space-y-4">
                   <div className="flex items-center gap-3 p-4 bg-green-50 border border-green-200 rounded-lg">
@@ -183,12 +175,20 @@ export default function Trophy() {
                 </div>
               ) : (
                 <form onSubmit={handleSubmit} className="space-y-6">
-                  <div>
-                    <Label htmlFor="company_name" className="text-base font-semibold">
+                  {/* Award Message */}
+                  <div className="mb-6">
+                    <p className="text-black text-base leading-relaxed">
+                      We are pleased to present FMF 2026 Trophy to you in appreciation of your valuable support and contribution to the success of the 5th Future Minerals Forum.
+                    </p>
+                  </div>
+
+                  {/* Company Name Section */}
+                  <div className="space-y-3">
+                    <Label htmlFor="company_name" className="text-base font-bold text-black">
                       Company Name
                     </Label>
-                    <p className="text-sm text-gray-500 mt-1 mb-3">
-                      Please enter the complete and correct name of your company as it should appear in official records.
+                    <p className="text-sm text-black">
+                      Please provide the exact company name as you would like it to appear on your award.
                     </p>
                     <Input
                       id="company_name"
@@ -196,17 +196,18 @@ export default function Trophy() {
                       placeholder="Enter your complete company name"
                       value={companyName}
                       onChange={(e) => setCompanyName(e.target.value)}
-                      className="text-base"
+                      className="text-base border-gray-300"
                       required
                       disabled={isSubmitting}
                     />
                   </div>
 
-                  <div className="flex justify-end gap-3 pt-4">
+                  {/* Submit Button */}
+                  <div className="flex justify-end pt-4">
                     <Button
                       type="submit"
                       disabled={isSubmitting || !companyName.trim()}
-                      className="bg-blue-600 hover:bg-blue-700"
+                      className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-md"
                     >
                       {isSubmitting ? (
                         <div className="flex items-center gap-2">
@@ -220,23 +221,6 @@ export default function Trophy() {
                   </div>
                 </form>
               )}
-            </CardContent>
-          </Card>
-
-          {/* Information Card */}
-          <Card className="mt-6">
-            <CardContent className="pt-6">
-              <div className="flex items-start gap-4">
-                <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center flex-shrink-0">
-                </div>
-                <div>
-                  <h3 className="font-semibold text-gray-900 mb-2">About Your Trophy</h3>
-                  <p className="text-sm text-gray-600">
-                    You have been awarded a trophy for your participation in the event. This recognition is a testament to your valuable contribution. 
-                    Please ensure that your company name is accurately submitted for our records.
-                  </p>
-                </div>
-              </div>
             </CardContent>
           </Card>
         </div>
