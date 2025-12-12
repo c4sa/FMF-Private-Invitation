@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useCallback } from "react";
-import { User, PartnershipType, Notification } from "@/api/entities";
+import { User, PartnershipType, Notification, TrophiesAndCertificates } from "@/api/entities";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,7 +23,11 @@ import {
   Search,
   Mail,
   CheckCircle,
-  FileText
+  FileText,
+  ChevronDown,
+  Eye,
+  Trophy,
+  Award
 } from "lucide-react";
 import * as XLSX from 'xlsx';
 import {
@@ -33,9 +37,15 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Checkbox } from "@/components/ui/checkbox";
 import ProtectedRoute from "../components/common/ProtectedRoute";
-import { sendNewUserRequestEmail, createUserDirectly, deleteUserCompletely, updateUserAccess, sendUserReminderEmail, sendTrophyAwardEmail } from "@/api/functions";
+import { sendNewUserRequestEmail, createUserDirectly, deleteUserCompletely, updateUserAccess, sendUserReminderEmail, sendTrophyAwardEmail, sendCertificateAwardEmail } from "@/api/functions";
 import { format } from "date-fns";
 import { useToast } from "../components/common/Toast";
 import { Link } from "react-router-dom";
@@ -60,7 +70,12 @@ export default function SystemUsers() {
   const [selectedUsers, setSelectedUsers] = useState(new Set());
   const [isSendingReminders, setIsSendingReminders] = useState(false);
   const [isGivingTrophy, setIsGivingTrophy] = useState(false);
+  const [isGivingCertificate, setIsGivingCertificate] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
+  const [showViewDetailsDialog, setShowViewDetailsDialog] = useState(false);
+  const [viewDetailsUser, setViewDetailsUser] = useState(null);
+  const [userAwards, setUserAwards] = useState([]);
+  const [usersWithAwards, setUsersWithAwards] = useState(new Set()); // Track which users have awards
   const [editingUser, setEditingUser] = useState(null);
   const [partnerTypes, setPartnerTypes] = useState([]); // <-- State for dynamic partner types
   const [formData, setFormData] = useState({
@@ -128,6 +143,19 @@ export default function SystemUsers() {
         }
         setUsers(filteredUserData);
         setFilteredUsers(filteredUserData);
+
+        // Load awards for all users to determine who has awards
+        try {
+          const allAwards = await TrophiesAndCertificates.list();
+          const userIdsWithAwards = new Set(
+            allAwards.map(award => award.user_id)
+          );
+          setUsersWithAwards(userIdsWithAwards);
+        } catch (awardsError) {
+          console.error('Error loading user awards:', awardsError);
+          // Don't fail the entire load if awards can't be loaded
+          setUsersWithAwards(new Set());
+        }
       } catch (dataError) {
         console.error("Error loading user data:", dataError);
         // Assuming "Permission denied" or similar message in the error object for API access issues
@@ -738,16 +766,6 @@ export default function SystemUsers() {
         // Get user type (Partner Type)
         const userType = (user.user_type && user.user_type !== 'N/A') ? user.user_type : 'N/A';
 
-        // Trophy details
-        const trophyAwarded = user.trophy_given ? 'Yes' : 'No';
-        const formSubmitted = user.complete_company_name ? 'Yes' : 'No';
-        const completeCompanyName = user.complete_company_name || '';
-        
-        // Inquiry fields from trophy_inquiry JSON
-        const inquiryName = user.trophy_inquiry?.name || '';
-        const inquiryEmail = user.trophy_inquiry?.email || '';
-        const inquiryMobile = user.trophy_inquiry?.mobile || '';
-
         return {
           'Company Name': user.company_name || '',
           'Name': displayName,
@@ -756,12 +774,6 @@ export default function SystemUsers() {
           'User Type': userType,
           'Slots Used': slotsUsed,
           'Slots Remaining': slotsRemaining,
-          'Trophy Awarded': trophyAwarded,
-          'Form Submitted': formSubmitted,
-          'Complete Company Name': completeCompanyName,
-          'Inquiry Name': inquiryName,
-          'Inquiry Email': inquiryEmail,
-          'Inquiry Mobile': inquiryMobile,
           'Resend Email Sent At': resendEmailSentAt
         };
       });
@@ -778,12 +790,6 @@ export default function SystemUsers() {
         { wch: 25 }, // User Type
         { wch: 15 }, // Slots Used
         { wch: 18 }, // Slots Remaining
-        { wch: 15 }, // Trophy Awarded
-        { wch: 15 }, // Form Submitted
-        { wch: 35 }, // Complete Company Name
-        { wch: 25 }, // Inquiry Name
-        { wch: 30 }, // Inquiry Email
-        { wch: 20 }, // Inquiry Mobile
         { wch: 20 }  // Resend Email Sent At
       ];
       ws['!cols'] = colWidths;
@@ -1226,12 +1232,28 @@ export default function SystemUsers() {
     let successCount = 0;
     let failureCount = 0;
     const errors = [];
+    const successfullyAwardedUserIds = []; // Track users who successfully received awards
 
     try {
-      // Update trophy_given for all selected users and send emails
+      // Create trophy awards in trophies_and_certificates table for all selected users and send emails
       for (const user of usersToAward) {
         try {
-          await User.update(user.id, { trophy_given: true });
+          // Check if user already has a trophy
+          const existingTrophies = await TrophiesAndCertificates.getByUserIdAndType(user.id, 'trophy');
+          if (existingTrophies && existingTrophies.length > 0) {
+            // User already has a trophy, skip but still count as success
+            if (!usersWithAwards.has(user.id)) {
+              successfullyAwardedUserIds.push(user.id);
+            }
+            continue;
+          }
+
+          // Create new trophy award
+          await TrophiesAndCertificates.create({
+            user_id: user.id,
+            award_type: 'trophy',
+            awarded_by: currentUser?.id || null
+          });
           
           // Send trophy award email to the user
           try {
@@ -1241,6 +1263,7 @@ export default function SystemUsers() {
             // Don't fail the entire operation if email fails, just log it
           }
           
+          successfullyAwardedUserIds.push(user.id);
           successCount++;
         } catch (error) {
           console.error(`Failed to give trophy to ${user.email}:`, error);
@@ -1251,6 +1274,15 @@ export default function SystemUsers() {
 
       // Clear selection after awarding
       setSelectedUsers(new Set());
+
+      // Update usersWithAwards set with newly awarded users
+      if (successfullyAwardedUserIds.length > 0) {
+        setUsersWithAwards(prev => {
+          const updated = new Set(prev);
+          successfullyAwardedUserIds.forEach(userId => updated.add(userId));
+          return updated;
+        });
+      }
 
       // Reload data to reflect changes
       await loadData();
@@ -1277,6 +1309,120 @@ export default function SystemUsers() {
       });
     } finally {
       setIsGivingTrophy(false);
+    }
+  };
+
+  const handleGiveCertificate = async () => {
+    if (selectedUsers.size === 0) {
+      toast({
+        title: "No Users Selected",
+        description: "Please select at least one user to give a certificate.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsGivingCertificate(true);
+    const selectedUserIds = Array.from(selectedUsers);
+    const usersToAward = getVisibleUsers().filter(user => selectedUserIds.includes(user.id));
+    
+    let successCount = 0;
+    let failureCount = 0;
+    const errors = [];
+    const successfullyAwardedUserIds = []; // Track users who successfully received awards
+
+    try {
+      // Create certificate awards in trophies_and_certificates table for all selected users and send emails
+      for (const user of usersToAward) {
+        try {
+          // Check if user already has a certificate
+          const existingCertificates = await TrophiesAndCertificates.getByUserIdAndType(user.id, 'certificate');
+          if (existingCertificates && existingCertificates.length > 0) {
+            // User already has a certificate, skip but still count as success
+            if (!usersWithAwards.has(user.id)) {
+              successfullyAwardedUserIds.push(user.id);
+            }
+            continue;
+          }
+
+          // Create new certificate award
+          await TrophiesAndCertificates.create({
+            user_id: user.id,
+            award_type: 'certificate',
+            awarded_by: currentUser?.id || null
+          });
+          
+          // Send certificate award email to the user
+          try {
+            await sendCertificateAwardEmail(user);
+          } catch (emailError) {
+            console.error(`Failed to send certificate award email to ${user.email}:`, emailError);
+            // Don't fail the entire operation if email fails, just log it
+          }
+          
+          successfullyAwardedUserIds.push(user.id);
+          successCount++;
+        } catch (error) {
+          console.error(`Failed to give certificate to ${user.email}:`, error);
+          failureCount++;
+          errors.push(`${user.email}: ${error.message}`);
+        }
+      }
+
+      // Clear selection after awarding
+      setSelectedUsers(new Set());
+
+      // Update usersWithAwards set with newly awarded users
+      if (successfullyAwardedUserIds.length > 0) {
+        setUsersWithAwards(prev => {
+          const updated = new Set(prev);
+          successfullyAwardedUserIds.forEach(userId => updated.add(userId));
+          return updated;
+        });
+      }
+
+      // Reload data to reflect changes
+      await loadData();
+
+      if (failureCount === 0) {
+        toast({
+          title: "Certificates Awarded",
+          description: `Successfully awarded certificates to ${successCount} user(s).`,
+          variant: "success"
+        });
+      } else {
+        toast({
+          title: "Partial Success",
+          description: `Awarded to ${successCount} user(s), failed for ${failureCount} user(s). ${errors.slice(0, 3).join('; ')}${errors.length > 3 ? '...' : ''}`,
+          variant: "warning"
+        });
+      }
+    } catch (error) {
+      console.error('Error giving certificates:', error);
+      toast({
+        title: "Error",
+        description: "Failed to give certificates. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsGivingCertificate(false);
+    }
+  };
+
+  const handleViewDetails = async (user) => {
+    setViewDetailsUser(user);
+    setShowViewDetailsDialog(true);
+    try {
+      const awards = await TrophiesAndCertificates.getByUserId(user.id);
+      setUserAwards(awards || []);
+    } catch (error) {
+      console.error('Error loading user awards:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load award details. Please try again.",
+        variant: "destructive"
+      });
+      setUserAwards([]);
     }
   };
 
@@ -1710,6 +1856,92 @@ export default function SystemUsers() {
             </DialogContent>
           </Dialog>
 
+          {/* View Details Dialog */}
+          <Dialog open={showViewDetailsDialog} onOpenChange={setShowViewDetailsDialog}>
+            <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>
+                  Awards Details for {viewDetailsUser ? getDisplayName(viewDetailsUser) : ''}
+                </DialogTitle>
+                <DialogDescription>
+                  View all trophies and certificates awarded to this user.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 mt-4">
+                {userAwards.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    <Trophy className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                    <p>No awards have been given to this user yet.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {userAwards.map((award) => (
+                      <Card key={award.id} className="border-l-4 border-l-blue-500">
+                        <CardContent className="p-4">
+                          <div className="flex items-start justify-between mb-3">
+                            <div className="flex items-center gap-2">
+                              {award.award_type === 'trophy' ? (
+                                <Trophy className="w-5 h-5 text-yellow-600" />
+                              ) : (
+                                <Award className="w-5 h-5 text-blue-600" />
+                              )}
+                              <Badge className={award.award_type === 'trophy' ? 'bg-yellow-100 text-yellow-800' : 'bg-blue-100 text-blue-800'}>
+                                {award.award_type === 'trophy' ? 'Trophy' : 'Certificate'}
+                              </Badge>
+                            </div>
+                            <div className="text-sm text-gray-500">
+                              Awarded: {format(new Date(award.awarded_at), 'MMM d, yyyy')}
+                            </div>
+                          </div>
+                          <div className="space-y-2">
+                            {award.complete_company_name ? (
+                              <div className="flex items-center gap-2">
+                                <CheckCircle className="w-4 h-4 text-green-500" />
+                                <span className="text-sm font-semibold text-green-700">Form Submitted</span>
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-2">
+                                <FileText className="w-4 h-4 text-orange-500" />
+                                <span className="text-sm text-orange-600">Pending Submission</span>
+                              </div>
+                            )}
+                            {award.complete_company_name && (
+                              <div className="mt-2 p-2 bg-gray-50 rounded">
+                                <p className="text-xs text-gray-600 font-semibold mb-1">Company Name:</p>
+                                <p className="text-sm text-gray-900">{award.complete_company_name}</p>
+                              </div>
+                            )}
+                            {award.inquiry_details && Object.keys(award.inquiry_details).length > 0 && (
+                              <div className="mt-2 p-2 bg-gray-50 rounded">
+                                <p className="text-xs text-gray-600 font-semibold mb-1">Contact Details:</p>
+                                <div className="text-sm text-gray-900 space-y-1">
+                                  {award.inquiry_details.name && (
+                                    <p><span className="font-semibold">Name:</span> {award.inquiry_details.name}</p>
+                                  )}
+                                  {award.inquiry_details.email && (
+                                    <p><span className="font-semibold">Email:</span> {award.inquiry_details.email}</p>
+                                  )}
+                                  {award.inquiry_details.mobile && (
+                                    <p><span className="font-semibold">Mobile:</span> {award.inquiry_details.mobile}</p>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div className="flex justify-end mt-6">
+                <Button variant="outline" onClick={() => setShowViewDetailsDialog(false)}>
+                  Close
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+
           {/* Search Filter */}
           <Card className="mb-6">
             <CardContent className="p-6">
@@ -1746,14 +1978,34 @@ export default function SystemUsers() {
                     <Mail className="w-4 h-4" />
                     {isSendingReminders ? 'Sending...' : `Resend Email (${selectedUsers.size})`}
                   </Button>
-                  <Button
-                    variant="outline"
-                    className="flex items-center gap-2"
-                    onClick={handleGiveTrophy}
-                    disabled={isGivingTrophy || selectedUsers.size === 0}
-                  >
-                    {isGivingTrophy ? 'Awarding...' : `Give Trophy (${selectedUsers.size})`}
-                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className="flex items-center gap-2"
+                        disabled={selectedUsers.size === 0 || isGivingTrophy || isGivingCertificate}
+                      >
+                        {(isGivingTrophy || isGivingCertificate) ? 'Awarding...' : 'Give Award'}
+                        <ChevronDown className="w-4 h-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem
+                        onClick={handleGiveTrophy}
+                        disabled={isGivingTrophy || isGivingCertificate}
+                      >
+                        <Trophy className="w-4 h-4 mr-2" />
+                        Give Trophy ({selectedUsers.size})
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={handleGiveCertificate}
+                        disabled={isGivingTrophy || isGivingCertificate}
+                      >
+                        <Award className="w-4 h-4 mr-2" />
+                        Give Certificate ({selectedUsers.size})
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               </div>
             </CardHeader>
@@ -1785,7 +2037,7 @@ export default function SystemUsers() {
                       <TableHead>Status</TableHead>
                       <TableHead>Last Login</TableHead>
                       <TableHead>Slots (Avail/Total)</TableHead>
-                      <TableHead>Trophy Status</TableHead>
+                      <TableHead>Awards</TableHead>
                       <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -1897,35 +2149,19 @@ export default function SystemUsers() {
                                 )}
                             </TableCell>
                             <TableCell>
-                              <div className="flex flex-col gap-1">
-                                {user.trophy_given ? (
-                                  <div className="flex items-center gap-1">
-                                    <span className="text-xs text-gray-600">Trophy Awarded</span>
-                                  </div>
-                                ) : (
-                                  <span className="text-xs text-gray-400">-</span>
-                                )}
-                                {user.complete_company_name ? (
-                                  <div className="flex items-center gap-1 mt-1">
-                                    <CheckCircle className="w-3 h-3 text-green-500" />
-                                    <span className="text-xs text-gray-600">Form Submitted</span>
-                                  </div>
-                                ) : user.trophy_given ? (
-                                  <div className="flex items-center gap-1 mt-1">
-                                    <FileText className="w-3 h-3 text-orange-500" />
-                                    <span className="text-xs text-orange-600">Pending</span>
-                                  </div>
-                                ) : null}
-                                {user.complete_company_name && (
-                                  <div className="mt-1">
-                                    <span className="text-xs text-gray-500" title={user.complete_company_name}>
-                                      {user.complete_company_name.length > 30 
-                                        ? `${user.complete_company_name.substring(0, 30)}...` 
-                                        : user.complete_company_name}
-                                    </span>
-                                  </div>
-                                )}
-                              </div>
+                              {usersWithAwards.has(user.id) ? (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleViewDetails(user)}
+                                  className="flex items-center gap-2"
+                                >
+                                  <Eye className="w-4 h-4" />
+                                  View Details
+                                </Button>
+                              ) : (
+                                <span className="text-xs text-gray-400">-</span>
+                              )}
                             </TableCell>
                             <TableCell>
                               {canPerformAction(user) ? (

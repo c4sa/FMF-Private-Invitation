@@ -11,9 +11,9 @@ import Loader from "@/components/ui/loader";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 
-export default function Trophy() {
+export default function Certificate() {
   const [currentUser, setCurrentUser] = useState(null);
-  const [trophyAward, setTrophyAward] = useState(null);
+  const [certificateAward, setCertificateAward] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [companyName, setCompanyName] = useState("");
@@ -21,7 +21,7 @@ export default function Trophy() {
   const [inquiryEmail, setInquiryEmail] = useState("");
   const [inquiryMobile, setInquiryMobile] = useState("");
   const [isSubmitted, setIsSubmitted] = useState(false);
-  const [hasTrophyAccess, setHasTrophyAccess] = useState(false);
+  const [hasCertificateAccess, setHasCertificateAccess] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -35,31 +35,31 @@ export default function Trophy() {
       const user = await User.me();
       setCurrentUser(user);
       
-      // Check if user has trophy access by querying trophies_and_certificates table
-      const trophies = await TrophiesAndCertificates.getByUserIdAndType(user.id, 'trophy');
+      // Check if user has certificate access by querying trophies_and_certificates table
+      const certificates = await TrophiesAndCertificates.getByUserIdAndType(user.id, 'certificate');
       
-      if (!trophies || trophies.length === 0) {
-        setHasTrophyAccess(false);
+      if (!certificates || certificates.length === 0) {
+        setHasCertificateAccess(false);
         setIsLoading(false);
         return;
       }
       
-      // Get the latest trophy award
-      const latestTrophy = trophies[0];
-      setTrophyAward(latestTrophy);
-      setHasTrophyAccess(true);
+      // Get the latest certificate award
+      const latestCertificate = certificates[0];
+      setCertificateAward(latestCertificate);
+      setHasCertificateAccess(true);
       
       // Pre-fill company name if already submitted
-      if (latestTrophy.complete_company_name) {
-        setCompanyName(latestTrophy.complete_company_name);
+      if (latestCertificate.complete_company_name) {
+        setCompanyName(latestCertificate.complete_company_name);
         setIsSubmitted(true);
       }
       
       // Pre-fill inquiry fields if already submitted
-      if (latestTrophy.inquiry_details) {
-        setInquiryName(latestTrophy.inquiry_details.name || "");
-        setInquiryEmail(latestTrophy.inquiry_details.email || "");
-        setInquiryMobile(latestTrophy.inquiry_details.mobile || "");
+      if (latestCertificate.inquiry_details) {
+        setInquiryName(latestCertificate.inquiry_details.name || "");
+        setInquiryEmail(latestCertificate.inquiry_details.email || "");
+        setInquiryMobile(latestCertificate.inquiry_details.mobile || "");
       }
     } catch (error) {
       console.error("Error loading user data:", error);
@@ -111,11 +111,11 @@ export default function Trophy() {
       return;
     }
 
-    if (!trophyAward) return;
+    if (!certificateAward) return;
 
     setIsSubmitting(true);
     try {
-      await TrophiesAndCertificates.update(trophyAward.id, {
+      await TrophiesAndCertificates.update(certificateAward.id, {
         complete_company_name: companyName.trim(),
         inquiry_details: {
           name: inquiryName.trim(),
@@ -125,7 +125,7 @@ export default function Trophy() {
       });
       
       // Update local state
-      setTrophyAward(prev => ({
+      setCertificateAward(prev => ({
         ...prev,
         complete_company_name: companyName.trim(),
         inquiry_details: {
@@ -142,7 +142,7 @@ export default function Trophy() {
         variant: "success"
       });
     } catch (error) {
-      console.error("Error updating trophy information:", error);
+      console.error("Error updating certificate information:", error);
       toast({
         title: "Error",
         description: "Failed to save information. Please try again.",
@@ -155,7 +155,7 @@ export default function Trophy() {
 
   if (isLoading) {
     return (
-      <ProtectedRoute pageName="Trophy">
+      <ProtectedRoute pageName="Certificate">
         <div className="p-6 space-y-6 bg-slate-50 min-h-screen">
           <div className="max-w-4xl mx-auto flex items-center justify-center min-h-96">
             <Loader size="default" />
@@ -165,10 +165,10 @@ export default function Trophy() {
     );
   }
 
-  // Check trophy access after loading
-  if (!hasTrophyAccess) {
+  // Check certificate access after loading
+  if (!hasCertificateAccess) {
     return (
-      <ProtectedRoute pageName="Trophy">
+      <ProtectedRoute pageName="Certificate">
         <div className="p-6 space-y-6 bg-slate-50 min-h-screen">
           <div className="max-w-4xl mx-auto">
             <div className="flex flex-col items-center justify-center min-h-96">
@@ -176,9 +176,9 @@ export default function Trophy() {
                 <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto">
                   <Shield className="w-8 h-8 text-yellow-600" />
                 </div>
-                <h1 className="text-2xl font-bold text-gray-900">Trophy Access Required</h1>
+                <h1 className="text-2xl font-bold text-gray-900">Certificate Access Required</h1>
                 <p className="text-gray-600 max-w-md">
-                  You need to be awarded a trophy to access this page. Please contact an administrator if you believe this is an error.
+                  You need to be awarded a certificate to access this page. Please contact an administrator if you believe this is an error.
                 </p>
                 <div className="pt-4">
                   <Button variant="outline" onClick={() => navigate(createPageUrl("Dashboard"))}>
@@ -194,13 +194,13 @@ export default function Trophy() {
   }
 
   return (
-    <ProtectedRoute pageName="Trophy">
+    <ProtectedRoute pageName="Certificate">
       <div className="bg-white min-h-screen">
         <div className="max-w-4xl mx-auto px-6 py-8">
           {/* Header */}
           <div className="mb-8">
             <h1 className="text-3xl font-bold text-black">
-              Recognition Award
+              Certificate of Appreciation
             </h1>
             <p className="text-black mt-2 text-lg">Congratulations!</p>
           </div>
@@ -215,15 +215,15 @@ export default function Trophy() {
                     <div>
                       <p className="font-semibold text-green-900">Information Submitted</p>
                       <p className="text-sm text-green-700 mt-1">
-                        Your complete company name has been recorded: <strong>{trophyAward?.complete_company_name}</strong>
+                        Your complete company name has been recorded: <strong>{certificateAward?.complete_company_name}</strong>
                       </p>
-                      {trophyAward?.inquiry_details && (
+                      {certificateAward?.inquiry_details && (
                         <div className="mt-2 text-sm text-green-700">
                           <p>Contact details:</p>
                           <ul className="list-disc list-inside mt-1 space-y-1">
-                            <li>Name: <strong>{trophyAward.inquiry_details.name}</strong></li>
-                            <li>Email: <strong>{trophyAward.inquiry_details.email}</strong></li>
-                            <li>Mobile: <strong>{trophyAward.inquiry_details.mobile}</strong></li>
+                            <li>Name: <strong>{certificateAward.inquiry_details.name}</strong></li>
+                            <li>Email: <strong>{certificateAward.inquiry_details.email}</strong></li>
+                            <li>Mobile: <strong>{certificateAward.inquiry_details.mobile}</strong></li>
                           </ul>
                         </div>
                       )}
@@ -234,10 +234,10 @@ export default function Trophy() {
                       variant="outline"
                       onClick={() => {
                         setIsSubmitted(false);
-                        setCompanyName(trophyAward?.complete_company_name || "");
-                        setInquiryName(trophyAward?.inquiry_details?.name || "");
-                        setInquiryEmail(trophyAward?.inquiry_details?.email || "");
-                        setInquiryMobile(trophyAward?.inquiry_details?.mobile || "");
+                        setCompanyName(certificateAward?.complete_company_name || "");
+                        setInquiryName(certificateAward?.inquiry_details?.name || "");
+                        setInquiryEmail(certificateAward?.inquiry_details?.email || "");
+                        setInquiryMobile(certificateAward?.inquiry_details?.mobile || "");
                       }}
                     >
                       Update Information
@@ -249,14 +249,14 @@ export default function Trophy() {
                   {/* Award Message */}
                   <div className="mb-6">
                     <p className="text-black text-base leading-relaxed">
-                      We are pleased to present FMF 2026 Trophy to you in appreciation of your valuable support and contribution to the success of the 5th Future Minerals Forum.
+                      We are pleased to present FMF 2026 to you in appreciation of your valuable support and contribution to the success of the 5th Future Minerals Forum.
                     </p>
                   </div>
 
                   {/* Company Name Section */}
                   <div className="space-y-3">
                     <Label htmlFor="company_name" className="text-base font-bold text-black">
-                      Company Name
+                      Kindly share your company official name for the certificate issuance.
                     </Label>
                     <p className="text-sm text-black">
                       Please provide the exact company name as you would like it to appear on your award.

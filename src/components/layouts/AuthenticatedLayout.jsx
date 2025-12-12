@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { User, SystemSetting } from "@/api/entities";
+import { User, SystemSetting, TrophiesAndCertificates } from "@/api/entities";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Loader from "@/components/ui/loader";
 import {
@@ -26,6 +26,7 @@ import {
   Bell,
   User as UserIcon,
   Trophy,
+  Award,
 } from "lucide-react";
 import {
   Sidebar,
@@ -118,6 +119,8 @@ export default function AuthenticatedLayout({ children, currentPageName }) {
   const [isLoading, setIsLoading] = useState(true);
   const [moduleSettings, setModuleSettings] = useState({});
   const [showProfileSettings, setShowProfileSettings] = useState(false);
+  const [hasTrophy, setHasTrophy] = useState(false);
+  const [hasCertificate, setHasCertificate] = useState(false);
 
   const loadCurrentUserAndSettings = useCallback(async () => {
     try {
@@ -131,6 +134,21 @@ export default function AuthenticatedLayout({ children, currentPageName }) {
           newModuleSettings[s.key] = s.value === 'true';
       });
       setModuleSettings(newModuleSettings);
+
+      // Check for trophy and certificate awards
+      try {
+        const [trophies, certificates] = await Promise.all([
+          TrophiesAndCertificates.getByUserIdAndType(user.id, 'trophy'),
+          TrophiesAndCertificates.getByUserIdAndType(user.id, 'certificate')
+        ]);
+        setHasTrophy(trophies && trophies.length > 0);
+        setHasCertificate(certificates && certificates.length > 0);
+      } catch (awardError) {
+        console.error('Error loading awards:', awardError);
+        // Fallback to old trophy_given field if it still exists during migration
+        setHasTrophy(user.trophy_given === true);
+        setHasCertificate(false);
+      }
 
     } catch (error) {
       // Not logged in, redirect
@@ -193,7 +211,8 @@ export default function AuthenticatedLayout({ children, currentPageName }) {
     { title: "Requests", url: createPageUrl("Requests"), icon: Bell, module: "requests" },
     { title: "Settings", url: createPageUrl("Settings"), icon: SettingsIcon, module: "settings" },
     { title: "My Access", url: createPageUrl("AccessLevels"), icon: ClipboardList, module: "access_levels" },
-    { title: "Sponsor Trophy", url: createPageUrl("Trophy"), icon: Trophy, module: "trophy", requiresTrophy: true }
+    { title: "Sponsor Trophy", url: createPageUrl("Trophy"), icon: Trophy, module: "trophy", requiresTrophy: true },
+    { title: "Certificate", url: createPageUrl("Certificate"), icon: Award, module: "certificate", requiresCertificate: true }
   ];
 
   // Get default navigation items for this user type
@@ -222,11 +241,15 @@ export default function AuthenticatedLayout({ children, currentPageName }) {
     return defaultModules.includes(moduleName);
   };
 
-  // Filter navigation items based on module settings and trophy requirement
+  // Filter navigation items based on module settings and trophy/certificate requirement
   const navigationItems = allNavigationItems.filter(item => {
     // Check if item requires trophy and user has trophy
     if (item.requiresTrophy) {
-      return currentUser?.trophy_given === true;
+      return hasTrophy;
+    }
+    // Check if item requires certificate and user has certificate
+    if (item.requiresCertificate) {
+      return hasCertificate;
     }
     // Otherwise, check module settings
     return isModuleEnabled(item.module, systemUserType);

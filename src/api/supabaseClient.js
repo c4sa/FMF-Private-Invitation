@@ -547,6 +547,49 @@ export class StagedUsersAPI extends SupabaseAPI {
   }
 }
 
+export class TrophiesAndCertificatesAPI extends SupabaseAPI {
+  constructor() {
+    super('trophies_and_certificates')
+  }
+
+  async getByUserId(userId) {
+    const { data, error } = await supabase
+      .from('trophies_and_certificates')
+      .select('*')
+      .eq('user_id', userId)
+      .order('awarded_at', { ascending: false })
+    
+    if (error) throw error
+    return data
+  }
+
+  async getByUserIdAndType(userId, awardType) {
+    const { data, error } = await supabase
+      .from('trophies_and_certificates')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('award_type', awardType)
+      .order('awarded_at', { ascending: false })
+    
+    if (error) throw error
+    return data
+  }
+
+  async getLatestByUserIdAndType(userId, awardType) {
+    const { data, error } = await supabase
+      .from('trophies_and_certificates')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('award_type', awardType)
+      .order('awarded_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    
+    if (error) throw error
+    return data
+  }
+}
+
 // Create instances
 export const User = new UsersAPI()
 export const Attendee = new AttendeesAPI()
@@ -557,6 +600,7 @@ export const PartnershipType = new PartnershipTypesAPI()
 export const SlotRequest = new SlotRequestsAPI()
 export const Notification = new NotificationsAPI()
 export const StagedUser = new StagedUsersAPI()
+export const TrophiesAndCertificates = new TrophiesAndCertificatesAPI()
 
 // Export the base client for custom queries
 export { supabase, supabaseHelpers }

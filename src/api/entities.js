@@ -7,7 +7,8 @@ import {
   SlotRequest, 
   PartnershipType, 
   Notification,
-  StagedUser
+  StagedUser,
+  TrophiesAndCertificates
 } from './supabaseClient.js';
 
 // Export all entities
@@ -20,5 +21,6 @@ export {
   SlotRequest,
   PartnershipType,
   Notification,
-  StagedUser
+  StagedUser,
+  TrophiesAndCertificates
 };

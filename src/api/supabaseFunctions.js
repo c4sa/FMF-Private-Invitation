@@ -145,6 +145,42 @@ export const sendTrophyAwardEmail = async (user) => {
   }
 }
 
+export const sendCertificateAwardEmail = async (user) => {
+  try {
+    // Get certificate award email template
+    const templates = await EmailTemplate.filter({ name: 'certificate_award' })
+    const template = templates?.[0]
+    
+    if (!template) {
+      throw new Error('Certificate award email template not found')
+    }
+
+    // Check if the email template is active
+    if (!template.is_active) {
+      console.log('Certificate award email template is disabled, skipping email send')
+      return { success: true, message: 'Email template is disabled' }
+    }
+    
+    const loginUrl = `${window.location.origin}${createPageUrl('Certificate')}`
+    let subject = template.subject
+    let html = template.body
+      .replace(/{{preferred_name}}/g, user.preferred_name || user.full_name || 'User')
+      .replace(/{{email}}/g, user.email || '')
+      .replace(/{{company_name}}/g, user.company_name || 'N/A')
+      .replace(/{{system_role}}/g, user.system_role || 'User')
+      .replace(/{{login_url}}/g, loginUrl)
+    
+    return await emailService.send({
+      to: user.email,
+      subject,
+      html
+    })
+  } catch (error) {
+    console.error('Error sending certificate award email:', error)
+    throw error
+  }
+}
+
 export const sendModificationRequestEmail = async ({ to, subject, body }) => {
   try {
     return await emailService.sendModificationRequestEmail({

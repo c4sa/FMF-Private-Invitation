@@ -30,6 +30,8 @@ import PrivateInvitations from "./PrivateInvitations";
 
 import Trophy from "./Trophy";
 
+import Certificate from "./Certificate";
+
 import TestDataSetup from "./TestDataSetup";
 
 import Login from "./Login";
@@ -70,6 +72,8 @@ const PAGES = {
     PrivateInvitations: PrivateInvitations,
     
     Trophy: Trophy,
+    
+    Certificate: Certificate,
     
     TestDataSetup: TestDataSetup,
     
@@ -143,6 +147,8 @@ function PagesContent() {
                 <Route path="/PrivateInvitations" element={<PrivateInvitations />} />
                 
                 <Route path="/Trophy" element={<Trophy />} />
+                
+                <Route path="/Certificate" element={<Certificate />} />
                 
                 <Route path="/TestDataSetup" element={<TestDataSetup />} />
                 
