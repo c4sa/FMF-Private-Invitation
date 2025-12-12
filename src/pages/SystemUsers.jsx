@@ -77,6 +77,8 @@ export default function SystemUsers() {
   const [userAwards, setUserAwards] = useState([]);
   const [usersWithAwards, setUsersWithAwards] = useState(new Set()); // Track which users have awards
   const [editingUser, setEditingUser] = useState(null);
+  const [editingUserCompanies, setEditingUserCompanies] = useState([]);
+  const [editingCompanyInput, setEditingCompanyInput] = useState('');
   const [partnerTypes, setPartnerTypes] = useState([]); // <-- State for dynamic partner types
   const [formData, setFormData] = useState({
     preferred_name: '',
@@ -104,6 +106,12 @@ export default function SystemUsers() {
     registration_slots: attendeeTypes.reduce((acc, type) => ({...acc, [type]: 0}), {}),
     has_access: false
   });
+  // New state for multiple companies/users
+  const [companiesData, setCompaniesData] = useState([]);
+  const [currentCompanyInput, setCurrentCompanyInput] = useState('');
+  const [currentSystemRole, setCurrentSystemRole] = useState('User');
+  const [currentHasAccess, setCurrentHasAccess] = useState(false);
+  const [currentUserInputs, setCurrentUserInputs] = useState({}); // { companyIndex: { name: '', email: '', password: '', partnershipType: 'N/A', registrationSlots: {} } }
   const [isSendingUserRequest, setIsSendingUserRequest] = useState(false);
   const [isDeletingUser, setIsDeletingUser] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -133,13 +141,32 @@ export default function SystemUsers() {
 
         setPartnerTypes(partnerTypeData);
 
+        // Load companies for all users
+        const usersWithCompanies = await Promise.all(
+          userData.map(async (user) => {
+            try {
+              const companies = await User.getUserCompanies(user.id);
+              return {
+                ...user,
+                companies: companies || []
+              };
+            } catch (error) {
+              console.error(`Error loading companies for user ${user.id}:`, error);
+              return {
+                ...user,
+                companies: []
+              };
+            }
+          })
+        );
+
         let filteredUserData;
         if (me.system_role === 'Super User') {
           // Super Users see themselves and all 'User' type users
-          filteredUserData = userData.filter(u => u.id === me.id || u.system_role === 'User');
+          filteredUserData = usersWithCompanies.filter(u => u.id === me.id || u.system_role === 'User');
         } else {
           // Admins see everyone
-          filteredUserData = userData;
+          filteredUserData = usersWithCompanies;
         }
         setUsers(filteredUserData);
         setFilteredUsers(filteredUserData);
@@ -202,11 +229,17 @@ export default function SystemUsers() {
         const systemRole = user.system_role || '';
         const userType = user.user_type || '';
         const userId = user.id || '';
+        
+        // Search in all companies from user_companies
+        const allCompanyNames = user.companies 
+          ? user.companies.map(c => c.company_name || '').join(' ')
+          : '';
 
         return (
           displayName.toLowerCase().includes(lowercasedSearch) ||
           email.toLowerCase().includes(lowercasedSearch) ||
           companyName.toLowerCase().includes(lowercasedSearch) ||
+          allCompanyNames.toLowerCase().includes(lowercasedSearch) ||
           mobile.toLowerCase().includes(lowercasedSearch) ||
           systemRole.toLowerCase().includes(lowercasedSearch) ||
           userType.toLowerCase().includes(lowercasedSearch) ||
@@ -235,6 +268,8 @@ export default function SystemUsers() {
       has_access: false
     });
     setEditingUser(null);
+    setEditingUserCompanies([]);
+    setEditingCompanyInput('');
   };
 
   const handleInputChange = (field, value) => {
@@ -385,7 +420,7 @@ export default function SystemUsers() {
     }
   };
 
-  const handleEdit = (user) => {
+  const handleEdit = async (user) => {
     setEditingUser(user);
     const initialSlots = attendeeTypes.reduce((acc, type) => ({
       ...acc,
@@ -402,7 +437,77 @@ export default function SystemUsers() {
       account_status: user.account_status || 'active',
       has_access: user.has_access || false
     });
+    
+    // Load user's companies
+    try {
+      const userCompanies = await User.getUserCompanies(user.id);
+      setEditingUserCompanies(userCompanies || []);
+    } catch (error) {
+      console.error('Error loading user companies:', error);
+      setEditingUserCompanies([]);
+    }
+    
+    setEditingCompanyInput('');
     setShowEditDialog(true);
+  };
+
+  const handleAddEditingCompany = async () => {
+    if (!editingCompanyInput.trim() || !editingUser) {
+      toast({ title: "Missing Information", description: "Please enter a company name.", variant: "destructive" });
+      return;
+    }
+    
+    const companyName = editingCompanyInput.trim();
+    // Check if company already exists
+    if (editingUserCompanies.some(c => c.company_name === companyName)) {
+      toast({ title: "Duplicate Company", description: "This company has already been added.", variant: "destructive" });
+      return;
+    }
+    
+    try {
+      await User.addUserCompany(editingUser.id, companyName, formData.user_type || 'N/A');
+      // Reload companies
+      const userCompanies = await User.getUserCompanies(editingUser.id);
+      setEditingUserCompanies(userCompanies || []);
+      setEditingCompanyInput('');
+      
+      // Update formData company_name for backward compatibility
+      if (userCompanies && userCompanies.length > 0) {
+        setFormData(prev => ({ ...prev, company_name: userCompanies[0].company_name }));
+      }
+    } catch (error) {
+      console.error('Error adding company:', error);
+      toast({ 
+        title: "Error", 
+        description: `Failed to add company: ${error.message}`, 
+        variant: "destructive" 
+      });
+    }
+  };
+
+  const handleRemoveEditingCompany = async (companyName) => {
+    if (!editingUser) return;
+    
+    try {
+      await User.removeUserCompany(editingUser.id, companyName);
+      // Reload companies
+      const userCompanies = await User.getUserCompanies(editingUser.id);
+      setEditingUserCompanies(userCompanies || []);
+      
+      // Update formData company_name for backward compatibility
+      if (userCompanies && userCompanies.length > 0) {
+        setFormData(prev => ({ ...prev, company_name: userCompanies[0].company_name }));
+      } else {
+        setFormData(prev => ({ ...prev, company_name: '' }));
+      }
+    } catch (error) {
+      console.error('Error removing company:', error);
+      toast({ 
+        title: "Error", 
+        description: `Failed to remove company: ${error.message}`, 
+        variant: "destructive" 
+      });
+    }
   };
 
   const confirmDelete = (user) => {
@@ -511,67 +616,277 @@ export default function SystemUsers() {
     }
   };
 
-  const handleRequestNewUser = async () => {
-    if (!newUserRequestData.full_name || !newUserRequestData.email || !newUserRequestData.password || !newUserRequestData.company_name) {
-      toast({ title: "Missing Information", description: "Please provide full name, email, password, and company name.", variant: "destructive" });
+  // Handle adding a company
+  const handleAddCompany = () => {
+    if (!currentCompanyInput.trim()) {
+      toast({ title: "Missing Information", description: "Please enter a company name.", variant: "destructive" });
       return;
     }
-    setIsSendingUserRequest(true);
-    try {
-      // Create user directly in Supabase Auth and users table
-      const result = await createUserDirectly({
-        fullName: newUserRequestData.full_name,
-        email: newUserRequestData.email,
-        password: newUserRequestData.password,
-        companyName: newUserRequestData.company_name,
-        systemRole: newUserRequestData.system_role,
-        userType: newUserRequestData.user_type,
-        registrationSlots: newUserRequestData.registration_slots,
-        preferredName: newUserRequestData.full_name,
-        hasAccess: newUserRequestData.has_access
-      });
-      
-      if (result.success) {
-        // Additionally call the updateUserAccess API to ensure has_access is properly set
-        try {
-          await updateUserAccess({
-            userId: result.user.id,
-            systemRole: newUserRequestData.system_role,
-            hasAccess: newUserRequestData.has_access
-          });
-        } catch (accessError) {
-          console.warn('Failed to update user access via API after creation:', accessError);
-          // Don't fail the entire creation if this fails, just log it
-        }
-
-        toast({ 
-          title: "User Created Successfully", 
-          description: `User ${newUserRequestData.full_name} has been created and can now log in.`, 
-          variant: "success" 
-        });
-        setShowAddUserRequestDialog(false);
-        setNewUserRequestData({ 
-          full_name: '', 
-          email: '', 
-          password: '', 
-          company_name: '', 
-          system_role: 'User', 
-          user_type: 'N/A', 
-          registration_slots: attendeeTypes.reduce((acc, type) => ({...acc, [type]: 0}), {}),
-          has_access: false
-        });
-        // Refresh the users list
-        loadData();
-      }
-    } catch (error) {
-      console.error("Failed to create user:", error);
-      toast({ 
-        title: "Error", 
-        description: `Failed to create user: ${error.message}`, 
-        variant: "destructive" 
-      });
+    
+    const companyName = currentCompanyInput.trim();
+    // Check if company already exists
+    if (companiesData.some(c => c.companyName === companyName)) {
+      toast({ title: "Duplicate Company", description: "This company has already been added.", variant: "destructive" });
+      return;
     }
-    setIsSendingUserRequest(false);
+    
+    setCompaniesData(prev => [...prev, { companyName, users: [] }]);
+    setCurrentCompanyInput('');
+  };
+
+  // Handle adding a user to a company
+  const handleAddUserToCompany = (companyIndex) => {
+    const userInput = currentUserInputs[companyIndex];
+    if (!userInput || !userInput.name || !userInput.name.trim()) {
+      toast({ title: "Missing Information", description: "Please enter a user name.", variant: "destructive" });
+      return;
+    }
+    
+    const userName = userInput.name.trim();
+    const company = companiesData[companyIndex];
+    
+    // Check if user already exists in this company
+    if (company.users.some(u => u.name === userName)) {
+      toast({ title: "Duplicate User", description: "This user has already been added to this company.", variant: "destructive" });
+      return;
+    }
+    
+    setCompaniesData(prev => {
+      const updated = [...prev];
+      updated[companyIndex] = {
+        ...updated[companyIndex],
+        users: [...updated[companyIndex].users, {
+          name: userName,
+          email: userInput.email || '',
+          password: userInput.password || '',
+          partnershipType: userInput.partnershipType || 'N/A',
+          registrationSlots: userInput.registrationSlots || attendeeTypes.reduce((acc, type) => ({...acc, [type]: 0}), {})
+        }]
+      };
+      return updated;
+    });
+    
+    // Clear the input for this company
+    setCurrentUserInputs(prev => {
+      const updated = { ...prev };
+      updated[companyIndex] = { name: '', email: '', password: '', partnershipType: 'N/A', registrationSlots: attendeeTypes.reduce((acc, type) => ({...acc, [type]: 0}), {}) };
+      return updated;
+    });
+  };
+
+  // Handle removing a company
+  const handleRemoveCompany = (companyIndex) => {
+    setCompaniesData(prev => prev.filter((_, idx) => idx !== companyIndex));
+    // Clean up user inputs for this company
+    setCurrentUserInputs(prev => {
+      const updated = { ...prev };
+      delete updated[companyIndex];
+      return updated;
+    });
+  };
+
+  // Handle removing a user from a company
+  const handleRemoveUserFromCompany = (companyIndex, userIndex) => {
+    setCompaniesData(prev => {
+      const updated = [...prev];
+      updated[companyIndex] = {
+        ...updated[companyIndex],
+        users: updated[companyIndex].users.filter((_, idx) => idx !== userIndex)
+      };
+      return updated;
+    });
+  };
+
+  // Handle updating user input for a company
+  const handleUserInputChange = (companyIndex, field, value) => {
+    setCurrentUserInputs(prev => {
+      const updated = { ...prev };
+      if (!updated[companyIndex]) {
+        updated[companyIndex] = { name: '', email: '', password: '', partnershipType: 'N/A', registrationSlots: attendeeTypes.reduce((acc, type) => ({...acc, [type]: 0}), {}) };
+      }
+      updated[companyIndex][field] = value;
+      
+      // Auto-fill registration slots when partnership type changes
+      if (field === 'partnershipType' && value && value !== 'N/A') {
+        const selectedPartnerType = partnerTypes.find(p => p.name === value);
+        if (selectedPartnerType) {
+          updated[companyIndex].registrationSlots = {
+            VIP: selectedPartnerType.slots_vip || 0,
+            Partner: selectedPartnerType.slots_partner || 0,
+            Exhibitor: selectedPartnerType.slots_exhibitor || 0,
+            Media: selectedPartnerType.slots_media || 0,
+          };
+        }
+      } else if (field === 'partnershipType' && value === 'N/A') {
+        updated[companyIndex].registrationSlots = attendeeTypes.reduce((acc, type) => ({...acc, [type]: 0}), {});
+      }
+      
+      return updated;
+    });
+  };
+
+  const handleRequestNewUser = async () => {
+    // Check if using new format (companies array) or old format (single user)
+    if (companiesData.length > 0) {
+      // New format: multiple companies with multiple users
+      // Validate that all companies have at least one user with required fields
+      let hasErrors = false;
+      const errors = [];
+      
+      for (let i = 0; i < companiesData.length; i++) {
+        const company = companiesData[i];
+        if (!company.users || company.users.length === 0) {
+          errors.push(`Company "${company.companyName}" has no users. Please add at least one user.`);
+          hasErrors = true;
+          continue;
+        }
+        
+        for (let j = 0; j < company.users.length; j++) {
+          const user = company.users[j];
+          if (!user.name || !user.email || !user.password) {
+            errors.push(`User in company "${company.companyName}" is missing required fields (name, email, or password).`);
+            hasErrors = true;
+          }
+        }
+      }
+      
+      if (hasErrors) {
+        toast({ 
+          title: "Validation Error", 
+          description: errors[0] || "Please complete all required fields.", 
+          variant: "destructive" 
+        });
+        return;
+      }
+      
+      if (!currentSystemRole) {
+        toast({ title: "Missing Information", description: "Please select a system role.", variant: "destructive" });
+        return;
+      }
+      
+      setIsSendingUserRequest(true);
+      try {
+        // Prepare companies data for API
+        const companiesForAPI = companiesData.map(company => ({
+          companyName: company.companyName,
+          users: company.users.map(user => ({
+            fullName: user.name,
+            email: user.email,
+            password: user.password,
+            partnershipType: user.partnershipType || 'N/A',
+            registrationSlots: user.registrationSlots || attendeeTypes.reduce((acc, type) => ({...acc, [type]: 0}), {})
+          }))
+        }));
+        
+        const result = await createUserDirectly({
+          companies: companiesForAPI,
+          systemRole: currentSystemRole,
+          hasAccess: currentHasAccess
+        });
+        
+        if (result.success) {
+          // Update user access for all created users
+          if (result.users && result.users.length > 0) {
+            for (const createdUser of result.users) {
+              try {
+                await updateUserAccess({
+                  userId: createdUser.id,
+                  systemRole: currentSystemRole,
+                  hasAccess: currentHasAccess
+                });
+              } catch (accessError) {
+                console.warn('Failed to update user access via API after creation:', accessError);
+              }
+            }
+          }
+          
+          toast({ 
+            title: "Users Created Successfully", 
+            description: `Successfully created ${result.users?.length || 0} user(s). Welcome emails have been sent.`, 
+            variant: "success" 
+          });
+          setShowAddUserRequestDialog(false);
+          // Reset state
+          setCompaniesData([]);
+          setCurrentCompanyInput('');
+          setCurrentSystemRole('User');
+          setCurrentHasAccess(false);
+          setCurrentUserInputs({});
+          // Refresh the users list
+          loadData();
+        }
+      } catch (error) {
+        console.error("Failed to create users:", error);
+        toast({ 
+          title: "Error", 
+          description: `Failed to create users: ${error.message}`, 
+          variant: "destructive" 
+        });
+      }
+      setIsSendingUserRequest(false);
+    } else {
+      // Old format: single user (backward compatibility)
+      if (!newUserRequestData.full_name || !newUserRequestData.email || !newUserRequestData.password || !newUserRequestData.company_name) {
+        toast({ title: "Missing Information", description: "Please provide full name, email, password, and company name.", variant: "destructive" });
+        return;
+      }
+      setIsSendingUserRequest(true);
+      try {
+        // Create user directly in Supabase Auth and users table
+        const result = await createUserDirectly({
+          fullName: newUserRequestData.full_name,
+          email: newUserRequestData.email,
+          password: newUserRequestData.password,
+          companyName: newUserRequestData.company_name,
+          systemRole: newUserRequestData.system_role,
+          userType: newUserRequestData.user_type,
+          registrationSlots: newUserRequestData.registration_slots,
+          preferredName: newUserRequestData.full_name,
+          hasAccess: newUserRequestData.has_access
+        });
+        
+        if (result.success) {
+          // Additionally call the updateUserAccess API to ensure has_access is properly set
+          try {
+            await updateUserAccess({
+              userId: result.user.id,
+              systemRole: newUserRequestData.system_role,
+              hasAccess: newUserRequestData.has_access
+            });
+          } catch (accessError) {
+            console.warn('Failed to update user access via API after creation:', accessError);
+            // Don't fail the entire creation if this fails, just log it
+          }
+
+          toast({ 
+            title: "User Created Successfully", 
+            description: `User ${newUserRequestData.full_name} has been created and can now log in.`, 
+            variant: "success" 
+          });
+          setShowAddUserRequestDialog(false);
+          setNewUserRequestData({ 
+            full_name: '', 
+            email: '', 
+            password: '', 
+            company_name: '', 
+            system_role: 'User', 
+            user_type: 'N/A', 
+            registration_slots: attendeeTypes.reduce((acc, type) => ({...acc, [type]: 0}), {}),
+            has_access: false
+          });
+          // Refresh the users list
+          loadData();
+        }
+      } catch (error) {
+        console.error("Failed to create user:", error);
+        toast({ 
+          title: "Error", 
+          description: `Failed to create user: ${error.message}`, 
+          variant: "destructive" 
+        });
+      }
+      setIsSendingUserRequest(false);
+    }
   };
 
   const handleDownloadTemplate = () => {
@@ -1508,56 +1823,29 @@ export default function SystemUsers() {
           </div>
 
           {/* New User Request Dialog */}
-          <Dialog open={showAddUserRequestDialog} onOpenChange={setShowAddUserRequestDialog}>
-            <DialogContent className="max-w-md">
+          <Dialog open={showAddUserRequestDialog} onOpenChange={(open) => {
+            setShowAddUserRequestDialog(open);
+            if (!open) {
+              // Reset state when dialog closes
+              setCompaniesData([]);
+              setCurrentCompanyInput('');
+              setCurrentSystemRole('User');
+              setCurrentHasAccess(false);
+              setCurrentUserInputs({});
+            }
+          }}>
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
-                <DialogTitle>Add New System User</DialogTitle>
+                <DialogTitle>Add New System User(s)</DialogTitle>
                 <DialogDescription>
-                  Create a new system user account with the specified details. The system user will be able to log in immediately.
+                  Create system user accounts. You can add multiple companies, and each company can have multiple users. Each user will get their own account.
                 </DialogDescription>
               </DialogHeader>
-              <div className="space-y-4 py-4">
+              <div className="space-y-6 py-4">
+                {/* System Role Selection (applies to all users) */}
                 <div>
-                  <Label htmlFor="new_user_full_name">Full Name</Label>
-                  <Input
-                    id="new_user_full_name"
-                    placeholder="Enter the full name of the new system user"
-                    value={newUserRequestData.full_name}
-                    onChange={(e) => setNewUserRequestData(prev => ({ ...prev, full_name: e.target.value }))}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="new_user_email">Email</Label>
-                  <Input
-                    id="new_user_email"
-                    type="email"
-                    placeholder="Enter the email for invitation"
-                    value={newUserRequestData.email}
-                    onChange={(e) => setNewUserRequestData(prev => ({ ...prev, email: e.target.value }))}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="new_user_password">Password</Label>
-                  <Input
-                    id="new_user_password"
-                    type="password"
-                    placeholder="Enter the password for the new system user"
-                    value={newUserRequestData.password}
-                    onChange={(e) => setNewUserRequestData(prev => ({ ...prev, password: e.target.value }))}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="new_user_company">Company Name</Label>
-                  <Input
-                    id="new_user_company"
-                    placeholder="Enter the company name"
-                    value={newUserRequestData.company_name}
-                    onChange={(e) => setNewUserRequestData(prev => ({ ...prev, company_name: e.target.value }))}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="new_user_type">System User Type</Label>
-                  <Select value={newUserRequestData.system_role} onValueChange={(value) => handleNewUserRequestDataChange('system_role', value)}>
+                  <Label htmlFor="new_system_role">System User Type (applies to all users)</Label>
+                  <Select value={currentSystemRole} onValueChange={setCurrentSystemRole}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select user type" />
                     </SelectTrigger>
@@ -1569,72 +1857,322 @@ export default function SystemUsers() {
                   </Select>
                 </div>
 
-                {newUserRequestData.system_role === 'Super User' && (
+                {currentSystemRole === 'Super User' && (
                   <div className="flex items-center space-x-2">
                     <Checkbox
                       id="has_access"
-                      checked={newUserRequestData.has_access}
-                      onCheckedChange={(checked) => setNewUserRequestData(prev => ({ ...prev, has_access: checked }))}
+                      checked={currentHasAccess}
+                      onCheckedChange={setCurrentHasAccess}
                     />
                     <Label htmlFor="has_access" className="text-sm">
-                      Allow this Super User to approve/disapprove attendees
+                      Allow Super Users to approve/disapprove attendees
                     </Label>
                   </div>
                 )}
 
-                {newUserRequestData.system_role === 'User' && (
-                  <div>
-                    <Label htmlFor="new_user_sponsor_type">Partner Type</Label>
-                    <Select value={newUserRequestData.user_type} onValueChange={(value) => handleNewUserRequestDataChange('user_type', value)}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select partner type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="N/A">N/A</SelectItem>
-                        {partnerTypes.map(type => (
-                          <SelectItem key={type.id} value={type.name}>{type.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                {/* Add Company Section */}
+                <div>
+                  <Label htmlFor="new_company">Add Company</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      id="new_company"
+                      placeholder="Enter company name and press Enter"
+                      value={currentCompanyInput}
+                      onChange={(e) => setCurrentCompanyInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleAddCompany();
+                        }
+                      }}
+                    />
+                    <Button type="button" onClick={handleAddCompany} variant="outline">
+                      Add Company
+                    </Button>
                   </div>
-                )}
+                </div>
 
-                {newUserRequestData.system_role === 'User' && (
-                  <div>
-                    <Label className="text-base font-semibold mb-4 block">Registration Slots</Label>
-                    <div className="grid grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg">
-                      {attendeeTypes.map((type) => (
-                        <div key={type} className="flex items-center justify-between">
-                          <Label className="text-sm">{type}</Label>
-                          <Input
-                            type="number"
-                            min="0"
-                            className="w-20"
-                            value={newUserRequestData.registration_slots[type] || 0}
-                            onChange={(e) => handleNewUserSlotChange(type, e.target.value)}
-                            disabled={newUserRequestData.user_type !== 'N/A'}
-                          />
+                {/* Companies List */}
+                {companiesData.length > 0 && (
+                  <div className="space-y-4">
+                    {companiesData.map((company, companyIndex) => (
+                      <div key={companyIndex} className="border rounded-lg p-4 space-y-4">
+                        {/* Company Header */}
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="text-base px-3 py-1">
+                              {company.companyName}
+                            </Badge>
+                            <span className="text-sm text-gray-500">
+                              {company.users.length} user(s)
+                            </span>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleRemoveCompany(companyIndex)}
+                            className="text-red-600 hover:text-red-700"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
                         </div>
-                      ))}
-                    </div>
-                    {newUserRequestData.user_type !== 'N/A' && (
-                      <p className="text-sm text-gray-500 mt-2">
-                        Slots are automatically determined by the selected Partnership Type.
-                      </p>
-                    )}
+
+                        {/* Add User to Company */}
+                        <div className="space-y-2">
+                          <Label>Add User to {company.companyName}</Label>
+                          <div className="flex gap-2">
+                            <Input
+                              placeholder="Enter user name and press Enter"
+                              value={currentUserInputs[companyIndex]?.name || ''}
+                              onChange={(e) => handleUserInputChange(companyIndex, 'name', e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  e.preventDefault();
+                                  handleAddUserToCompany(companyIndex);
+                                }
+                              }}
+                            />
+                            <Button
+                              type="button"
+                              onClick={() => handleAddUserToCompany(companyIndex)}
+                              variant="outline"
+                            >
+                              Add User
+                            </Button>
+                          </div>
+                        </div>
+
+                        {/* Users List for this Company */}
+                        {company.users.length > 0 && (
+                          <div className="space-y-3">
+                            {company.users.map((user, userIndex) => (
+                              <div key={userIndex} className="bg-gray-50 rounded-lg p-4 space-y-3">
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-2">
+                                    <Badge>{user.name}</Badge>
+                                  </div>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleRemoveUserFromCompany(companyIndex, userIndex)}
+                                    className="text-red-600 hover:text-red-700"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </Button>
+                                </div>
+                                
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                  <div>
+                                    <Label>Email *</Label>
+                                    <Input
+                                      type="email"
+                                      placeholder="user@example.com"
+                                      value={user.email}
+                                      onChange={(e) => {
+                                        setCompaniesData(prev => {
+                                          const updated = [...prev];
+                                          updated[companyIndex].users[userIndex].email = e.target.value;
+                                          return updated;
+                                        });
+                                      }}
+                                    />
+                                  </div>
+                                  <div>
+                                    <Label>Password *</Label>
+                                    <Input
+                                      type="password"
+                                      placeholder="Enter password"
+                                      value={user.password}
+                                      onChange={(e) => {
+                                        setCompaniesData(prev => {
+                                          const updated = [...prev];
+                                          updated[companyIndex].users[userIndex].password = e.target.value;
+                                          return updated;
+                                        });
+                                      }}
+                                    />
+                                  </div>
+                                </div>
+
+                                {currentSystemRole === 'User' && (
+                                  <>
+                                    <div>
+                                      <Label>Partnership Type</Label>
+                                      <Select
+                                        value={user.partnershipType || 'N/A'}
+                                        onValueChange={(value) => {
+                                          setCompaniesData(prev => {
+                                            const updated = [...prev];
+                                            updated[companyIndex].users[userIndex].partnershipType = value;
+                                            
+                                            // Auto-fill registration slots
+                                            if (value !== 'N/A') {
+                                              const selectedPartnerType = partnerTypes.find(p => p.name === value);
+                                              if (selectedPartnerType) {
+                                                updated[companyIndex].users[userIndex].registrationSlots = {
+                                                  VIP: selectedPartnerType.slots_vip || 0,
+                                                  Partner: selectedPartnerType.slots_partner || 0,
+                                                  Exhibitor: selectedPartnerType.slots_exhibitor || 0,
+                                                  Media: selectedPartnerType.slots_media || 0,
+                                                };
+                                              }
+                                            } else {
+                                              updated[companyIndex].users[userIndex].registrationSlots = attendeeTypes.reduce((acc, type) => ({...acc, [type]: 0}), {});
+                                            }
+                                            
+                                            return updated;
+                                          });
+                                        }}
+                                      >
+                                        <SelectTrigger>
+                                          <SelectValue placeholder="Select partner type" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          <SelectItem value="N/A">N/A</SelectItem>
+                                          {partnerTypes.map(type => (
+                                            <SelectItem key={type.id} value={type.name}>{type.name}</SelectItem>
+                                          ))}
+                                        </SelectContent>
+                                      </Select>
+                                    </div>
+                                    
+                                    {user.partnershipType === 'N/A' && (
+                                      <div>
+                                        <Label className="text-base font-semibold mb-2 block">Registration Slots</Label>
+                                        <div className="grid grid-cols-2 gap-3 p-3 bg-white rounded">
+                                          {attendeeTypes.map((type) => (
+                                            <div key={type} className="flex items-center justify-between">
+                                              <Label className="text-sm">{type}</Label>
+                                              <Input
+                                                type="number"
+                                                min="0"
+                                                className="w-20"
+                                                value={user.registrationSlots?.[type] || 0}
+                                                onChange={(e) => {
+                                                  setCompaniesData(prev => {
+                                                    const updated = [...prev];
+                                                    if (!updated[companyIndex].users[userIndex].registrationSlots) {
+                                                      updated[companyIndex].users[userIndex].registrationSlots = {};
+                                                    }
+                                                    updated[companyIndex].users[userIndex].registrationSlots[type] = parseInt(e.target.value) || 0;
+                                                    return updated;
+                                                  });
+                                                }}
+                                              />
+                                            </div>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    )}
+                                    
+                                    {user.partnershipType !== 'N/A' && (
+                                      <p className="text-sm text-gray-500">
+                                        Slots are automatically determined by the selected Partnership Type.
+                                      </p>
+                                    )}
+                                  </>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
                   </div>
                 )}
 
-                {(newUserRequestData.system_role === 'Admin' || newUserRequestData.system_role === 'Super User') && (
-                  <div className="p-4 bg-gray-50 rounded-lg">
-                    <p className="text-sm text-gray-700">
-                      Admins and Super Users have unlimited registration slots.
-                    </p>
-                  </div>
-                )}
+                {/* Backward Compatibility: Single User Form (hidden by default, can be toggled) */}
+                <div className="border-t pt-4">
+                  <details className="cursor-pointer">
+                    <summary className="text-sm text-gray-600 mb-2">Use single user form (legacy)</summary>
+                    <div className="space-y-4 mt-4">
+                      <div>
+                        <Label htmlFor="new_user_full_name">Full Name</Label>
+                        <Input
+                          id="new_user_full_name"
+                          placeholder="Enter the full name of the new system user"
+                          value={newUserRequestData.full_name}
+                          onChange={(e) => setNewUserRequestData(prev => ({ ...prev, full_name: e.target.value }))}
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="new_user_email">Email</Label>
+                        <Input
+                          id="new_user_email"
+                          type="email"
+                          placeholder="Enter the email for invitation"
+                          value={newUserRequestData.email}
+                          onChange={(e) => setNewUserRequestData(prev => ({ ...prev, email: e.target.value }))}
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="new_user_password">Password</Label>
+                        <Input
+                          id="new_user_password"
+                          type="password"
+                          placeholder="Enter the password for the new system user"
+                          value={newUserRequestData.password}
+                          onChange={(e) => setNewUserRequestData(prev => ({ ...prev, password: e.target.value }))}
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="new_user_company">Company Name</Label>
+                        <Input
+                          id="new_user_company"
+                          placeholder="Enter the company name"
+                          value={newUserRequestData.company_name}
+                          onChange={(e) => setNewUserRequestData(prev => ({ ...prev, company_name: e.target.value }))}
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="new_user_sponsor_type">Partner Type</Label>
+                        <Select value={newUserRequestData.user_type} onValueChange={(value) => handleNewUserRequestDataChange('user_type', value)}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select partner type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="N/A">N/A</SelectItem>
+                            {partnerTypes.map(type => (
+                              <SelectItem key={type.id} value={type.name}>{type.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      {newUserRequestData.system_role === 'User' && (
+                        <div>
+                          <Label className="text-base font-semibold mb-4 block">Registration Slots</Label>
+                          <div className="grid grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg">
+                            {attendeeTypes.map((type) => (
+                              <div key={type} className="flex items-center justify-between">
+                                <Label className="text-sm">{type}</Label>
+                                <Input
+                                  type="number"
+                                  min="0"
+                                  className="w-20"
+                                  value={newUserRequestData.registration_slots[type] || 0}
+                                  onChange={(e) => handleNewUserSlotChange(type, e.target.value)}
+                                  disabled={newUserRequestData.user_type !== 'N/A'}
+                                />
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </details>
+                </div>
               </div>
               <div className="flex justify-end gap-3">
-                <Button variant="outline" onClick={() => setShowAddUserRequestDialog(false)}>
+                <Button variant="outline" onClick={() => {
+                  setShowAddUserRequestDialog(false);
+                  setCompaniesData([]);
+                  setCurrentCompanyInput('');
+                  setCurrentSystemRole('User');
+                  setCurrentHasAccess(false);
+                  setCurrentUserInputs({});
+                }}>
                   Cancel
                 </Button>
                 <Button onClick={handleRequestNewUser} disabled={isSendingUserRequest}>
@@ -1644,7 +2182,7 @@ export default function SystemUsers() {
                       Creating...
                     </div>
                   ) : (
-                    "Create System User"
+                    `Create ${companiesData.reduce((sum, c) => sum + c.users.length, 0) || 1} User(s)`
                   )}
                 </Button>
               </div>
@@ -1718,13 +2256,68 @@ export default function SystemUsers() {
                     />
                   </div>
                   <div>
-                    <Label htmlFor="company_name">Company Name</Label>
+                    <Label htmlFor="company_name">Primary Company Name (for backward compatibility)</Label>
                     <Input
                       id="company_name"
                       value={formData.company_name}
                       onChange={(e) => handleInputChange('company_name', e.target.value)}
                       placeholder="Enter company name"
+                      disabled
+                      className="bg-gray-100"
                     />
+                    <p className="text-xs text-gray-500 mt-1">This is automatically set from the first company below</p>
+                  </div>
+                </div>
+                
+                {/* User Companies Management */}
+                <div>
+                  <Label>Companies</Label>
+                  <div className="space-y-3 mt-2">
+                    {/* Add Company */}
+                    <div className="flex gap-2">
+                      <Input
+                        placeholder="Enter company name and press Enter"
+                        value={editingCompanyInput}
+                        onChange={(e) => setEditingCompanyInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleAddEditingCompany();
+                          }
+                        }}
+                      />
+                      <Button type="button" onClick={handleAddEditingCompany} variant="outline">
+                        Add Company
+                      </Button>
+                    </div>
+                    
+                    {/* Companies List */}
+                    {editingUserCompanies.length > 0 && (
+                      <div className="space-y-2">
+                        {editingUserCompanies.map((company, index) => (
+                          <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded border">
+                            <div className="flex items-center gap-2">
+                              <Badge variant="outline">{company.company_name}</Badge>
+                              {company.partnership_type && company.partnership_type !== 'N/A' && (
+                                <span className="text-xs text-gray-500">({company.partnership_type})</span>
+                              )}
+                            </div>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleRemoveEditingCompany(company.company_name)}
+                              className="text-red-600 hover:text-red-700"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {editingUserCompanies.length === 0 && (
+                      <p className="text-sm text-gray-500">No companies assigned. Add a company above.</p>
+                    )}
                   </div>
                 </div>
                  <div>
@@ -2092,7 +2685,17 @@ export default function SystemUsers() {
                                     <p className="font-semibold text-gray-900">{displayName}</p>
                                   </div>
                                   <p className="text-sm text-gray-500">{user.email}</p>
-                                  {user.company_name && <p className="text-xs text-gray-400">{user.company_name}</p>}
+                                  {user.companies && user.companies.length > 0 ? (
+                                    <div className="flex flex-wrap gap-1 mt-1">
+                                      {user.companies.map((company, idx) => (
+                                        <Badge key={idx} variant="outline" className="text-xs">
+                                          {company.company_name}
+                                        </Badge>
+                                      ))}
+                                    </div>
+                                  ) : user.company_name && (
+                                    <p className="text-xs text-gray-400">{user.company_name}</p>
+                                  )}
                                 </div>
                               </div>
                             </TableCell>

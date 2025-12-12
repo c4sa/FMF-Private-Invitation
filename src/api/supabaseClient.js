@@ -202,6 +202,123 @@ export class UsersAPI extends SupabaseAPI {
     return this.update(user.id, updates)
   }
 
+  async getUserCompanies(userId) {
+    const { data, error } = await supabase
+      .from('user_companies')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: true })
+    
+    if (error) throw error
+    return data
+  }
+
+  async getCompanyUsers(companyName) {
+    const { data, error } = await supabase
+      .from('user_companies')
+      .select(`
+        *,
+        users (
+          id,
+          email,
+          full_name,
+          preferred_name,
+          system_role,
+          user_type,
+          account_status
+        )
+      `)
+      .eq('company_name', companyName)
+      .order('created_at', { ascending: true })
+    
+    if (error) throw error
+    return data
+  }
+
+  async addUserCompany(userId, companyName, partnershipType = 'N/A') {
+    const { data, error } = await supabase
+      .from('user_companies')
+      .insert([{
+        user_id: userId,
+        company_name: companyName,
+        partnership_type: partnershipType,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }])
+      .select()
+      .single()
+    
+    if (error) throw error
+    
+    // Update user's company_name field with first company for backward compatibility
+    const userCompanies = await this.getUserCompanies(userId)
+    if (userCompanies && userCompanies.length > 0) {
+      const firstCompany = userCompanies[0].company_name
+      await this.update(userId, { company_name: firstCompany })
+    }
+    
+    return data
+  }
+
+  async removeUserCompany(userId, companyName) {
+    const { error } = await supabase
+      .from('user_companies')
+      .delete()
+      .eq('user_id', userId)
+      .eq('company_name', companyName)
+    
+    if (error) throw error
+    
+    // Update user's company_name field with first remaining company for backward compatibility
+    const userCompanies = await this.getUserCompanies(userId)
+    if (userCompanies && userCompanies.length > 0) {
+      const firstCompany = userCompanies[0].company_name
+      await this.update(userId, { company_name: firstCompany })
+    } else {
+      // No companies left, set to null
+      await this.update(userId, { company_name: null })
+    }
+    
+    return { success: true }
+  }
+
+  async updateUserCompanies(userId, companies) {
+    // Remove all existing company relationships
+    const { error: deleteError } = await supabase
+      .from('user_companies')
+      .delete()
+      .eq('user_id', userId)
+    
+    if (deleteError) throw deleteError
+    
+    // Add new company relationships
+    if (companies && companies.length > 0) {
+      const companyRecords = companies.map(company => ({
+        user_id: userId,
+        company_name: company.companyName,
+        partnership_type: company.partnershipType || 'N/A',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }))
+      
+      const { data, error: insertError } = await supabase
+        .from('user_companies')
+        .insert(companyRecords)
+        .select()
+      
+      if (insertError) throw insertError
+      
+      // Update user's company_name field with first company for backward compatibility
+      await this.update(userId, { company_name: companies[0].companyName })
+      
+      return data
+    } else {
+      // No companies, set to null
+      await this.update(userId, { company_name: null })
+      return []
+    }
+  }
+
   async loginWithRedirect(redirectUrl) {
     // Redirect to login page instead of OAuth
     window.location.href = '/login';

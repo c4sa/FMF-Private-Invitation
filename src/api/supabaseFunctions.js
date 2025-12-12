@@ -666,6 +666,7 @@ export const createUserProfile = async (userId, userData) => {
 };
 
 // Direct user creation function (replaces email request system)
+// Supports both single user (backward compatible) and multiple companies/users
 export const createUserDirectly = async ({ 
   fullName, 
   email, 
@@ -675,28 +676,40 @@ export const createUserDirectly = async ({
   userType,
   registrationSlots,
   mobile = null,
-  preferredName = null 
+  preferredName = null,
+  hasAccess = false,
+  // New format for multiple companies/users
+  companies = null
 }) => {
   try {
     // Use API endpoint for user creation (server-side with admin privileges)
     const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? 'http://localhost:3000' : '');
+    
+    const requestBody = companies && Array.isArray(companies) && companies.length > 0
+      ? {
+          companies,
+          systemRole,
+          hasAccess
+        }
+      : {
+          fullName,
+          email,
+          password,
+          companyName,
+          systemRole,
+          userType,
+          registrationSlots,
+          mobile,
+          preferredName,
+          hasAccess
+        };
     
     const response = await fetch(`${API_BASE_URL}/api/create-user`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        fullName,
-        email,
-        password,
-        companyName,
-        systemRole,
-        userType,
-        registrationSlots,
-        mobile,
-        preferredName
-      })
+      body: JSON.stringify(requestBody)
     });
 
     if (!response.ok) {
@@ -707,46 +720,92 @@ export const createUserDirectly = async ({
     const result = await response.json();
 
     if (!result.success) {
-      throw new Error(result.error || 'Failed to create user');
+      throw new Error(result.error || 'Failed to create user(s)');
     }
 
-    // Send welcome email to the new user
-    try {
-      await emailService.sendNewUserNotificationEmail({
-        to: email,
-        newUserData: {
-          full_name: fullName,
-          email: email,
-          company_name: companyName,
-          system_role: systemRole,
-          user_type: userType,
-          password: password,
-          registration_slots: registrationSlots
-        }
-      });
-    } catch (emailError) {
-      console.warn('Failed to send welcome email:', emailError);
-      // Don't fail the user creation if email fails
-    }
-
-    // Send notification to admins
-    try {
-      const admins = await User.filter({ system_role: 'Admin' });
-      if (admins.length > 0) {
-        const adminPromises = admins.map(admin => 
-          emailService.sendNewUserRequestEmail({
-            to: admin.email,
-            newUserData: {
+    // Send welcome emails to all created users
+    const usersToEmail = result.users || (result.user ? [result.user] : []);
+    
+    for (const user of usersToEmail) {
+      try {
+        // Get user's companies from user_companies table
+        const { data: userCompanies } = await supabase
+          .from('user_companies')
+          .select('company_name, partnership_type')
+          .eq('user_id', user.id);
+        
+        const primaryCompany = userCompanies && userCompanies.length > 0 
+          ? userCompanies[0].company_name 
+          : user.company_name || 'N/A';
+        
+        // Get user data for email
+        const userEmailData = companies
+          ? (() => {
+              // Find user data from companies array
+              for (const company of companies) {
+                const foundUser = company.users.find(u => u.email === user.email);
+                if (foundUser) {
+                  return {
+                    full_name: foundUser.fullName,
+                    email: foundUser.email,
+                    company_name: company.companyName,
+                    system_role: systemRole,
+                    user_type: foundUser.partnershipType || userType || 'N/A',
+                    password: foundUser.password,
+                    registration_slots: foundUser.registrationSlots || registrationSlots || {}
+                  };
+                }
+              }
+              return null;
+            })()
+          : {
               full_name: fullName,
               email: email,
               company_name: companyName,
               system_role: systemRole,
               user_type: userType,
               password: password,
-              registration_slots: registrationSlots
+              registration_slots: registrationSlots || {}
+            };
+
+        if (userEmailData) {
+          await emailService.sendNewUserNotificationEmail({
+            to: user.email,
+            newUserData: userEmailData
+          });
+        }
+      } catch (emailError) {
+        console.warn(`Failed to send welcome email to ${user.email}:`, emailError);
+        // Don't fail the user creation if email fails
+      }
+    }
+
+    // Send notification to admins (only once, not per user)
+    try {
+      const admins = await User.filter({ system_role: 'Admin' });
+      if (admins.length > 0) {
+        const adminPromises = admins.map(admin => {
+          // Create summary of created users for admin notification
+          const summary = usersToEmail.map(u => ({
+            email: u.email,
+            name: u.full_name || u.preferred_name,
+            company: u.company_name
+          }));
+          
+          return emailService.sendNewUserRequestEmail({
+            to: admin.email,
+            newUserData: {
+              full_name: `${usersToEmail.length} new user(s)`,
+              email: 'multiple',
+              company_name: 'Multiple companies',
+              system_role: systemRole,
+              user_type: userType || 'N/A',
+              password: 'See individual user emails',
+              registration_slots: {},
+              summary: summary
             }
-          })
-        );
+          });
+        });
         await Promise.all(adminPromises);
       }
     } catch (adminEmailError) {
