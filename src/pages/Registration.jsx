@@ -127,6 +127,7 @@ export default function RegistrationPage() {
     id_number: '',
     need_visa: false,
     expiry_date: '',
+    issue_date: '',
     issue_place: '',
     date_of_birth: '',
     religion: '',
@@ -949,15 +950,20 @@ export default function RegistrationPage() {
       delete payload.confirm_email;
 
       // Convert empty string date fields to null for PostgreSQL compatibility
-      const dateFields = ['date_of_birth', 'expiry_date'];
+      const dateFields = ['date_of_birth', 'expiry_date', 'issue_date'];
       dateFields.forEach(field => {
         if (payload[field] === '') {
           payload[field] = null;
         }
       });
       
-      // Set default issue_date to today's date
-      payload.issue_date = new Date().toISOString().split('T')[0];
+      // Set issue_date: use user input for Passport if provided, otherwise default to today
+      // For non-Passport ID types, always default to today
+      if (payload.id_type === 'Passport' && payload.issue_date) {
+        // Use the user-entered date (already in payload)
+      } else {
+        payload.issue_date = new Date().toISOString().split('T')[0];
+      }
 
       if (editingId) {
         await Attendee.update(editingId, payload);
@@ -1510,6 +1516,13 @@ export default function RegistrationPage() {
                             </SelectContent>
                           </Select>
                           {fieldErrors.need_visa && <p className="text-red-500 text-sm mt-1">{fieldErrors.need_visa}</p>}
+                        </div>
+                      )}
+                      {formData.id_type === 'Passport' && (
+                        <div>
+                          <Label htmlFor="issue_date">Issue Date *</Label>
+                          <Input id="issue_date" type="date" value={formData.issue_date} onChange={(e) => handleInputChange('issue_date', e.target.value)} required className={fieldErrors.issue_date ? 'border-red-500' : ''} />
+                          {fieldErrors.issue_date && <p className="text-red-500 text-sm mt-1">{fieldErrors.issue_date}</p>}
                         </div>
                       )}
                       {formData.id_type === 'Passport' && formData.need_visa && (

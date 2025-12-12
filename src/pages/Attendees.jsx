@@ -371,7 +371,7 @@ export default function Attendees() {
       // ID Information
       'ID TYPE': a.id_type || '',
       'ID NUMBER': a.id_number || '',
-      'ISSUE DATE': a.issue_date ? format(new Date(a.issue_date), 'yyyy-MM-dd') : '',
+      'ISSUE DATE': (a.id_type === 'Passport' && a.issue_date) ? format(new Date(a.issue_date), 'yyyy-MM-dd') : '',
       'EXPIRY DATE': a.expiry_date ? format(new Date(a.expiry_date), 'yyyy-MM-dd') : '',
       'ISSUE PLACE': a.issue_place || '',
       'NEED VISA': a.need_visa ? 'Yes' : 'No',

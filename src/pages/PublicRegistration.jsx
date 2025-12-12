@@ -119,6 +119,7 @@ export default function PublicRegistrationPage() {
     id_number: '',
     need_visa: false,
     expiry_date: '',
+    issue_date: '',
     issue_place: '',
     date_of_birth: '',
     religion: '',
@@ -409,15 +410,20 @@ export default function PublicRegistrationPage() {
       // Convert empty string date fields to null for PostgreSQL compatibility
       const processedFormData = { ...formData };
       delete processedFormData.confirm_email; // Remove confirm_email as it's only for validation
-      const dateFields = ['date_of_birth', 'expiry_date'];
+      const dateFields = ['date_of_birth', 'expiry_date', 'issue_date'];
       dateFields.forEach(field => {
         if (processedFormData[field] === '') {
           processedFormData[field] = null;
         }
       });
       
-      // Set default issue_date to today's date
-      processedFormData.issue_date = new Date().toISOString().split('T')[0];
+      // Set issue_date: use user input for Passport if provided, otherwise default to today
+      // For non-Passport ID types, always default to today
+      if (processedFormData.id_type === 'Passport' && processedFormData.issue_date) {
+        // Use the user-entered date (already in processedFormData)
+      } else {
+        processedFormData.issue_date = new Date().toISOString().split('T')[0];
+      }
 
       let result;
       if (isModificationMode && originalAttendeeId) {
@@ -485,7 +491,7 @@ export default function PublicRegistrationPage() {
         });
         if (result.success) {
           setSubmissionSuccess(true);
-          toast({ title: "Registration Approved", description: "Your registration has been approved! Welcome to the Future Minerals Forum.", variant: "success" });
+          toast({ title: "Registration Submitted", description: "Your registration has been submitted and is pending review. You will receive an email notification once it's been reviewed.", variant: "success" });
           
           // Send confirmation email
           try {
@@ -511,7 +517,7 @@ export default function PublicRegistrationPage() {
               .replace(/{{organization}}/g, formData.organization || '')
               .replace(/{{job_title}}/g, formData.job_title || '')
               .replace(/{{attendee_type}}/g, formData.attendee_type || '')
-              .replace(/{{is_approved}}/g, 'true'); // Auto-approved for invitation registrations
+              .replace(/{{is_approved}}/g, 'false'); // Pending approval for invitation registrations
             
             await emailService.send({
               to: formData.email,
@@ -1067,6 +1073,21 @@ export default function PublicRegistrationPage() {
                           </SelectContent>
                         </Select>
                         {fieldErrors.need_visa && (<p className="text-red-500 text-sm mt-1">{fieldErrors.need_visa}</p>)}
+                      </div>
+                    )}
+
+                    {formData.id_type === 'Passport' && (
+                      <div>
+                        <Label htmlFor="issue_date">Issue Date *</Label>
+                        <Input
+                          id="issue_date"
+                          type="date"
+                          value={formData.issue_date}
+                          onChange={(e) => handleInputChange('issue_date', e.target.value)}
+                          required
+                          className={fieldErrors.issue_date ? 'border-red-500' : ''}
+                        />
+                        {fieldErrors.issue_date && (<p className="text-red-500 text-sm mt-1">{fieldErrors.issue_date}</p>)}
                       </div>
                     )}
 
