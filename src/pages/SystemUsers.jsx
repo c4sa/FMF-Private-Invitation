@@ -742,6 +742,11 @@ export default function SystemUsers() {
         const trophyAwarded = user.trophy_given ? 'Yes' : 'No';
         const formSubmitted = user.complete_company_name ? 'Yes' : 'No';
         const completeCompanyName = user.complete_company_name || '';
+        
+        // Inquiry fields from trophy_inquiry JSON
+        const inquiryName = user.trophy_inquiry?.name || '';
+        const inquiryEmail = user.trophy_inquiry?.email || '';
+        const inquiryMobile = user.trophy_inquiry?.mobile || '';
 
         return {
           'Company Name': user.company_name || '',
@@ -754,6 +759,9 @@ export default function SystemUsers() {
           'Trophy Awarded': trophyAwarded,
           'Form Submitted': formSubmitted,
           'Complete Company Name': completeCompanyName,
+          'Inquiry Name': inquiryName,
+          'Inquiry Email': inquiryEmail,
+          'Inquiry Mobile': inquiryMobile,
           'Resend Email Sent At': resendEmailSentAt
         };
       });
@@ -773,6 +781,9 @@ export default function SystemUsers() {
         { wch: 15 }, // Trophy Awarded
         { wch: 15 }, // Form Submitted
         { wch: 35 }, // Complete Company Name
+        { wch: 25 }, // Inquiry Name
+        { wch: 30 }, // Inquiry Email
+        { wch: 20 }, // Inquiry Mobile
         { wch: 20 }  // Resend Email Sent At
       ];
       ws['!cols'] = colWidths;

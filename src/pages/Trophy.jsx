@@ -16,6 +16,9 @@ export default function Trophy() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [companyName, setCompanyName] = useState("");
+  const [inquiryName, setInquiryName] = useState("");
+  const [inquiryEmail, setInquiryEmail] = useState("");
+  const [inquiryMobile, setInquiryMobile] = useState("");
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [hasTrophyAccess, setHasTrophyAccess] = useState(false);
   const { toast } = useToast();
@@ -45,6 +48,13 @@ export default function Trophy() {
         setCompanyName(user.complete_company_name);
         setIsSubmitted(true);
       }
+      
+      // Pre-fill inquiry fields if already submitted
+      if (user.trophy_inquiry) {
+        setInquiryName(user.trophy_inquiry.name || "");
+        setInquiryEmail(user.trophy_inquiry.email || "");
+        setInquiryMobile(user.trophy_inquiry.mobile || "");
+      }
     } catch (error) {
       console.error("Error loading user data:", error);
       toast({
@@ -68,26 +78,68 @@ export default function Trophy() {
       return;
     }
 
+    if (!inquiryName.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter the contact person's name.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (!inquiryEmail.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter the contact person's email.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (!inquiryMobile.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter the contact person's mobile number.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     if (!currentUser) return;
 
     setIsSubmitting(true);
     try {
-      await User.update(currentUser.id, { complete_company_name: companyName.trim() });
+      await User.update(currentUser.id, {
+        complete_company_name: companyName.trim(),
+        trophy_inquiry: {
+          name: inquiryName.trim(),
+          email: inquiryEmail.trim(),
+          mobile: inquiryMobile.trim()
+        }
+      });
       
       // Update local state
-      setCurrentUser(prev => ({ ...prev, complete_company_name: companyName.trim() }));
+      setCurrentUser(prev => ({
+        ...prev,
+        complete_company_name: companyName.trim(),
+        trophy_inquiry: {
+          name: inquiryName.trim(),
+          email: inquiryEmail.trim(),
+          mobile: inquiryMobile.trim()
+        }
+      }));
       setIsSubmitted(true);
       
       toast({
         title: "Success",
-        description: "Your complete company name has been saved successfully!",
+        description: "Your company name and contact details have been saved successfully!",
         variant: "success"
       });
     } catch (error) {
-      console.error("Error updating company name:", error);
+      console.error("Error updating trophy information:", error);
       toast({
         title: "Error",
-        description: "Failed to save company name. Please try again.",
+        description: "Failed to save information. Please try again.",
         variant: "destructive"
       });
     } finally {
@@ -142,7 +194,7 @@ export default function Trophy() {
           {/* Header */}
           <div className="mb-8">
             <h1 className="text-3xl font-bold text-black">
-              Recognition Award
+              Certification of Appreciation
             </h1>
             <p className="text-black mt-2 text-lg">Congratulations!</p>
           </div>
@@ -155,10 +207,20 @@ export default function Trophy() {
                   <div className="flex items-center gap-3 p-4 bg-green-50 border border-green-200 rounded-lg">
                     <CheckCircle className="w-5 h-5 text-green-600" />
                     <div>
-                      <p className="font-semibold text-green-900">Company Name Submitted</p>
+                      <p className="font-semibold text-green-900">Information Submitted</p>
                       <p className="text-sm text-green-700 mt-1">
                         Your complete company name has been recorded: <strong>{currentUser?.complete_company_name}</strong>
                       </p>
+                      {currentUser?.trophy_inquiry && (
+                        <div className="mt-2 text-sm text-green-700">
+                          <p>Contact details:</p>
+                          <ul className="list-disc list-inside mt-1 space-y-1">
+                            <li>Name: <strong>{currentUser.trophy_inquiry.name}</strong></li>
+                            <li>Email: <strong>{currentUser.trophy_inquiry.email}</strong></li>
+                            <li>Mobile: <strong>{currentUser.trophy_inquiry.mobile}</strong></li>
+                          </ul>
+                        </div>
+                      )}
                     </div>
                   </div>
                   <div className="pt-4">
@@ -167,9 +229,12 @@ export default function Trophy() {
                       onClick={() => {
                         setIsSubmitted(false);
                         setCompanyName(currentUser?.complete_company_name || "");
+                        setInquiryName(currentUser?.trophy_inquiry?.name || "");
+                        setInquiryEmail(currentUser?.trophy_inquiry?.email || "");
+                        setInquiryMobile(currentUser?.trophy_inquiry?.mobile || "");
                       }}
                     >
-                      Update Company Name
+                      Update Information
                     </Button>
                   </div>
                 </div>
@@ -178,14 +243,14 @@ export default function Trophy() {
                   {/* Award Message */}
                   <div className="mb-6">
                     <p className="text-black text-base leading-relaxed">
-                      We are pleased to present FMF 2026 Trophy to you in appreciation of your valuable support and contribution to the success of the 5th Future Minerals Forum.
+                      We are pleased to present FMF 2026 to you in appreciation of your valuable support and contribution to the success of the 5th Future Minerals Forum.
                     </p>
                   </div>
 
                   {/* Company Name Section */}
                   <div className="space-y-3">
                     <Label htmlFor="company_name" className="text-base font-bold text-black">
-                      Company Name
+                      Kindly share your company official name for the certificate issuance.
                     </Label>
                     <p className="text-sm text-black">
                       Please provide the exact company name as you would like it to appear on your award.
@@ -202,11 +267,68 @@ export default function Trophy() {
                     />
                   </div>
 
+                  {/* Inquiry Fields Section */}
+                  <div className="space-y-4 pt-6 border-t border-gray-200">
+                    <p className="text-base font-bold text-black">
+                      Kindly share the contact details (name and email) of the person we should reach out to for any inquiries.
+                    </p>
+                    
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="inquiry_name" className="text-sm font-bold text-black">
+                          Name:
+                        </Label>
+                        <Input
+                          id="inquiry_name"
+                          type="text"
+                          placeholder="Enter contact person's name"
+                          value={inquiryName}
+                          onChange={(e) => setInquiryName(e.target.value)}
+                          className="text-base border-gray-300"
+                          required
+                          disabled={isSubmitting}
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="inquiry_mobile" className="text-sm font-bold text-black">
+                          Mobile:
+                        </Label>
+                        <Input
+                          id="inquiry_mobile"
+                          type="tel"
+                          placeholder="Enter contact person's mobile number"
+                          value={inquiryMobile}
+                          onChange={(e) => setInquiryMobile(e.target.value)}
+                          className="text-base border-gray-300"
+                          required
+                          disabled={isSubmitting}
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="inquiry_email" className="text-sm font-bold text-black">
+                          Email:
+                        </Label>
+                        <Input
+                          id="inquiry_email"
+                          type="email"
+                          placeholder="Enter contact person's email"
+                          value={inquiryEmail}
+                          onChange={(e) => setInquiryEmail(e.target.value)}
+                          className="text-base border-gray-300"
+                          required
+                          disabled={isSubmitting}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
                   {/* Submit Button */}
                   <div className="flex justify-end pt-4">
                     <Button
                       type="submit"
-                      disabled={isSubmitting || !companyName.trim()}
+                      disabled={isSubmitting || !companyName.trim() || !inquiryName.trim() || !inquiryEmail.trim() || !inquiryMobile.trim()}
                       className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-md"
                     >
                       {isSubmitting ? (
