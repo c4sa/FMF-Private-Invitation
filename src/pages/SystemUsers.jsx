@@ -76,6 +76,7 @@ export default function SystemUsers() {
   const [viewDetailsUser, setViewDetailsUser] = useState(null);
   const [userAwards, setUserAwards] = useState([]);
   const [usersWithAwards, setUsersWithAwards] = useState(new Set()); // Track which users have awards
+  const [userAwardsMap, setUserAwardsMap] = useState(new Map()); // Map<userId, {trophy: award|null, certificate: award|null}>
   const [editingUser, setEditingUser] = useState(null);
   const [editingUserCompanies, setEditingUserCompanies] = useState([]);
   const [editingCompanyInput, setEditingCompanyInput] = useState('');
@@ -178,10 +179,35 @@ export default function SystemUsers() {
             allAwards.map(award => award.user_id)
           );
           setUsersWithAwards(userIdsWithAwards);
+          
+          // Sort awards by awarded_at descending to get the latest ones first
+          const sortedAwards = [...allAwards].sort((a, b) => {
+            const dateA = new Date(a.awarded_at || 0);
+            const dateB = new Date(b.awarded_at || 0);
+            return dateB - dateA;
+          });
+          
+          // Create a Map to store detailed award information per user
+          const awardsMap = new Map();
+          sortedAwards.forEach(award => {
+            if (!awardsMap.has(award.user_id)) {
+              awardsMap.set(award.user_id, { trophy: null, certificate: null });
+            }
+            const userAwards = awardsMap.get(award.user_id);
+            if (award.award_type === 'trophy' && !userAwards.trophy) {
+              // Store the latest trophy
+              userAwards.trophy = award;
+            } else if (award.award_type === 'certificate' && !userAwards.certificate) {
+              // Store the latest certificate
+              userAwards.certificate = award;
+            }
+          });
+          setUserAwardsMap(awardsMap);
         } catch (awardsError) {
           console.error('Error loading user awards:', awardsError);
           // Don't fail the entire load if awards can't be loaded
           setUsersWithAwards(new Set());
+          setUserAwardsMap(new Map());
         }
       } catch (dataError) {
         console.error("Error loading user data:", dataError);
@@ -1081,6 +1107,31 @@ export default function SystemUsers() {
         // Get user type (Partner Type)
         const userType = (user.user_type && user.user_type !== 'N/A') ? user.user_type : 'N/A';
 
+        // Get award information
+        const userAwardInfo = userAwardsMap.get(user.id);
+        const trophyAward = userAwardInfo?.trophy;
+        const certificateAward = userAwardInfo?.certificate;
+        
+        // Format trophy information
+        const hasTrophy = trophyAward !== null && trophyAward !== undefined;
+        const trophyDate = trophyAward?.awarded_at 
+          ? format(new Date(trophyAward.awarded_at), 'yyyy-MM-dd')
+          : '';
+        const trophyCompanyName = trophyAward?.complete_company_name || '';
+        const trophyInquiryDetails = trophyAward?.inquiry_details 
+          ? `${trophyAward.inquiry_details.name || ''} | ${trophyAward.inquiry_details.email || ''} | ${trophyAward.inquiry_details.mobile || ''}`
+          : '';
+        
+        // Format certificate information
+        const hasCertificate = certificateAward !== null && certificateAward !== undefined;
+        const certificateDate = certificateAward?.awarded_at 
+          ? format(new Date(certificateAward.awarded_at), 'yyyy-MM-dd')
+          : '';
+        const certificateCompanyName = certificateAward?.complete_company_name || '';
+        const certificateInquiryDetails = certificateAward?.inquiry_details 
+          ? `${certificateAward.inquiry_details.name || ''} | ${certificateAward.inquiry_details.email || ''} | ${certificateAward.inquiry_details.mobile || ''}`
+          : '';
+
         return {
           'Company Name': user.company_name || '',
           'Name': displayName,
@@ -1089,7 +1140,15 @@ export default function SystemUsers() {
           'User Type': userType,
           'Slots Used': slotsUsed,
           'Slots Remaining': slotsRemaining,
-          'Resend Email Sent At': resendEmailSentAt
+          'Resend Email Sent At': resendEmailSentAt,
+          'Has Trophy': hasTrophy ? 'Yes' : 'No',
+          'Trophy Award Date': trophyDate,
+          'Trophy Company Name': trophyCompanyName,
+          'Trophy Contact Details': trophyInquiryDetails,
+          'Has Certificate': hasCertificate ? 'Yes' : 'No',
+          'Certificate Award Date': certificateDate,
+          'Certificate Company Name': certificateCompanyName,
+          'Certificate Contact Details': certificateInquiryDetails
         };
       });
 
@@ -1105,7 +1164,15 @@ export default function SystemUsers() {
         { wch: 25 }, // User Type
         { wch: 15 }, // Slots Used
         { wch: 18 }, // Slots Remaining
-        { wch: 20 }  // Resend Email Sent At
+        { wch: 20 }, // Resend Email Sent At
+        { wch: 12 }, // Has Trophy
+        { wch: 18 }, // Trophy Award Date
+        { wch: 25 }, // Trophy Company Name
+        { wch: 40 }, // Trophy Contact Details
+        { wch: 15 }, // Has Certificate
+        { wch: 20 }, // Certificate Award Date
+        { wch: 25 }, // Certificate Company Name
+        { wch: 40 }  // Certificate Contact Details
       ];
       ws['!cols'] = colWidths;
 
@@ -2660,6 +2727,9 @@ export default function SystemUsers() {
                         const displayName = getDisplayName(user);
                         const isActive = user.account_status === 'active' || !user.account_status;
                         const isSelected = selectedUsers.has(user.id);
+                        const userAwardInfo = userAwardsMap.get(user.id);
+                        const hasTrophy = userAwardInfo?.trophy !== null && userAwardInfo?.trophy !== undefined;
+                        const hasCertificate = userAwardInfo?.certificate !== null && userAwardInfo?.certificate !== undefined;
 
                         return (
                           <TableRow key={user.id} className="hover:bg-gray-50">
@@ -2683,6 +2753,12 @@ export default function SystemUsers() {
                                 <div className="flex-1">
                                   <div className="flex items-center gap-2">
                                     <p className="font-semibold text-gray-900">{displayName}</p>
+                                    {hasTrophy && (
+                                      <Trophy className="w-4 h-4 text-yellow-600" title="Trophy Awarded" />
+                                    )}
+                                    {hasCertificate && (
+                                      <Award className="w-4 h-4 text-blue-600" title="Certificate Awarded" />
+                                    )}
                                   </div>
                                   <p className="text-sm text-gray-500">{user.email}</p>
                                   {user.companies && user.companies.length > 0 ? (

@@ -8,10 +8,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { PartnershipType } from '@/api/entities';
 import { useToast } from '@/components/common/Toast';
-import { Plus, Edit3, Trash2 } from 'lucide-react';
+import { Plus, Edit3, Trash2, Search } from 'lucide-react';
 
 export default function PartnershipManagementPage() {
   const [partnerTypes, setPartnerTypes] = useState([]);
+  const [filteredPartnerTypes, setFilteredPartnerTypes] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [showDialog, setShowDialog] = useState(false);
   const [editingType, setEditingType] = useState(null);
@@ -31,6 +33,7 @@ export default function PartnershipManagementPage() {
     try {
       const data = await PartnershipType.list('-created_at');
       setPartnerTypes(data);
+      setFilteredPartnerTypes(data);
     } catch (error) {
       console.error("Failed to load partnership types:", error);
       toast({ title: "Error", description: "Could not load partnership types.", variant: "destructive" });
@@ -41,6 +44,35 @@ export default function PartnershipManagementPage() {
   useEffect(() => {
     loadTypes();
   }, [loadTypes]);
+
+  const applyFilters = useCallback(() => {
+    let filtered = [...partnerTypes];
+
+    if (searchTerm) {
+      const lowercasedSearch = searchTerm.toLowerCase();
+      filtered = filtered.filter(type => {
+        const name = type.name || '';
+        const slotsVip = String(type.slots_vip || 0);
+        const slotsPartner = String(type.slots_partner || 0);
+        const slotsExhibitor = String(type.slots_exhibitor || 0);
+        const slotsMedia = String(type.slots_media || 0);
+        
+        return (
+          name.toLowerCase().includes(lowercasedSearch) ||
+          slotsVip.includes(lowercasedSearch) ||
+          slotsPartner.includes(lowercasedSearch) ||
+          slotsExhibitor.includes(lowercasedSearch) ||
+          slotsMedia.includes(lowercasedSearch)
+        );
+      });
+    }
+
+    setFilteredPartnerTypes(filtered);
+  }, [partnerTypes, searchTerm]);
+
+  useEffect(() => {
+    applyFilters();
+  }, [applyFilters]);
 
   const resetForm = () => {
     setEditingType(null);
@@ -120,10 +152,29 @@ export default function PartnershipManagementPage() {
               Add New Type
             </Button>
           </div>
+
+          {/* Search Filter */}
+          <Card className="mb-6">
+            <CardContent className="p-6">
+              <div className="flex flex-col md:flex-row gap-4">
+                <div className="flex-1">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                    <Input
+                      placeholder="Search by partnership type name or slot values"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
           
           <Card>
             <CardHeader>
-              <CardTitle>Partnership Types</CardTitle>
+              <CardTitle>Partnership Types {filteredPartnerTypes.length !== partnerTypes.length && `(${filteredPartnerTypes.length})`}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="overflow-x-auto">
@@ -141,23 +192,31 @@ export default function PartnershipManagementPage() {
                   <TableBody>
                     {isLoading ? (
                       <TableRow><TableCell colSpan={6} className="text-center h-24">Loading...</TableCell></TableRow>
-                    ) : partnerTypes.map(type => (
-                      <TableRow key={type.id}>
-                        <TableCell className="font-semibold">{type.name}</TableCell>
-                        <TableCell className="text-center">{type.slots_vip}</TableCell>
-                        <TableCell className="text-center">{type.slots_partner}</TableCell>
-                        <TableCell className="text-center">{type.slots_exhibitor}</TableCell>
-                        <TableCell className="text-center">{type.slots_media}</TableCell>
-                        <TableCell className="flex gap-2">
-                           <Button size="sm" variant="outline" onClick={() => handleEdit(type)}>
-                              <Edit3 className="w-4 h-4" />
-                           </Button>
-                           <Button size="sm" variant="destructive" onClick={() => confirmDelete(type)}>
-                              <Trash2 className="w-4 h-4" />
-                           </Button>
+                    ) : filteredPartnerTypes.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center h-24 text-gray-500">
+                          {searchTerm ? 'No partnership types found matching your search.' : 'No partnership types found.'}
                         </TableCell>
                       </TableRow>
-                    ))}
+                    ) : (
+                      filteredPartnerTypes.map(type => (
+                        <TableRow key={type.id}>
+                          <TableCell className="font-semibold">{type.name}</TableCell>
+                          <TableCell className="text-center">{type.slots_vip}</TableCell>
+                          <TableCell className="text-center">{type.slots_partner}</TableCell>
+                          <TableCell className="text-center">{type.slots_exhibitor}</TableCell>
+                          <TableCell className="text-center">{type.slots_media}</TableCell>
+                          <TableCell className="flex gap-2">
+                             <Button size="sm" variant="outline" onClick={() => handleEdit(type)}>
+                                <Edit3 className="w-4 h-4" />
+                             </Button>
+                             <Button size="sm" variant="destructive" onClick={() => confirmDelete(type)}>
+                                <Trash2 className="w-4 h-4" />
+                             </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
                   </TableBody>
                 </Table>
               </div>

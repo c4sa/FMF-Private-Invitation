@@ -53,11 +53,26 @@ export default function RequestsPage() {
         slotReqs.map(async (req) => {
           try {
             const user = await User.get(req.user_id);
+            
+            // Calculate total and used slots
+            const getTotalSlots = (slots) => {
+              return Object.values(slots || {}).reduce((sum, count) => sum + (count || 0), 0);
+            };
+            
+            const getTotalUsedSlots = (usedSlots) => {
+              return Object.values(usedSlots || {}).reduce((sum, count) => sum + (count || 0), 0);
+            };
+            
             return {
               ...req,
               user_name: user.preferred_name || user.full_name || 'Unknown User',
               user_email: user.email || 'No email',
-              user_company_name: user.company_name || ''
+              user_company_name: user.company_name || '',
+              user_type: user.user_type || 'N/A',
+              user_total_slots: getTotalSlots(user.registration_slots),
+              user_used_slots: getTotalUsedSlots(user.used_slots),
+              user_registration_slots: user.registration_slots || {},
+              user_used_slots_detail: user.used_slots || {}
             };
           } catch (error) {
             console.error(`Failed to fetch user for slot request ${req.id}:`, error);
@@ -65,7 +80,12 @@ export default function RequestsPage() {
               ...req,
               user_name: 'Unknown User',
               user_email: 'No email',
-              user_company_name: ''
+              user_company_name: '',
+              user_type: 'N/A',
+              user_total_slots: 0,
+              user_used_slots: 0,
+              user_registration_slots: {},
+              user_used_slots_detail: {}
             };
           }
         })
@@ -483,8 +503,12 @@ export default function RequestsPage() {
               <CardContent className="space-y-4">
                 {isLoading ? <p>Loading...</p> : slotRequests.length > 0 ? slotRequests.map(req => (
                   <div key={req.id} className="p-4 border rounded-lg flex justify-between items-start">
-                    <div>
+                    <div className="flex-1">
                       <p className="font-semibold">{req.user_name} <span className="text-sm text-gray-500">({req.user_email})</span></p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <p className="text-xs text-gray-500">Partnership Type:</p>
+                        <Badge variant="outline" className="text-xs">{req.user_type || 'N/A'}</Badge>
+                      </div>
                       <p className="text-sm text-gray-600 mt-1">{req.reason}</p>
                       <div className="flex flex-wrap gap-2 mt-2">
                         {Object.entries(getSlotSummary(req.requested_slots)).map(([type, count]) => (
@@ -492,6 +516,11 @@ export default function RequestsPage() {
                             <Badge key={type} variant="secondary">{count} x {type}</Badge>
                           )
                         ))}
+                      </div>
+                      <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
+                        <span>Total Slots: <strong className="text-gray-700">{req.user_total_slots || 0}</strong></span>
+                        <span>Used: <strong className="text-gray-700">{req.user_used_slots || 0}</strong></span>
+                        <span>Available: <strong className="text-gray-700">{(req.user_total_slots || 0) - (req.user_used_slots || 0)}</strong></span>
                       </div>
                       <p className="text-xs text-gray-400 mt-2">
                         Requested on {safeFormatDate(req.created_at)}
@@ -593,18 +622,59 @@ export default function RequestsPage() {
                   <p className="text-sm">{selectedSlotRequest.user_company_name || 'N/A'}</p>
                 </div>
                 <div>
+                  <label className="text-sm font-medium text-gray-500">Partnership Type</label>
+                  <p className="text-sm">{selectedSlotRequest.user_type || 'N/A'}</p>
+                </div>
+                <div>
                   <label className="text-sm font-medium text-gray-500">Status</label>
                   <Badge variant="outline" className="mt-1">
                     {selectedSlotRequest.status}
                   </Badge>
                 </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Requested Date</label>
+                  <p className="text-sm">{safeFormatDate(selectedSlotRequest.created_at)}</p>
+                </div>
                 <div className="col-span-2">
                   <label className="text-sm font-medium text-gray-500">Reason / Justification</label>
                   <p className="text-sm text-gray-700 mt-1">{selectedSlotRequest.reason || 'No reason provided'}</p>
                 </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-500">Requested Date</label>
-                  <p className="text-sm">{safeFormatDate(selectedSlotRequest.created_at)}</p>
+              </div>
+
+              <div className="border-t pt-4">
+                <h3 className="font-semibold text-lg mb-4">User Slot Information</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <label className="text-xs font-medium text-gray-500">Total Slots</label>
+                    <p className="text-2xl font-bold text-blue-700 mt-1">{selectedSlotRequest.user_total_slots || 0}</p>
+                    <div className="mt-2 space-y-1">
+                      {Object.entries(selectedSlotRequest.user_registration_slots || {}).map(([type, count]) => (
+                        count > 0 && (
+                          <p key={type} className="text-xs text-gray-600">
+                            {type}: {count}
+                          </p>
+                        )
+                      ))}
+                    </div>
+                  </div>
+                  <div className="p-3 bg-orange-50 border border-orange-200 rounded-lg">
+                    <label className="text-xs font-medium text-gray-500">Used Slots</label>
+                    <p className="text-2xl font-bold text-orange-700 mt-1">{selectedSlotRequest.user_used_slots || 0}</p>
+                    <div className="mt-2 space-y-1">
+                      {Object.entries(selectedSlotRequest.user_used_slots_detail || {}).map(([type, count]) => (
+                        count > 0 && (
+                          <p key={type} className="text-xs text-gray-600">
+                            {type}: {count}
+                          </p>
+                        )
+                      ))}
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-3 p-2 bg-gray-50 border border-gray-200 rounded">
+                  <p className="text-xs text-gray-600">
+                    <strong>Available Slots:</strong> {(selectedSlotRequest.user_total_slots || 0) - (selectedSlotRequest.user_used_slots || 0)}
+                  </p>
                 </div>
               </div>
 
