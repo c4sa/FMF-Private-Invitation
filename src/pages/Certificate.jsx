@@ -276,7 +276,7 @@ export default function Certificate() {
                   {/* Inquiry Fields Section */}
                   <div className="space-y-4 pt-6 border-t border-gray-200">
                     <p className="text-base font-bold text-black">
-                      Kindly share the contact details (name and email) of the person we should reach out to for any inquiries.
+                      Kindly share the contact details (name, email and mobile) of the person we should reach out to for any inquiries.
                     </p>
                     
                     <div className="space-y-4">
