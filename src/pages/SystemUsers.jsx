@@ -1121,6 +1121,7 @@ export default function SystemUsers() {
         const trophyInquiryDetails = trophyAward?.inquiry_details 
           ? `${trophyAward.inquiry_details.name || ''} | ${trophyAward.inquiry_details.email || ''} | ${trophyAward.inquiry_details.mobile || ''}`
           : '';
+        const trophyNotes = trophyAward?.notes || '';
         
         // Format certificate information
         const hasCertificate = certificateAward !== null && certificateAward !== undefined;
@@ -1131,6 +1132,7 @@ export default function SystemUsers() {
         const certificateInquiryDetails = certificateAward?.inquiry_details 
           ? `${certificateAward.inquiry_details.name || ''} | ${certificateAward.inquiry_details.email || ''} | ${certificateAward.inquiry_details.mobile || ''}`
           : '';
+        const certificateNotes = certificateAward?.notes || '';
 
         return {
           'Company Name': user.company_name || '',
@@ -1145,10 +1147,12 @@ export default function SystemUsers() {
           'Trophy Award Date': trophyDate,
           'Trophy Company Name': trophyCompanyName,
           'Trophy Contact Details': trophyInquiryDetails,
+          'Trophy Notes': trophyNotes,
           'Has Certificate': hasCertificate ? 'Yes' : 'No',
           'Certificate Award Date': certificateDate,
           'Certificate Company Name': certificateCompanyName,
-          'Certificate Contact Details': certificateInquiryDetails
+          'Certificate Contact Details': certificateInquiryDetails,
+          'Certificate Notes': certificateNotes
         };
       });
 
@@ -1169,10 +1173,12 @@ export default function SystemUsers() {
         { wch: 18 }, // Trophy Award Date
         { wch: 25 }, // Trophy Company Name
         { wch: 40 }, // Trophy Contact Details
+        { wch: 40 }, // Trophy Notes
         { wch: 15 }, // Has Certificate
         { wch: 20 }, // Certificate Award Date
         { wch: 25 }, // Certificate Company Name
-        { wch: 40 }  // Certificate Contact Details
+        { wch: 40 }, // Certificate Contact Details
+        { wch: 40 }  // Certificate Notes
       ];
       ws['!cols'] = colWidths;
 
@@ -2585,6 +2591,12 @@ export default function SystemUsers() {
                                     <p><span className="font-semibold">Mobile:</span> {award.inquiry_details.mobile}</p>
                                   )}
                                 </div>
+                              </div>
+                            )}
+                            {award.notes && (
+                              <div className="mt-2 p-2 bg-gray-50 rounded">
+                                <p className="text-xs text-gray-600 font-semibold mb-1">Notes:</p>
+                                <p className="text-sm text-gray-900 whitespace-pre-wrap">{award.notes}</p>
                               </div>
                             )}
                           </div>

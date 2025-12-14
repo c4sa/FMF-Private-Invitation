@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/common/Toast";
 import { CheckCircle, Shield } from "lucide-react";
 import Loader from "@/components/ui/loader";
@@ -20,6 +21,7 @@ export default function Certificate() {
   const [inquiryName, setInquiryName] = useState("");
   const [inquiryEmail, setInquiryEmail] = useState("");
   const [inquiryMobile, setInquiryMobile] = useState("");
+  const [notes, setNotes] = useState("");
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [hasCertificateAccess, setHasCertificateAccess] = useState(false);
   const { toast } = useToast();
@@ -60,6 +62,11 @@ export default function Certificate() {
         setInquiryName(latestCertificate.inquiry_details.name || "");
         setInquiryEmail(latestCertificate.inquiry_details.email || "");
         setInquiryMobile(latestCertificate.inquiry_details.mobile || "");
+      }
+      
+      // Pre-fill notes if already submitted
+      if (latestCertificate.notes) {
+        setNotes(latestCertificate.notes || "");
       }
     } catch (error) {
       console.error("Error loading user data:", error);
@@ -121,7 +128,8 @@ export default function Certificate() {
           name: inquiryName.trim(),
           email: inquiryEmail.trim(),
           mobile: inquiryMobile.trim()
-        }
+        },
+        notes: notes.trim()
       });
       
       // Update local state
@@ -132,7 +140,8 @@ export default function Certificate() {
           name: inquiryName.trim(),
           email: inquiryEmail.trim(),
           mobile: inquiryMobile.trim()
-        }
+        },
+        notes: notes.trim()
       }));
       setIsSubmitted(true);
       
@@ -227,6 +236,12 @@ export default function Certificate() {
                           </ul>
                         </div>
                       )}
+                      {certificateAward?.notes && (
+                        <div className="mt-2 text-sm text-green-700">
+                          <p className="font-semibold">Notes:</p>
+                          <p className="mt-1 whitespace-pre-wrap">{certificateAward.notes}</p>
+                        </div>
+                      )}
                     </div>
                   </div>
                   <div className="pt-4">
@@ -238,6 +253,7 @@ export default function Certificate() {
                         setInquiryName(certificateAward?.inquiry_details?.name || "");
                         setInquiryEmail(certificateAward?.inquiry_details?.email || "");
                         setInquiryMobile(certificateAward?.inquiry_details?.mobile || "");
+                        setNotes(certificateAward?.notes || "");
                       }}
                     >
                       Update Information
@@ -280,36 +296,39 @@ export default function Certificate() {
                     </p>
                     
                     <div className="space-y-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="inquiry_name" className="text-sm font-bold text-black">
-                          Name:
-                        </Label>
-                        <Input
-                          id="inquiry_name"
-                          type="text"
-                          placeholder="Enter contact person's name"
-                          value={inquiryName}
-                          onChange={(e) => setInquiryName(e.target.value)}
-                          className="text-base border-gray-300"
-                          required
-                          disabled={isSubmitting}
-                        />
-                      </div>
+                      {/* Name and Mobile on the same line */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="inquiry_name" className="text-sm font-bold text-black">
+                            Name:
+                          </Label>
+                          <Input
+                            id="inquiry_name"
+                            type="text"
+                            placeholder="Enter contact person's name"
+                            value={inquiryName}
+                            onChange={(e) => setInquiryName(e.target.value)}
+                            className="text-base border-gray-300"
+                            required
+                            disabled={isSubmitting}
+                          />
+                        </div>
 
-                      <div className="space-y-2">
-                        <Label htmlFor="inquiry_mobile" className="text-sm font-bold text-black">
-                          Mobile:
-                        </Label>
-                        <Input
-                          id="inquiry_mobile"
-                          type="tel"
-                          placeholder="Enter contact person's mobile number"
-                          value={inquiryMobile}
-                          onChange={(e) => setInquiryMobile(e.target.value)}
-                          className="text-base border-gray-300"
-                          required
-                          disabled={isSubmitting}
-                        />
+                        <div className="space-y-2">
+                          <Label htmlFor="inquiry_mobile" className="text-sm font-bold text-black">
+                            Mobile:
+                          </Label>
+                          <Input
+                            id="inquiry_mobile"
+                            type="tel"
+                            placeholder="Enter contact person's mobile number"
+                            value={inquiryMobile}
+                            onChange={(e) => setInquiryMobile(e.target.value)}
+                            className="text-base border-gray-300"
+                            required
+                            disabled={isSubmitting}
+                          />
+                        </div>
                       </div>
 
                       <div className="space-y-2">
@@ -328,6 +347,24 @@ export default function Certificate() {
                         />
                       </div>
                     </div>
+                  </div>
+
+                  {/* Notes Section */}
+                  <div className="space-y-3 pt-6 border-t border-gray-200">
+                    <Label htmlFor="notes" className="text-base font-bold text-black">
+                      Notes (Optional):
+                    </Label>
+                    <p className="text-sm text-black">
+                      Add any additional notes or comments about this certificate.
+                    </p>
+                    <Textarea
+                      id="notes"
+                      placeholder="Enter any notes or comments..."
+                      value={notes}
+                      onChange={(e) => setNotes(e.target.value)}
+                      className="text-base border-gray-300 min-h-[100px]"
+                      disabled={isSubmitting}
+                    />
                   </div>
 
                   {/* Submit Button */}

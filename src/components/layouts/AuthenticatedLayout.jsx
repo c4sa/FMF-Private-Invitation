@@ -400,17 +400,27 @@ export default function AuthenticatedLayout({ children, currentPageName }) {
         </Sidebar>
 
         <main className="flex-1 flex flex-col bg-slate-50">
-          <header className="bg-white border-b border-gray-200 px-6 py-4 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <SidebarTrigger className="hover:bg-gray-100 p-2 rounded-lg transition-colors duration-200 md:hidden" />
-                <h1 className="text-xl font-semibold text-gray-900 hidden md:block">Forum Admin</h1>
+          {/* Hide header for Trophy and Certificate pages */}
+          {currentPageName !== 'Trophy' && currentPageName !== 'Certificate' && (
+            <header className="bg-white border-b border-gray-200 px-6 py-4 shadow-sm">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <SidebarTrigger className="hover:bg-gray-100 p-2 rounded-lg transition-colors duration-200 md:hidden" />
+                  <h1 className="text-xl font-semibold text-gray-900 hidden md:block">Forum Admin</h1>
+                </div>
+                
+                {/* Notification Center */}
+                <NotificationCenter currentUser={currentUser} />
               </div>
-              
-              {/* Notification Center */}
-              <NotificationCenter currentUser={currentUser} />
+            </header>
+          )}
+
+          {/* Mobile sidebar trigger for Trophy and Certificate pages */}
+          {(currentPageName === 'Trophy' || currentPageName === 'Certificate') && (
+            <div className="fixed top-4 left-4 z-50 md:hidden">
+              <SidebarTrigger className="hover:bg-gray-100 p-2 rounded-lg transition-colors duration-200 bg-white shadow-md" />
             </div>
-          </header>
+          )}
 
           <div className="flex-1 overflow-auto">
             {children}
