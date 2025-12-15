@@ -280,8 +280,8 @@ export default function AuthenticatedLayout({ children, currentPageName }) {
                   className="w-full h-full object-contain rounded-md" />
               </div>
               <div>
-                <h2 className="font-bold text-gray-900 text-lg">FMF Invitation</h2>
-                <p className="text-xs text-gray-500">Management System</p>
+                <h2 className="font-bold text-gray-900 text-lg">FMF Partner</h2>
+                <p className="text-xs text-gray-500">Registration System</p>
               </div>
             </div>
           </SidebarHeader>
