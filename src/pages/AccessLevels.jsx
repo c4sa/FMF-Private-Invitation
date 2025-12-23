@@ -24,10 +24,11 @@ const attendeeTypeConfig = {
   "VIP": { icon: Crown, color: "bg-purple-500", bgColor: "bg-white border-gray-200" },
   "Partner": { icon: Handshake, color: "bg-pink-500", bgColor: "bg-white border-gray-200" },
   "Exhibitor": { icon: Monitor, color: "bg-cyan-500", bgColor: "bg-white border-gray-200" },
-  "Media": { icon: FileText, color: "bg-yellow-500", bgColor: "bg-white border-gray-200" }
+  "Media": { icon: FileText, color: "bg-yellow-500", bgColor: "bg-white border-gray-200" },
+  "Other": { icon: Users, color: "bg-gray-500", bgColor: "bg-white border-gray-200" }
 };
 
-const attendeeTypes = ["VIP", "Partner", "Exhibitor", "Media"];
+const attendeeTypes = ["VIP", "Partner", "Exhibitor", "Media", "Other"];
 
 export default function AccessLevels() {
   const [currentUser, setCurrentUser] = useState(null);
@@ -35,10 +36,11 @@ export default function AccessLevels() {
   const [showRequestDialog, setShowRequestDialog] = useState(false);
   const [showVipDetailsDialog, setShowVipDetailsDialog] = useState(false);
   const [requestData, setRequestData] = useState({
-    slots: { VIP: 0, Partner: 0, Exhibitor: 0, Media: 0 },
+    slots: { VIP: 0, Partner: 0, Exhibitor: 0, Media: 0, Other: 0 },
     reason: ''
   });
   const [vipSlotDetails, setVipSlotDetails] = useState({}); // { "VIP-1": { name: "", email: "", position: "" }, ... }
+  const [otherReason, setOtherReason] = useState(''); // Reason for "Other" slots
   const { toast } = useToast();
 
   useEffect(() => {
@@ -78,6 +80,11 @@ export default function AccessLevels() {
         });
         return updated;
       });
+    }
+    
+    // Clean up Other reason if Other count is reduced to 0
+    if (type === 'Other' && newCount === 0) {
+      setOtherReason('');
     }
   };
 
@@ -123,6 +130,17 @@ export default function AccessLevels() {
       }
     }
 
+    // Validate Other slots have reason if Other slots are requested
+    const otherCount = requestData.slots.Other || 0;
+    if (otherCount > 0 && !otherReason.trim()) {
+      toast({ 
+        title: "Error", 
+        description: "Please provide a reason for requesting 'Other' slots.", 
+        variant: "destructive" 
+      });
+      return;
+    }
+
     try {
       // Build VIP slots array with details
       const vipSlotsArray = [];
@@ -154,6 +172,7 @@ export default function AccessLevels() {
         user_id: currentUser.id,
         requested_slots: requestedSlotsData,
         reason: requestData.reason,
+        other_reason: otherCount > 0 ? otherReason.trim() : null,
         status: 'pending'
       });
       
@@ -167,8 +186,9 @@ export default function AccessLevels() {
       
       toast({ title: "Request Sent", description: "Your request for additional slots has been sent for approval.", variant: "success" });
       setShowRequestDialog(false);
-      setRequestData({ slots: { VIP: 0, Partner: 0, Exhibitor: 0, Media: 0 }, reason: '' });
+      setRequestData({ slots: { VIP: 0, Partner: 0, Exhibitor: 0, Media: 0, Other: 0 }, reason: '' });
       setVipSlotDetails({});
+      setOtherReason('');
     } catch (error) {
       console.error("Failed to submit slot request:", error);
       toast({ title: "Submission Failed", description: "Could not send your request. Please try again.", variant: "destructive" });
@@ -178,8 +198,9 @@ export default function AccessLevels() {
   const handleDialogClose = (open) => {
     if (!open) {
       setShowRequestDialog(false);
-      setRequestData({ slots: { VIP: 0, Partner: 0, Exhibitor: 0, Media: 0 }, reason: '' });
+      setRequestData({ slots: { VIP: 0, Partner: 0, Exhibitor: 0, Media: 0, Other: 0 }, reason: '' });
       setVipSlotDetails({});
+      setOtherReason('');
     }
   };
 
@@ -305,6 +326,21 @@ export default function AccessLevels() {
                   <UserPlus className="w-4 h-4 mr-2" />
                   Add Details
                 </Button>
+              </div>
+            )}
+            {requestData.slots.Other > 0 && (
+              <div className="space-y-2">
+                <Label htmlFor="other-reason">Reason for "Other" Slots *</Label>
+                <Textarea 
+                  id="other-reason"
+                  placeholder="Please explain why you need 'Other' slots..."
+                  value={otherReason}
+                  onChange={(e) => setOtherReason(e.target.value)}
+                  className="min-h-[100px]"
+                />
+                <p className="text-xs text-gray-500">
+                  Please provide a clear explanation for requesting "Other" type slots.
+                </p>
               </div>
             )}
             <div className="space-y-2">

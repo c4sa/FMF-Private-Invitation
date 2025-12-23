@@ -301,12 +301,14 @@ export default function RequestsPage() {
               'Partner Slots': summary.Partner || 0,
               'Exhibitor Slots': summary.Exhibitor || 0,
               'Media Slots': summary.Media || 0,
+              'Other Slots': summary.Other || 0,
+              'Other Reason': req.other_reason || '',
               'Total Requested': totalRequested
             });
           });
           
           // If there are non-VIP slots, add a summary row
-          const nonVipTotal = (summary.Partner || 0) + (summary.Exhibitor || 0) + (summary.Media || 0);
+          const nonVipTotal = (summary.Partner || 0) + (summary.Exhibitor || 0) + (summary.Media || 0) + (summary.Other || 0);
           if (nonVipTotal > 0) {
             exportData.push({
               'Request ID': req.id || '',
@@ -325,6 +327,8 @@ export default function RequestsPage() {
               'Partner Slots': summary.Partner || 0,
               'Exhibitor Slots': summary.Exhibitor || 0,
               'Media Slots': summary.Media || 0,
+              'Other Slots': summary.Other || 0,
+              'Other Reason': req.other_reason || '',
               'Total Requested': totalRequested
             });
           }
@@ -374,6 +378,8 @@ export default function RequestsPage() {
         { wch: 15 }, // Partner Slots
         { wch: 18 }, // Exhibitor Slots
         { wch: 15 }, // Media Slots
+        { wch: 15 }, // Other Slots
+        { wch: 30 }, // Other Reason
         { wch: 15 }  // Total Requested
       ];
       ws['!cols'] = colWidths;
@@ -639,6 +645,14 @@ export default function RequestsPage() {
                   <label className="text-sm font-medium text-gray-500">Reason / Justification</label>
                   <p className="text-sm text-gray-700 mt-1">{selectedSlotRequest.reason || 'No reason provided'}</p>
                 </div>
+                {selectedSlotRequest.other_reason && (
+                  <div className="col-span-2">
+                    <label className="text-sm font-medium text-gray-500">Reason for "Other" Slots</label>
+                    <p className="text-sm text-gray-700 mt-1 bg-gray-50 p-3 rounded border border-gray-200">
+                      {selectedSlotRequest.other_reason}
+                    </p>
+                  </div>
+                )}
               </div>
 
               <div className="border-t pt-4">
@@ -848,6 +862,14 @@ export default function RequestsPage() {
                   <label className="text-sm font-medium text-gray-500">Reason</label>
                   <p className="text-sm text-gray-700 mt-1">{requestToApprove.reason || 'No reason provided'}</p>
                 </div>
+                {requestToApprove.other_reason && (
+                  <div className="col-span-2">
+                    <label className="text-sm font-medium text-gray-500">Reason for "Other" Slots</label>
+                    <p className="text-sm text-gray-700 mt-1 bg-gray-50 p-3 rounded border border-gray-200">
+                      {requestToApprove.other_reason}
+                    </p>
+                  </div>
+                )}
               </div>
 
               <div className="border-t pt-4">
