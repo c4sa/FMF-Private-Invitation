@@ -2765,12 +2765,6 @@ export default function SystemUsers() {
                                 <div className="flex-1">
                                   <div className="flex items-center gap-2">
                                     <p className="font-semibold text-gray-900">{displayName}</p>
-                                    {hasTrophy && (
-                                      <Trophy className="w-4 h-4 text-yellow-600" title="Trophy Awarded" />
-                                    )}
-                                    {hasCertificate && (
-                                      <Award className="w-4 h-4 text-blue-600" title="Certificate Awarded" />
-                                    )}
                                   </div>
                                   <p className="text-sm text-gray-500">{user.email}</p>
                                   {user.companies && user.companies.length > 0 ? (
