@@ -17,30 +17,105 @@ import {
   FileText,
   Users,
   PlusCircle,
-  UserPlus
+  UserPlus,
+  Star
 } from "lucide-react";
 
 const attendeeTypeConfig = {
-  "VIP": { icon: Crown, color: "bg-purple-500", bgColor: "bg-white border-gray-200" },
-  "Partner": { icon: Handshake, color: "bg-pink-500", bgColor: "bg-white border-gray-200" },
-  "Exhibitor": { icon: Monitor, color: "bg-cyan-500", bgColor: "bg-white border-gray-200" },
-  "Media": { icon: FileText, color: "bg-yellow-500", bgColor: "bg-white border-gray-200" },
-  "Other": { icon: Users, color: "bg-gray-500", bgColor: "bg-white border-gray-200" }
+  "VIP": { 
+    icon: Crown, 
+    color: "bg-purple-500", 
+    bgColor: "bg-white border-gray-200",
+    bgLight: "bg-purple-50",
+    borderColor: "border-purple-200",
+    textColor: "text-purple-900",
+    textLight: "text-purple-700",
+    iconColor: "text-purple-600",
+    borderButton: "border-purple-300",
+    textButton: "text-purple-700",
+    hoverButton: "hover:bg-purple-100"
+  },
+  "Premier": { 
+    icon: Star, 
+    color: "bg-indigo-500", 
+    bgColor: "bg-white border-gray-200",
+    bgLight: "bg-indigo-50",
+    borderColor: "border-indigo-200",
+    textColor: "text-indigo-900",
+    textLight: "text-indigo-700",
+    iconColor: "text-indigo-600",
+    borderButton: "border-indigo-300",
+    textButton: "text-indigo-700",
+    hoverButton: "hover:bg-indigo-100"
+  },
+  "Partner": { 
+    icon: Handshake, 
+    color: "bg-pink-500", 
+    bgColor: "bg-white border-gray-200",
+    bgLight: "bg-pink-50",
+    borderColor: "border-pink-200",
+    textColor: "text-pink-900",
+    textLight: "text-pink-700",
+    iconColor: "text-pink-600",
+    borderButton: "border-pink-300",
+    textButton: "text-pink-700",
+    hoverButton: "hover:bg-pink-100"
+  },
+  "Exhibitor": { 
+    icon: Monitor, 
+    color: "bg-cyan-500", 
+    bgColor: "bg-white border-gray-200",
+    bgLight: "bg-cyan-50",
+    borderColor: "border-cyan-200",
+    textColor: "text-cyan-900",
+    textLight: "text-cyan-700",
+    iconColor: "text-cyan-600",
+    borderButton: "border-cyan-300",
+    textButton: "text-cyan-700",
+    hoverButton: "hover:bg-cyan-100"
+  },
+  "Media": { 
+    icon: FileText, 
+    color: "bg-yellow-500", 
+    bgColor: "bg-white border-gray-200",
+    bgLight: "bg-yellow-50",
+    borderColor: "border-yellow-200",
+    textColor: "text-yellow-900",
+    textLight: "text-yellow-700",
+    iconColor: "text-yellow-600",
+    borderButton: "border-yellow-300",
+    textButton: "text-yellow-700",
+    hoverButton: "hover:bg-yellow-100"
+  },
+  "Other": { 
+    icon: Users, 
+    color: "bg-gray-500", 
+    bgColor: "bg-white border-gray-200",
+    bgLight: "bg-gray-50",
+    borderColor: "border-gray-200",
+    textColor: "text-gray-900",
+    textLight: "text-gray-700",
+    iconColor: "text-gray-600",
+    borderButton: "border-gray-300",
+    textButton: "text-gray-700",
+    hoverButton: "hover:bg-gray-100"
+  }
 };
 
-const attendeeTypes = ["VIP", "Partner", "Exhibitor", "Media", "Other"];
+const attendeeTypes = ["VIP", "Premier", "Partner", "Exhibitor", "Media", "Other"];
 
 export default function AccessLevels() {
   const [currentUser, setCurrentUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showRequestDialog, setShowRequestDialog] = useState(false);
-  const [showVipDetailsDialog, setShowVipDetailsDialog] = useState(false);
+  const [showSlotDetailsDialog, setShowSlotDetailsDialog] = useState(false);
+  const [currentSlotType, setCurrentSlotType] = useState(null); // Track which slot type dialog is open
   const [requestData, setRequestData] = useState({
-    slots: { VIP: 0, Partner: 0, Exhibitor: 0, Media: 0, Other: 0 },
+    slots: { VIP: 0, Premier: 0, Partner: 0, Exhibitor: 0, Media: 0, Other: 0 },
     reason: ''
   });
-  const [vipSlotDetails, setVipSlotDetails] = useState({}); // { "VIP-1": { name: "", email: "", position: "" }, ... }
-  const [otherReason, setOtherReason] = useState(''); // Reason for "Other" slots
+  // Unified slot details state: { "VIP-1": { name: "", email: "", position: "" }, "Partner-1": {...}, ... }
+  const [slotDetails, setSlotDetails] = useState({});
   const { toast } = useToast();
 
   useEffect(() => {
@@ -65,31 +140,40 @@ export default function AccessLevels() {
       slots: { ...prev.slots, [type]: newCount }
     }));
     
-    // Clean up VIP slot details if VIP count is reduced
-    if (type === 'VIP' && newCount === 0) {
-      setVipSlotDetails({});
-    } else if (type === 'VIP' && newCount < (requestData.slots.VIP || 0)) {
-      // Remove details for slots beyond the new count
-      setVipSlotDetails(prev => {
+    // Clean up slot details if count is reduced
+    if (newCount === 0) {
+      // Remove all details for this slot type
+      setSlotDetails(prev => {
         const updated = { ...prev };
         Object.keys(updated).forEach(key => {
-          const slotNum = parseInt(key.split('-')[1]);
-          if (slotNum > newCount) {
+          if (key.startsWith(`${type}-`)) {
             delete updated[key];
           }
         });
         return updated;
       });
-    }
-    
-    // Clean up Other reason if Other count is reduced to 0
-    if (type === 'Other' && newCount === 0) {
-      setOtherReason('');
+    } else {
+      const oldCount = requestData.slots[type] || 0;
+      if (newCount < oldCount) {
+        // Remove details for slots beyond the new count
+        setSlotDetails(prev => {
+          const updated = { ...prev };
+          Object.keys(updated).forEach(key => {
+            if (key.startsWith(`${type}-`)) {
+              const slotNum = parseInt(key.split('-')[1]);
+              if (slotNum > newCount) {
+                delete updated[key];
+              }
+            }
+          });
+          return updated;
+        });
+      }
     }
   };
 
-  const handleVipSlotDetailChange = (slotKey, field, value) => {
-    setVipSlotDetails(prev => ({
+  const handleSlotDetailChange = (slotKey, field, value) => {
+    setSlotDetails(prev => ({
       ...prev,
       [slotKey]: {
         ...prev[slotKey],
@@ -112,67 +196,63 @@ export default function AccessLevels() {
       return;
     }
 
-    // Validate VIP slots have details if VIP slots are requested
-    const vipCount = requestData.slots.VIP || 0;
-    if (vipCount > 0) {
-      const vipSlotsWithDetails = Object.keys(vipSlotDetails).filter(key => {
-        const detail = vipSlotDetails[key];
-        return detail?.name && detail?.email && detail?.position;
-      });
-      
-      if (vipSlotsWithDetails.length < vipCount) {
-        toast({ 
-          title: "Error", 
-          description: `Please fill in details (name, email, position) for all ${vipCount} VIP slot(s). Click "Add Details" to add VIP slot information.`, 
-          variant: "destructive" 
+    // Validate ALL slot types have details
+    const slotTypes = ['VIP', 'Premier', 'Partner', 'Exhibitor', 'Media', 'Other'];
+    for (const slotType of slotTypes) {
+      const count = requestData.slots[slotType] || 0;
+      if (count > 0) {
+        const slotsWithDetails = Object.keys(slotDetails).filter(key => {
+          if (!key.startsWith(`${slotType}-`)) return false;
+          const detail = slotDetails[key];
+          return detail?.name && detail?.email && detail?.position;
         });
-        return;
+        
+        if (slotsWithDetails.length < count) {
+          toast({ 
+            title: "Error", 
+            description: `Please fill in details (name, email, position) for all ${count} ${slotType} slot(s). Click "Add Details" to add ${slotType} slot information.`, 
+            variant: "destructive" 
+          });
+          return;
+        }
       }
     }
 
-    // Validate Other slots have reason if Other slots are requested
-    const otherCount = requestData.slots.Other || 0;
-    if (otherCount > 0 && !otherReason.trim()) {
-      toast({ 
-        title: "Error", 
-        description: "Please provide a reason for requesting 'Other' slots.", 
-        variant: "destructive" 
-      });
-      return;
-    }
-
     try {
-      // Build VIP slots array with details
-      const vipSlotsArray = [];
-      if (vipCount > 0) {
-        for (let i = 1; i <= vipCount; i++) {
-          const slotKey = `VIP-${i}`;
-          const detail = vipSlotDetails[slotKey];
-          if (detail) {
-            vipSlotsArray.push({
-              type: 'VIP',
-              slotNumber: i,
-              name: detail.name,
-              email: detail.email,
-              position: detail.position
-            });
+      // Build slots array with details for ALL slot types
+      const allDetailedSlots = [];
+      const slotTypes = ['VIP', 'Premier', 'Partner', 'Exhibitor', 'Media', 'Other'];
+      
+      for (const slotType of slotTypes) {
+        const count = requestData.slots[slotType] || 0;
+        if (count > 0) {
+          for (let i = 1; i <= count; i++) {
+            const slotKey = `${slotType}-${i}`;
+            const detail = slotDetails[slotKey];
+            if (detail) {
+              allDetailedSlots.push({
+                type: slotType,
+                slotNumber: i,
+                name: detail.name,
+                email: detail.email,
+                position: detail.position
+              });
+            }
           }
         }
       }
 
-      // Format data: VIP slots with details, others as simple counts
-      const requestedSlotsData = vipCount > 0 && vipSlotsArray.length > 0
-        ? {
-            slots: vipSlotsArray,
-            summary: requestData.slots
-          }
-        : requestData.slots; // Old format for non-VIP requests
+      // Format data: All slots with details
+      const requestedSlotsData = {
+        slots: allDetailedSlots,
+        summary: requestData.slots
+      };
 
       const slotRequest = await SlotRequest.create({
         user_id: currentUser.id,
         requested_slots: requestedSlotsData,
         reason: requestData.reason,
-        other_reason: otherCount > 0 ? otherReason.trim() : null,
+        other_reason: null, // No longer needed since all slots require details
         status: 'pending'
       });
       
@@ -186,9 +266,8 @@ export default function AccessLevels() {
       
       toast({ title: "Request Sent", description: "Your request for additional slots has been sent for approval.", variant: "success" });
       setShowRequestDialog(false);
-      setRequestData({ slots: { VIP: 0, Partner: 0, Exhibitor: 0, Media: 0, Other: 0 }, reason: '' });
-      setVipSlotDetails({});
-      setOtherReason('');
+      setRequestData({ slots: { VIP: 0, Premier: 0, Partner: 0, Exhibitor: 0, Media: 0, Other: 0 }, reason: '' });
+      setSlotDetails({});
     } catch (error) {
       console.error("Failed to submit slot request:", error);
       toast({ title: "Submission Failed", description: "Could not send your request. Please try again.", variant: "destructive" });
@@ -198,16 +277,21 @@ export default function AccessLevels() {
   const handleDialogClose = (open) => {
     if (!open) {
       setShowRequestDialog(false);
-      setRequestData({ slots: { VIP: 0, Partner: 0, Exhibitor: 0, Media: 0, Other: 0 }, reason: '' });
-      setVipSlotDetails({});
-      setOtherReason('');
+      setRequestData({ slots: { VIP: 0, Premier: 0, Partner: 0, Exhibitor: 0, Media: 0, Other: 0 }, reason: '' });
+      setSlotDetails({});
     }
   };
 
-  const handleVipDetailsDialogClose = (open) => {
+  const handleSlotDetailsDialogClose = (open) => {
     if (!open) {
-      setShowVipDetailsDialog(false);
+      setShowSlotDetailsDialog(false);
+      setCurrentSlotType(null);
     }
+  };
+
+  const openSlotDetailsDialog = (slotType) => {
+    setCurrentSlotType(slotType);
+    setShowSlotDetailsDialog(true);
   };
 
   if (isLoading) {
@@ -219,6 +303,14 @@ export default function AccessLevels() {
   }
 
   const isAdmin = currentUser?.role === 'admin' || currentUser?.system_role === 'Admin';
+  
+  // Filter attendee types based on user access - only show Premier if user has assign_premier
+  const availableAttendeeTypes = attendeeTypes.filter(type => {
+    if (type === 'Premier') {
+      return currentUser?.assign_premier === true;
+    }
+    return true;
+  });
   
   return (
     <div className="p-6 space-y-6 bg-slate-50 min-h-screen">
@@ -284,12 +376,12 @@ export default function AccessLevels() {
           <DialogHeader>
             <DialogTitle>Request Additional Slots</DialogTitle>
             <DialogDescription>
-              Select the number of slots you need for each attendee type. VIP slots require additional details.
+              Select the number of slots you need for each attendee type. All slots require additional details (name, email, position).
             </DialogDescription>
           </DialogHeader>
           <div className="py-4 space-y-4">
             <div className="grid grid-cols-2 gap-4">
-              {attendeeTypes.map(type => (
+              {availableAttendeeTypes.map(type => (
                 <div key={type} className="space-y-2">
                   <Label htmlFor={`slots-${type}`}>{type}</Label>
                   <Input 
@@ -302,47 +394,43 @@ export default function AccessLevels() {
                 </div>
               ))}
             </div>
-            {requestData.slots.VIP > 0 && (
-              <div className="flex items-center gap-2 p-3 bg-purple-50 border border-purple-200 rounded-lg">
-                <Crown className="w-5 h-5 text-purple-600" />
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-purple-900">
-                    {requestData.slots.VIP} VIP slot{requestData.slots.VIP > 1 ? 's' : ''} requested
-                  </p>
-                  <p className="text-xs text-purple-700">
-                    {Object.keys(vipSlotDetails).filter(key => {
-                      const detail = vipSlotDetails[key];
-                      return detail?.name && detail?.email && detail?.position;
-                    }).length} of {requestData.slots.VIP} slot{requestData.slots.VIP > 1 ? 's' : ''} with details
-                  </p>
+            {/* Show details section for all slot types that have count > 0 */}
+            {availableAttendeeTypes.map(slotType => {
+              const count = requestData.slots[slotType] || 0;
+              if (count === 0) return null;
+              
+              const config = attendeeTypeConfig[slotType];
+              const Icon = config?.icon || Users;
+              const slotsWithDetails = Object.keys(slotDetails).filter(key => {
+                if (!key.startsWith(`${slotType}-`)) return false;
+                const detail = slotDetails[key];
+                return detail?.name && detail?.email && detail?.position;
+              }).length;
+              
+              return (
+                <div key={slotType} className={`flex items-center gap-2 p-3 ${config.bgLight} border ${config.borderColor} rounded-lg`}>
+                  <Icon className={`w-5 h-5 ${config.iconColor}`} />
+                  <div className="flex-1">
+                    <p className={`text-sm font-medium ${config.textColor}`}>
+                      {count} {slotType} slot{count > 1 ? 's' : ''} requested
+                    </p>
+                    <p className={`text-xs ${config.textLight}`}>
+                      {slotsWithDetails} of {count} slot{count > 1 ? 's' : ''} with details
+                    </p>
+                  </div>
+                  <Button 
+                    type="button"
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => openSlotDetailsDialog(slotType)}
+                    className={`${config.borderButton} ${config.textButton} ${config.hoverButton}`}
+                  >
+                    <UserPlus className="w-4 h-4 mr-2" />
+                    Add Details
+                  </Button>
                 </div>
-                <Button 
-                  type="button"
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => setShowVipDetailsDialog(true)}
-                  className="border-purple-300 text-purple-700 hover:bg-purple-100"
-                >
-                  <UserPlus className="w-4 h-4 mr-2" />
-                  Add Details
-                </Button>
-              </div>
-            )}
-            {requestData.slots.Other > 0 && (
-              <div className="space-y-2">
-                <Label htmlFor="other-reason">Reason for "Other" Slots *</Label>
-                <Textarea 
-                  id="other-reason"
-                  placeholder="Please explain why you need 'Other' slots..."
-                  value={otherReason}
-                  onChange={(e) => setOtherReason(e.target.value)}
-                  className="min-h-[100px]"
-                />
-                <p className="text-xs text-gray-500">
-                  Please provide a clear explanation for requesting "Other" type slots.
-                </p>
-              </div>
-            )}
+              );
+            })}
             <div className="space-y-2">
               <Label htmlFor="reason">Justification / Note for Request</Label>
               <Textarea 
@@ -360,54 +448,56 @@ export default function AccessLevels() {
         </DialogContent>
       </Dialog>
 
-      {/* VIP Details Dialog */}
-      <Dialog open={showVipDetailsDialog} onOpenChange={handleVipDetailsDialogClose}>
+      {/* Unified Slot Details Dialog */}
+      <Dialog open={showSlotDetailsDialog} onOpenChange={handleSlotDetailsDialogClose}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Add VIP Slot Details</DialogTitle>
+            <DialogTitle>Add {currentSlotType} Slot Details</DialogTitle>
             <DialogDescription>
-              Fill in the details for each VIP slot. All fields are required.
+              Fill in the details for each {currentSlotType} slot. All fields are required.
             </DialogDescription>
           </DialogHeader>
           <div className="py-4 space-y-6">
-            {Array.from({ length: requestData.slots.VIP || 0 }, (_, i) => {
+            {currentSlotType && Array.from({ length: requestData.slots[currentSlotType] || 0 }, (_, i) => {
               const slotNumber = i + 1;
-              const slotKey = `VIP-${slotNumber}`;
-              const detail = vipSlotDetails[slotKey] || { name: '', email: '', position: '' };
+              const slotKey = `${currentSlotType}-${slotNumber}`;
+              const detail = slotDetails[slotKey] || { name: '', email: '', position: '' };
+              const config = attendeeTypeConfig[currentSlotType];
+              const Icon = config?.icon || Users;
               
               return (
-                <div key={slotKey} className="space-y-3 p-4 border rounded-lg bg-purple-50/50">
+                <div key={slotKey} className={`space-y-3 p-4 border rounded-lg ${config.bgLight}/50`}>
                   <div className="flex items-center gap-2 mb-2">
-                    <Crown className="w-4 h-4 text-purple-600" />
-                    <span className="font-semibold text-sm text-gray-900">VIP Slot {slotNumber}</span>
+                    <Icon className={`w-4 h-4 ${config.iconColor}`} />
+                    <span className="font-semibold text-sm text-gray-900">{currentSlotType} Slot {slotNumber}</span>
                   </div>
                   <div className="grid grid-cols-1 gap-3">
                     <div className="space-y-2">
-                      <Label htmlFor={`vip-name-${slotKey}`}>Name *</Label>
+                      <Label htmlFor={`${slotKey}-name`}>Name *</Label>
                       <Input 
-                        id={`vip-name-${slotKey}`}
+                        id={`${slotKey}-name`}
                         placeholder="Enter name"
                         value={detail.name}
-                        onChange={(e) => handleVipSlotDetailChange(slotKey, 'name', e.target.value)}
+                        onChange={(e) => handleSlotDetailChange(slotKey, 'name', e.target.value)}
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor={`vip-email-${slotKey}`}>Email *</Label>
+                      <Label htmlFor={`${slotKey}-email`}>Email *</Label>
                       <Input 
-                        id={`vip-email-${slotKey}`}
+                        id={`${slotKey}-email`}
                         type="email"
                         placeholder="Enter email"
                         value={detail.email}
-                        onChange={(e) => handleVipSlotDetailChange(slotKey, 'email', e.target.value)}
+                        onChange={(e) => handleSlotDetailChange(slotKey, 'email', e.target.value)}
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor={`vip-position-${slotKey}`}>Position *</Label>
+                      <Label htmlFor={`${slotKey}-position`}>Position *</Label>
                       <Input 
-                        id={`vip-position-${slotKey}`}
+                        id={`${slotKey}-position`}
                         placeholder="Enter position"
                         value={detail.position}
-                        onChange={(e) => handleVipSlotDetailChange(slotKey, 'position', e.target.value)}
+                        onChange={(e) => handleSlotDetailChange(slotKey, 'position', e.target.value)}
                       />
                     </div>
                   </div>
@@ -416,7 +506,7 @@ export default function AccessLevels() {
             })}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowVipDetailsDialog(false)}>Close</Button>
+            <Button variant="outline" onClick={() => handleSlotDetailsDialogClose(false)}>Close</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

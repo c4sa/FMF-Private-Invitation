@@ -282,7 +282,7 @@ export default function RequestsPage() {
         const totalRequested = Object.values(summary).reduce((sum, count) => sum + (count || 0), 0);
         
         if (isNewFormat(req.requested_slots) && req.requested_slots.slots && req.requested_slots.slots.length > 0) {
-          // New format: VIP slots have details, show one row per VIP slot
+          // New format: All slots have details, show one row per slot
           req.requested_slots.slots.forEach((slot, index) => {
             exportData.push({
               'Request ID': req.id || '',
@@ -298,40 +298,14 @@ export default function RequestsPage() {
               'Slot Email': slot.email || '',
               'Slot Position': slot.position || '',
               'VIP Slots': summary.VIP || 0,
+              'Premier Slots': summary.Premier || 0,
               'Partner Slots': summary.Partner || 0,
               'Exhibitor Slots': summary.Exhibitor || 0,
               'Media Slots': summary.Media || 0,
               'Other Slots': summary.Other || 0,
-              'Other Reason': req.other_reason || '',
               'Total Requested': totalRequested
             });
           });
-          
-          // If there are non-VIP slots, add a summary row
-          const nonVipTotal = (summary.Partner || 0) + (summary.Exhibitor || 0) + (summary.Media || 0) + (summary.Other || 0);
-          if (nonVipTotal > 0) {
-            exportData.push({
-              'Request ID': req.id || '',
-              'User Name': req.user_name || 'Unknown',
-              'User Email': req.user_email || '',
-              'Company Name': req.user_company_name || '',
-              'Reason': req.reason || '',
-              'Status': req.status || 'pending',
-              'Requested Date': req.created_at ? format(new Date(req.created_at), 'yyyy-MM-dd HH:mm:ss') : '',
-              'Slot Type': 'Other Slots',
-              'Slot Number': 'N/A',
-              'Slot Name': 'N/A',
-              'Slot Email': 'N/A',
-              'Slot Position': 'N/A',
-              'VIP Slots': summary.VIP || 0,
-              'Partner Slots': summary.Partner || 0,
-              'Exhibitor Slots': summary.Exhibitor || 0,
-              'Media Slots': summary.Media || 0,
-              'Other Slots': summary.Other || 0,
-              'Other Reason': req.other_reason || '',
-              'Total Requested': totalRequested
-            });
-          }
         } else {
           // Old format: one row per request
           exportData.push({
@@ -348,9 +322,11 @@ export default function RequestsPage() {
             'Slot Email': 'N/A',
             'Slot Position': 'N/A',
             'VIP Slots': summary.VIP || 0,
+            'Premier Slots': summary.Premier || 0,
             'Partner Slots': summary.Partner || 0,
             'Exhibitor Slots': summary.Exhibitor || 0,
             'Media Slots': summary.Media || 0,
+            'Other Slots': summary.Other || 0,
             'Total Requested': totalRequested
           });
         }
@@ -699,12 +675,27 @@ export default function RequestsPage() {
                     {selectedSlotRequest.requested_slots.slots && selectedSlotRequest.requested_slots.slots.length > 0 ? (
                       <div className="space-y-3">
                         <p className="text-sm text-gray-600 mb-3">
-                          VIP slots with detailed information:
+                          All slots with detailed information:
                         </p>
-                        {selectedSlotRequest.requested_slots.slots.map((slot, index) => (
-                          <div key={index} className="p-4 border rounded-lg bg-purple-50/50">
+                        {selectedSlotRequest.requested_slots.slots.map((slot, index) => {
+                          // Get color scheme based on slot type
+                          const getSlotColors = (type) => {
+                            switch(type) {
+                              case 'VIP': return { bg: 'bg-purple-50/50', badge: 'bg-purple-100 text-purple-800' };
+                              case 'Premier': return { bg: 'bg-indigo-50/50', badge: 'bg-indigo-100 text-indigo-800' };
+                              case 'Partner': return { bg: 'bg-pink-50/50', badge: 'bg-pink-100 text-pink-800' };
+                              case 'Exhibitor': return { bg: 'bg-cyan-50/50', badge: 'bg-cyan-100 text-cyan-800' };
+                              case 'Media': return { bg: 'bg-yellow-50/50', badge: 'bg-yellow-100 text-yellow-800' };
+                              case 'Other': return { bg: 'bg-gray-50/50', badge: 'bg-gray-100 text-gray-800' };
+                              default: return { bg: 'bg-gray-50/50', badge: 'bg-gray-100 text-gray-800' };
+                            }
+                          };
+                          const colors = getSlotColors(slot.type);
+                          
+                          return (
+                          <div key={index} className={`p-4 border rounded-lg ${colors.bg}`}>
                             <div className="flex items-center gap-2 mb-3">
-                              <Badge variant="secondary" className="bg-purple-100 text-purple-800">{slot.type}</Badge>
+                              <Badge variant="secondary" className={colors.badge}>{slot.type}</Badge>
                               <span className="text-sm text-gray-600">Slot {slot.slotNumber}</span>
                             </div>
                             <div className="grid grid-cols-3 gap-4">
@@ -722,7 +713,8 @@ export default function RequestsPage() {
                               </div>
                             </div>
                           </div>
-                        ))}
+                          );
+                        })}
                         {selectedSlotRequest.requested_slots.summary && (
                           <div className="mt-4 pt-4 border-t">
                             <p className="text-sm text-gray-600 mb-2">All requested slots summary:</p>

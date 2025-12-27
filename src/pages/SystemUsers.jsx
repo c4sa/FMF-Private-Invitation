@@ -71,6 +71,7 @@ export default function SystemUsers() {
   const [isSendingReminders, setIsSendingReminders] = useState(false);
   const [isGivingTrophy, setIsGivingTrophy] = useState(false);
   const [isGivingCertificate, setIsGivingCertificate] = useState(false);
+  const [isAssigningPremier, setIsAssigningPremier] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showViewDetailsDialog, setShowViewDetailsDialog] = useState(false);
   const [viewDetailsUser, setViewDetailsUser] = useState(null);
@@ -1603,6 +1604,70 @@ export default function SystemUsers() {
     }
   };
 
+  const handleAssignPremier = async () => {
+    if (selectedUsers.size === 0) {
+      toast({
+        title: "No Users Selected",
+        description: "Please select at least one user to assign Premier access.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsAssigningPremier(true);
+    const selectedUserIds = Array.from(selectedUsers);
+    const usersToUpdate = getVisibleUsers().filter(user => selectedUserIds.includes(user.id));
+    
+    let successCount = 0;
+    let failureCount = 0;
+    const errors = [];
+
+    try {
+      // Update assign_premier for all selected users
+      for (const user of usersToUpdate) {
+        try {
+          await User.update(user.id, { 
+            assign_premier: true 
+          });
+          successCount++;
+        } catch (error) {
+          console.error(`Failed to assign Premier access to ${user.email}:`, error);
+          failureCount++;
+          errors.push(`${user.email}: ${error.message}`);
+        }
+      }
+
+      // Refresh user data
+      await loadData();
+
+      // Clear selection after assignment
+      setSelectedUsers(new Set());
+
+      if (failureCount === 0) {
+        toast({
+          title: "Premier Access Assigned",
+          description: `Successfully assigned Premier access to ${successCount} user(s).`,
+          variant: "success"
+        });
+      } else {
+        toast({
+          title: "Partial Success",
+          description: `Assigned to ${successCount} user(s), failed for ${failureCount} user(s). ${errors.slice(0, 3).join('; ')}${errors.length > 3 ? '...' : ''}`,
+          variant: "warning"
+        });
+      }
+    } catch (error) {
+      console.error('Error assigning Premier access:', error);
+      toast({
+        title: "Error",
+        description: "Failed to assign Premier access. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsAssigningPremier(false);
+    }
+  };
+
   const handleGiveTrophy = async () => {
     if (selectedUsers.size === 0) {
       toast({
@@ -2649,6 +2714,15 @@ export default function SystemUsers() {
                   >
                     <Mail className="w-4 h-4" />
                     {isSendingReminders ? 'Sending...' : `Resend Email (${selectedUsers.size})`}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="flex items-center gap-2"
+                    onClick={handleAssignPremier}
+                    disabled={isAssigningPremier || selectedUsers.size === 0}
+                  >
+                    <Shield className="w-4 h-4" />
+                    {isAssigningPremier ? 'Assigning...' : `Assign Premier (${selectedUsers.size})`}
                   </Button>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
