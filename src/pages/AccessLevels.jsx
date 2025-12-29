@@ -338,35 +338,37 @@ export default function AccessLevels() {
         {/* User's slots view */}
         {!isAdmin && currentUser?.registration_slots && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            {Object.entries(currentUser.registration_slots).map(([type, totalSlots]) => {
-              const usedSlots = currentUser.used_slots?.[type] || 0;
-              const remainingSlots = totalSlots - usedSlots;
+            {Object.entries(currentUser.registration_slots)
+              .filter(([type, totalSlots]) => (totalSlots || 0) > 0) // Only show cards for slot types with allocated slots
+              .map(([type, totalSlots]) => {
+                const usedSlots = currentUser.used_slots?.[type] || 0;
+                const remainingSlots = totalSlots - usedSlots;
 
-              const config = attendeeTypeConfig[type];
-              const Icon = config?.icon || Users;
-              const progressPercentage = totalSlots > 0 ? (usedSlots / totalSlots) * 100 : 0;
+                const config = attendeeTypeConfig[type];
+                const Icon = config?.icon || Users;
+                const progressPercentage = totalSlots > 0 ? (usedSlots / totalSlots) * 100 : 0;
 
-              return (
-                <Card key={type} className={`border ${config?.bgColor || 'bg-gray-50 border-gray-200'}`}>
-                  <CardHeader>
-                    <div className="flex items-center gap-3">
-                      <div className={`p-3 rounded-lg ${config?.color || 'bg-gray-500'} text-white`}><Icon className="w-6 h-6" /></div>
-                      <CardTitle className="text-lg font-bold text-gray-900">{type}</CardTitle>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <Progress value={progressPercentage} className="h-2" />
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-gray-600">Used: {usedSlots}/{totalSlots}</span>
-                      <span className={`text-xl font-bold ${remainingSlots > 0 ? 'text-green-600' : 'text-red-600'}`}>{remainingSlots}</span>
-                    </div>
-                    <p className={`text-right text-sm font-semibold ${remainingSlots > 0 ? 'text-gray-600' : 'text-red-600'}`}>
-                      {remainingSlots > 0 ? 'Available' : 'Unavailable'}
-                    </p>
-                  </CardContent>
-                </Card>
-              );
-            })}
+                return (
+                  <Card key={type} className={`border ${config?.bgColor || 'bg-gray-50 border-gray-200'}`}>
+                    <CardHeader>
+                      <div className="flex items-center gap-3">
+                        <div className={`p-3 rounded-lg ${config?.color || 'bg-gray-500'} text-white`}><Icon className="w-6 h-6" /></div>
+                        <CardTitle className="text-lg font-bold text-gray-900">{type}</CardTitle>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <Progress value={progressPercentage} className="h-2" />
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-gray-600">Used: {usedSlots}/{totalSlots}</span>
+                        <span className={`text-xl font-bold ${remainingSlots > 0 ? 'text-green-600' : 'text-red-600'}`}>{remainingSlots}</span>
+                      </div>
+                      <p className={`text-right text-sm font-semibold ${remainingSlots > 0 ? 'text-gray-600' : 'text-red-600'}`}>
+                        {remainingSlots > 0 ? 'Available' : 'Unavailable'}
+                      </p>
+                    </CardContent>
+                  </Card>
+                );
+              })}
           </div>
         )}
       </div>
