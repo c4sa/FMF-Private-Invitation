@@ -2,9 +2,12 @@
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? 'http://localhost:3000' : '');
 
 // Development fallback - simulate email sending
-const simulateEmailSending = async ({ to, subject, html, text }) => {
+const simulateEmailSending = async ({ to, subject, html, text, bcc }) => {
   console.log('📧 Simulating email sending (development mode):');
   console.log('To:', to);
+  if (bcc) {
+    console.log('BCC:', Array.isArray(bcc) ? bcc.join(', ') : bcc);
+  }
   console.log('Subject:', subject);
   console.log('HTML Preview:', html.substring(0, 100) + '...');
   
@@ -21,7 +24,7 @@ const simulateEmailSending = async ({ to, subject, html, text }) => {
 // Email service functions
 export const emailService = {
   // Generic send function for all emails
-  async send({ to, subject, html, text }) {
+  async send({ to, subject, html, text, bcc }) {
     try {
       // Try to use the API endpoint first
       const response = await fetch(`${API_BASE_URL}/api/send-email`, {
@@ -33,7 +36,8 @@ export const emailService = {
           to,
           subject,
           html,
-          text
+          text,
+          bcc
         })
       });
 
@@ -52,17 +56,18 @@ export const emailService = {
       }
       
       // Fallback to simulation in both development and production
-      return await simulateEmailSending({ to, subject, html, text });
+      return await simulateEmailSending({ to, subject, html, text, bcc });
     }
   },
 
   // Send welcome email
-  async sendWelcomeEmail({ to, subject, html }) {
+  async sendWelcomeEmail({ to, subject, html, bcc }) {
     try {
       const result = await this.send({
         to: to,
         subject: subject || 'Welcome to Future Minerals Forum',
-        html: html
+        html: html,
+        bcc: bcc
       });
       
       return result;
@@ -73,12 +78,13 @@ export const emailService = {
   },
 
   // Send invitation email
-  async sendInvitationEmail({ to, subject, html }) {
+  async sendInvitationEmail({ to, subject, html, bcc }) {
     try {
       const result = await this.send({
         to: to,
         subject: subject || 'Invitation to Future Minerals Forum',
-        html: html
+        html: html,
+        bcc: bcc
       });
       
       return result;
@@ -89,12 +95,13 @@ export const emailService = {
   },
 
   // Send modification request email
-  async sendModificationRequestEmail({ to, subject, html }) {
+  async sendModificationRequestEmail({ to, subject, html, bcc }) {
     try {
       const result = await this.send({
         to: to,
         subject: subject || 'Action Required: Modify Your Future Minerals Forum Registration',
-        html: html
+        html: html,
+        bcc: bcc
       });
       
       return result;
@@ -105,12 +112,13 @@ export const emailService = {
   },
 
   // Send password reset email
-  async sendPasswordResetEmail({ to, subject, html }) {
+  async sendPasswordResetEmail({ to, subject, html, bcc }) {
     try {
       const result = await this.send({
         to: to,
         subject: subject || 'Password Reset Instructions',
-        html: html
+        html: html,
+        bcc: bcc
       });
       
       return result;
@@ -174,15 +182,30 @@ export const emailService = {
         } else {
           emailHtml = emailHtml.replace(/{{#if registration_slots}}[\s\S]*?{{\/if}}/g, '');
         }
+        
+        // Parse BCC recipients from template
+        const templateBcc = template.bcc_recipients 
+          ? template.bcc_recipients.split(',').map(email => email.trim()).filter(Boolean)
+          : null;
+        
+        const result = await this.send({
+          to: to,
+          subject: emailSubject,
+          html: emailHtml,
+          bcc: templateBcc
+        });
+        
+        return result;
+      } else {
+        // If subject/html provided directly, send without BCC (or could add bcc parameter)
+        const result = await this.send({
+          to: to,
+          subject: emailSubject,
+          html: emailHtml
+        });
+        
+        return result;
       }
-      
-      const result = await this.send({
-        to: to,
-        subject: emailSubject,
-        html: emailHtml
-      });
-      
-      return result;
     } catch (error) {
       console.error('Error sending new user request email:', error);
       throw error;
@@ -243,15 +266,30 @@ export const emailService = {
         } else {
           emailHtml = emailHtml.replace(/{{#if registration_slots}}[\s\S]*?{{\/if}}/g, '');
         }
+        
+        // Parse BCC recipients from template
+        const templateBcc = template.bcc_recipients 
+          ? template.bcc_recipients.split(',').map(email => email.trim()).filter(Boolean)
+          : null;
+        
+        const result = await this.send({
+          to: to,
+          subject: emailSubject,
+          html: emailHtml,
+          bcc: templateBcc
+        });
+        
+        return result;
+      } else {
+        // If subject/html provided directly, send without BCC (or could add bcc parameter)
+        const result = await this.send({
+          to: to,
+          subject: emailSubject,
+          html: emailHtml
+        });
+        
+        return result;
       }
-      
-      const result = await this.send({
-        to: to,
-        subject: emailSubject,
-        html: emailHtml
-      });
-      
-      return result;
     } catch (error) {
       console.error('Error sending new user notification email:', error);
       throw error;

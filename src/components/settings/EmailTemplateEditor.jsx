@@ -27,6 +27,7 @@ const modules = {
 export default function EmailTemplateEditor({ template, onSave }) {
   const [subject, setSubject] = useState(template.subject);
   const [body, setBody] = useState(template.body);
+  const [bccRecipients, setBccRecipients] = useState(template.bcc_recipients || '');
   const [isSaving, setIsSaving] = useState(false);
   const { toast } = useToast(); // Initialized useToast
 
@@ -35,8 +36,8 @@ export default function EmailTemplateEditor({ template, onSave }) {
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      await EmailTemplate.update(template.id, { subject, body });
-      onSave({ ...template, subject, body });
+      await EmailTemplate.update(template.id, { subject, body, bcc_recipients: bccRecipients });
+      onSave({ ...template, subject, body, bcc_recipients: bccRecipients });
       toast({ // Replaced alert with toast for success
         title: "Success",
         description: `'${template.name}' template saved successfully!`,
@@ -89,6 +90,21 @@ export default function EmailTemplateEditor({ template, onSave }) {
                     <Badge key={p} variant="secondary" className="font-mono">{p}</Badge>
                 ))}
             </div>
+        </div>
+
+        <div>
+          <Label htmlFor={`bcc-${template.name}`}>
+            BCC Recipients (Optional)
+          </Label>
+          <Input
+            id={`bcc-${template.name}`}
+            value={bccRecipients}
+            onChange={(e) => setBccRecipients(e.target.value)}
+            placeholder="email1@example.com, email2@example.com"
+          />
+          <p className="text-xs text-gray-500 mt-1">
+            Separate multiple emails with commas. These recipients will receive a copy of all emails sent using this template.
+          </p>
         </div>
 
         <div className="flex justify-end">

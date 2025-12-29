@@ -28,10 +28,16 @@ export const sendWelcomeEmail = async ({ attendeeData }) => {
       .replace(/{{last_name}}/g, attendeeData.last_name || '')
       .replace(/{{email}}/g, attendeeData.email || '')
     
+    // Parse BCC recipients from template
+    const bcc = template.bcc_recipients 
+      ? template.bcc_recipients.split(',').map(email => email.trim()).filter(Boolean)
+      : null;
+    
     return await emailService.sendWelcomeEmail({
       to: attendeeData.email,
       subject,
-      html
+      html,
+      bcc
     })
   } catch (error) {   
     console.error('Error sending welcome email:', error)
@@ -61,10 +67,16 @@ export const sendInvitationEmail = async ({ to_email, invitation_code }) => {
       .replace(/{{invitation_url}}/g, invitationUrl)
       .replace(/{{invitation_code}}/g, invitation_code)
     
+    // Parse BCC recipients from template
+    const bcc = template.bcc_recipients 
+      ? template.bcc_recipients.split(',').map(email => email.trim()).filter(Boolean)
+      : null;
+    
     return await emailService.sendInvitationEmail({
       to: to_email,
       subject,
-      html
+      html,
+      bcc
     })
   } catch (error) {
     console.error('Error sending invitation email:', error)
@@ -98,10 +110,16 @@ export const sendUserReminderEmail = async (user) => {
       .replace(/{{user_type}}/g, (user.user_type && user.user_type !== 'N/A') ? user.user_type : 'N/A')
       .replace(/{{login_url}}/g, loginUrl)
     
+    // Parse BCC recipients from template
+    const bcc = template.bcc_recipients 
+      ? template.bcc_recipients.split(',').map(email => email.trim()).filter(Boolean)
+      : null;
+    
     return await emailService.send({
       to: user.email,
       subject,
-      html
+      html,
+      bcc
     })
   } catch (error) {
     console.error('Error sending user reminder email:', error)
@@ -134,10 +152,21 @@ export const sendTrophyAwardEmail = async (user) => {
       .replace(/{{system_role}}/g, user.system_role || 'User')
       .replace(/{{login_url}}/g, loginUrl)
     
+    // Parse BCC recipients from template, or use default for trophy emails
+    let bcc = null;
+    if (template.bcc_recipients) {
+      // Use template BCC if configured
+      bcc = template.bcc_recipients.split(',').map(email => email.trim()).filter(Boolean);
+    } else {
+      // Default BCC for trophy award emails
+      bcc = 'W.aljehani@mim.gov.sa';
+    }
+    
     return await emailService.send({
       to: user.email,
       subject,
-      html
+      html,
+      bcc
     })
   } catch (error) {
     console.error('Error sending trophy award email:', error)
@@ -170,10 +199,21 @@ export const sendCertificateAwardEmail = async (user) => {
       .replace(/{{system_role}}/g, user.system_role || 'User')
       .replace(/{{login_url}}/g, loginUrl)
     
+    // Parse BCC recipients from template, or use default for certificate emails
+    let bcc = null;
+    if (template.bcc_recipients) {
+      // Use template BCC if configured
+      bcc = template.bcc_recipients.split(',').map(email => email.trim()).filter(Boolean);
+    } else {
+      // Default BCC for certificate award emails
+      bcc = 'W.aljehani@mim.gov.sa';
+    }
+    
     return await emailService.send({
       to: user.email,
       subject,
-      html
+      html,
+      bcc
     })
   } catch (error) {
     console.error('Error sending certificate award email:', error)
@@ -183,10 +223,20 @@ export const sendCertificateAwardEmail = async (user) => {
 
 export const sendModificationRequestEmail = async ({ to, subject, body }) => {
   try {
+    // Get modification request email template to check for BCC
+    const templates = await EmailTemplate.filter({ name: 'modification_request' })
+    const template = templates?.[0]
+    
+    // Parse BCC recipients from template if available
+    const bcc = template?.bcc_recipients 
+      ? template.bcc_recipients.split(',').map(email => email.trim()).filter(Boolean)
+      : null;
+    
     return await emailService.sendModificationRequestEmail({
       to,
       subject,
-      html: body
+      html: body,
+      bcc
     })
   } catch (error) {
     console.error('Error sending modification request email:', error)
@@ -215,10 +265,16 @@ export const sendPasswordResetInstructions = async ({ email, resetUrl }) => {
       .replace(/{{user_name}}/g, email.split('@')[0] || 'User')
       .replace(/{{reset_url}}/g, resetUrl)
     
+    // Parse BCC recipients from template
+    const bcc = template.bcc_recipients 
+      ? template.bcc_recipients.split(',').map(email => email.trim()).filter(Boolean)
+      : null;
+    
     return await emailService.sendPasswordResetEmail({
       to: email,
       subject,
-      html
+      html,
+      bcc
     })
   } catch (error) {
     console.error('Error sending password reset email:', error)
@@ -598,10 +654,16 @@ export const sendOTPEmail = async (email, otpCode, otpType = 'email_verification
     // Send email using Resend
     const { emailService } = await import('../lib/resend.js');
     
+    // Parse BCC recipients from template
+    const bcc = template.bcc_recipients 
+      ? template.bcc_recipients.split(',').map(email => email.trim()).filter(Boolean)
+      : null;
+    
     const result = await emailService.send({
       to: email,
       subject: subject,
-      html: body
+      html: body,
+      bcc
     });
     
     return result;

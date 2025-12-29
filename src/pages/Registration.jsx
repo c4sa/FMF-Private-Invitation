@@ -737,10 +737,16 @@ export default function RegistrationPage() {
                 .replace(/{{attendee_type}}/g, attendeeData.attendee_type || '')
                 .replace(/{{is_approved}}/g, attendeeData.status === 'approved' ? 'true' : 'false');
               
+              // Parse BCC recipients from template
+              const bcc = template.bcc_recipients 
+                ? template.bcc_recipients.split(',').map(email => email.trim()).filter(Boolean)
+                : null;
+              
               await emailService.send({
                 to: attendeeData.email,
                 subject: subject,
-                html: html
+                html: html,
+                bcc: bcc
               });
             }
           } catch (emailError) {
@@ -995,10 +1001,28 @@ export default function RegistrationPage() {
             </div>
           `;
           
+          // Try to get BCC from update confirmation template if it exists
+          let bcc = null;
+          try {
+            const { data: updateTemplate } = await supabase
+              .from('email_templates')
+              .select('bcc_recipients')
+              .eq('name', 'registration_update_confirmation')
+              .eq('is_active', true)
+              .single();
+            
+            if (updateTemplate?.bcc_recipients) {
+              bcc = updateTemplate.bcc_recipients.split(',').map(email => email.trim()).filter(Boolean);
+            }
+          } catch (e) {
+            // Template might not exist, that's okay
+          }
+          
           await emailService.send({
             to: formData.email,
             subject: emailSubject,
-            html: emailHtml
+            html: emailHtml,
+            bcc: bcc
           });
           
           console.log('Update confirmation email sent successfully');
@@ -1069,10 +1093,16 @@ export default function RegistrationPage() {
             .replace(/{{attendee_type}}/g, formData.attendee_type || '')
             .replace(/{{is_approved}}/g, attendeeStatus === 'approved' ? 'true' : 'false');
           
+          // Parse BCC recipients from template
+          const bcc = template.bcc_recipients 
+            ? template.bcc_recipients.split(',').map(email => email.trim()).filter(Boolean)
+            : null;
+          
           await emailService.send({
             to: formData.email,
             subject: subject,
-            html: html
+            html: html,
+            bcc: bcc
           });
           
           console.log('Registration confirmation email sent successfully');

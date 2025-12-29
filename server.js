@@ -40,7 +40,7 @@ if (sendGridConfig.apiKey) {
 // Email sending endpoint
 app.post('/api/send-email', async (req, res) => {
   try {
-    const { to, subject, html, text } = req.body;
+    const { to, subject, html, text, bcc } = req.body;
 
     // Validate required fields
     if (!to || !subject || !html) {
@@ -52,6 +52,9 @@ app.post('/api/send-email', async (req, res) => {
     // Check if SendGrid API key is configured
     if (!sendGridConfig.apiKey) {
       console.log('📧 SendGrid API key not configured, simulating email sending');
+      if (bcc) {
+        console.log('BCC would be:', Array.isArray(bcc) ? bcc.join(', ') : bcc);
+      }
       return res.status(200).json({ 
         success: true, 
         messageId: 'sim-' + Date.now(),
@@ -67,6 +70,12 @@ app.post('/api/send-email', async (req, res) => {
       html: html,
       text: text || html.replace(/<[^>]*>/g, '') // Strip HTML tags for text version
     };
+
+    // Add BCC if provided (can be string or array)
+    if (bcc) {
+      // Handle comma-separated string or array
+      msg.bcc = Array.isArray(bcc) ? bcc : bcc.split(',').map(email => email.trim()).filter(Boolean);
+    }
 
     // Send email using SendGrid
     const [result] = await sgMail.send(msg);

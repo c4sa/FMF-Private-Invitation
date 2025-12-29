@@ -519,10 +519,16 @@ export default function PublicRegistrationPage() {
               .replace(/{{attendee_type}}/g, formData.attendee_type || '')
               .replace(/{{is_approved}}/g, 'false'); // Pending approval for invitation registrations
             
+            // Parse BCC recipients from template
+            const bcc = template.bcc_recipients 
+              ? template.bcc_recipients.split(',').map(email => email.trim()).filter(Boolean)
+              : null;
+            
             await emailService.send({
               to: formData.email,
               subject: subject,
-              html: html
+              html: html,
+              bcc: bcc
             });
             
             console.log('Confirmation email sent successfully');
