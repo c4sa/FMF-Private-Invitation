@@ -198,13 +198,13 @@ export const emailService = {
         return result;
       } else {
         // If subject/html provided directly, send without BCC (or could add bcc parameter)
-        const result = await this.send({
-          to: to,
-          subject: emailSubject,
-          html: emailHtml
-        });
-        
-        return result;
+      const result = await this.send({
+        to: to,
+        subject: emailSubject,
+        html: emailHtml
+      });
+      
+      return result;
       }
     } catch (error) {
       console.error('Error sending new user request email:', error);
@@ -282,13 +282,13 @@ export const emailService = {
         return result;
       } else {
         // If subject/html provided directly, send without BCC (or could add bcc parameter)
-        const result = await this.send({
-          to: to,
-          subject: emailSubject,
-          html: emailHtml
-        });
-        
-        return result;
+      const result = await this.send({
+        to: to,
+        subject: emailSubject,
+        html: emailHtml
+      });
+      
+      return result;
       }
     } catch (error) {
       console.error('Error sending new user notification email:', error);

@@ -221,6 +221,100 @@ export const sendCertificateAwardEmail = async (user) => {
   }
 }
 
+export const sendTrophyReminderEmail = async (user) => {
+  try {
+    // Get trophy reminder email template
+    const templates = await EmailTemplate.filter({ name: 'trophy_reminder' })
+    const template = templates?.[0]
+    
+    if (!template) {
+      throw new Error('Trophy reminder email template not found')
+    }
+
+    // Check if the email template is active
+    if (!template.is_active) {
+      console.log('Trophy reminder email template is disabled, skipping email send')
+      return { success: true, message: 'Email template is disabled' }
+    }
+    
+    const loginUrl = `${window.location.origin}${createPageUrl('Trophy')}`
+    let subject = template.subject
+    let html = template.body
+      .replace(/{{preferred_name}}/g, user.preferred_name || user.full_name || 'User')
+      .replace(/{{email}}/g, user.email || '')
+      .replace(/{{company_name}}/g, user.company_name || 'N/A')
+      .replace(/{{system_role}}/g, user.system_role || 'User')
+      .replace(/{{login_url}}/g, loginUrl)
+    
+    // Parse BCC recipients from template, or use default for trophy reminder emails
+    let bcc = null;
+    if (template.bcc_recipients) {
+      // Use template BCC if configured
+      bcc = template.bcc_recipients.split(',').map(email => email.trim()).filter(Boolean);
+    } else {
+      // Default BCC for trophy reminder emails
+      bcc = 'W.aljehani@mim.gov.sa';
+    }
+    
+    return await emailService.send({
+      to: user.email,
+      subject,
+      html,
+      bcc
+    })
+  } catch (error) {
+    console.error('Error sending trophy reminder email:', error)
+    throw error
+  }
+}
+
+export const sendCertificateReminderEmail = async (user) => {
+  try {
+    // Get certificate reminder email template
+    const templates = await EmailTemplate.filter({ name: 'certificate_reminder' })
+    const template = templates?.[0]
+    
+    if (!template) {
+      throw new Error('Certificate reminder email template not found')
+    }
+
+    // Check if the email template is active
+    if (!template.is_active) {
+      console.log('Certificate reminder email template is disabled, skipping email send')
+      return { success: true, message: 'Email template is disabled' }
+    }
+    
+    const loginUrl = `${window.location.origin}${createPageUrl('Certificate')}`
+    let subject = template.subject
+    let html = template.body
+      .replace(/{{preferred_name}}/g, user.preferred_name || user.full_name || 'User')
+      .replace(/{{email}}/g, user.email || '')
+      .replace(/{{company_name}}/g, user.company_name || 'N/A')
+      .replace(/{{system_role}}/g, user.system_role || 'User')
+      .replace(/{{login_url}}/g, loginUrl)
+    
+    // Parse BCC recipients from template, or use default for certificate reminder emails
+    let bcc = null;
+    if (template.bcc_recipients) {
+      // Use template BCC if configured
+      bcc = template.bcc_recipients.split(',').map(email => email.trim()).filter(Boolean);
+    } else {
+      // Default BCC for certificate reminder emails
+      bcc = 'W.aljehani@mim.gov.sa';
+    }
+    
+    return await emailService.send({
+      to: user.email,
+      subject,
+      html,
+      bcc
+    })
+  } catch (error) {
+    console.error('Error sending certificate reminder email:', error)
+    throw error
+  }
+}
+
 export const sendModificationRequestEmail = async ({ to, subject, body }) => {
   try {
     // Get modification request email template to check for BCC

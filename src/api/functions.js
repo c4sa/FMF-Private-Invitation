@@ -28,7 +28,9 @@ import {
   updateEmailTemplateStatus,
   sendUserReminderEmail,
   sendTrophyAwardEmail,
-  sendCertificateAwardEmail
+  sendCertificateAwardEmail,
+  sendTrophyReminderEmail,
+  sendCertificateReminderEmail
 } from './supabaseFunctions.js';
 
 // Export all functions
@@ -62,7 +64,9 @@ export {
   updateEmailTemplateStatus,
   sendUserReminderEmail,
   sendTrophyAwardEmail,
-  sendCertificateAwardEmail
+  sendCertificateAwardEmail,
+  sendTrophyReminderEmail,
+  sendCertificateReminderEmail
 };
   
   

@@ -45,7 +45,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Checkbox } from "@/components/ui/checkbox";
 import ProtectedRoute from "../components/common/ProtectedRoute";
-import { sendNewUserRequestEmail, createUserDirectly, deleteUserCompletely, updateUserAccess, sendUserReminderEmail, sendTrophyAwardEmail, sendCertificateAwardEmail } from "@/api/functions";
+import { sendNewUserRequestEmail, createUserDirectly, deleteUserCompletely, updateUserAccess, sendUserReminderEmail, sendTrophyAwardEmail, sendCertificateAwardEmail, sendTrophyReminderEmail, sendCertificateReminderEmail } from "@/api/functions";
 import { format } from "date-fns";
 import { useToast } from "../components/common/Toast";
 import { Link } from "react-router-dom";
@@ -69,6 +69,8 @@ export default function SystemUsers() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedUsers, setSelectedUsers] = useState(new Set());
   const [isSendingReminders, setIsSendingReminders] = useState(false);
+  const [isSendingTrophyReminders, setIsSendingTrophyReminders] = useState(false);
+  const [isSendingCertificateReminders, setIsSendingCertificateReminders] = useState(false);
   const [isGivingTrophy, setIsGivingTrophy] = useState(false);
   const [isGivingCertificate, setIsGivingCertificate] = useState(false);
   const [isAssigningPremier, setIsAssigningPremier] = useState(false);
@@ -1604,6 +1606,154 @@ export default function SystemUsers() {
     }
   };
 
+  const handleSendTrophyReminders = async () => {
+    if (selectedUsers.size === 0) {
+      toast({
+        title: "No Users Selected",
+        description: "Please select at least one user to send trophy reminder emails.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsSendingTrophyReminders(true);
+    const selectedUserIds = Array.from(selectedUsers);
+    const usersToEmail = getVisibleUsers().filter(user => selectedUserIds.includes(user.id));
+    
+    let successCount = 0;
+    let failureCount = 0;
+    let skippedCount = 0;
+    const errors = [];
+
+    try {
+      // Send trophy reminder emails to selected users who have trophies
+      for (const user of usersToEmail) {
+        try {
+          // Check if user has a trophy
+          const userAwardInfo = userAwardsMap.get(user.id);
+          const hasTrophy = userAwardInfo?.trophy !== null && userAwardInfo?.trophy !== undefined;
+          
+          if (!hasTrophy) {
+            skippedCount++;
+            continue;
+          }
+
+          await sendTrophyReminderEmail(user);
+          successCount++;
+        } catch (error) {
+          console.error(`Failed to send trophy reminder email to ${user.email}:`, error);
+          failureCount++;
+          errors.push(`${user.email}: ${error.message}`);
+        }
+      }
+
+      // Clear selection after sending
+      setSelectedUsers(new Set());
+
+      let message = `Successfully sent trophy reminder emails to ${successCount} user(s).`;
+      if (skippedCount > 0) {
+        message += ` ${skippedCount} user(s) skipped (no trophy).`;
+      }
+
+      if (failureCount === 0) {
+        toast({
+          title: "Trophy Reminder Emails Sent",
+          description: message,
+          variant: "success"
+        });
+      } else {
+        toast({
+          title: "Partial Success",
+          description: `${message} Failed for ${failureCount} user(s). ${errors.slice(0, 3).join('; ')}${errors.length > 3 ? '...' : ''}`,
+          variant: "warning"
+        });
+      }
+    } catch (error) {
+      console.error('Error sending trophy reminder emails:', error);
+      toast({
+        title: "Error",
+        description: "Failed to send trophy reminder emails. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSendingTrophyReminders(false);
+    }
+  };
+
+  const handleSendCertificateReminders = async () => {
+    if (selectedUsers.size === 0) {
+      toast({
+        title: "No Users Selected",
+        description: "Please select at least one user to send certificate reminder emails.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsSendingCertificateReminders(true);
+    const selectedUserIds = Array.from(selectedUsers);
+    const usersToEmail = getVisibleUsers().filter(user => selectedUserIds.includes(user.id));
+    
+    let successCount = 0;
+    let failureCount = 0;
+    let skippedCount = 0;
+    const errors = [];
+
+    try {
+      // Send certificate reminder emails to selected users who have certificates
+      for (const user of usersToEmail) {
+        try {
+          // Check if user has a certificate
+          const userAwardInfo = userAwardsMap.get(user.id);
+          const hasCertificate = userAwardInfo?.certificate !== null && userAwardInfo?.certificate !== undefined;
+          
+          if (!hasCertificate) {
+            skippedCount++;
+            continue;
+          }
+
+          await sendCertificateReminderEmail(user);
+          successCount++;
+        } catch (error) {
+          console.error(`Failed to send certificate reminder email to ${user.email}:`, error);
+          failureCount++;
+          errors.push(`${user.email}: ${error.message}`);
+        }
+      }
+
+      // Clear selection after sending
+      setSelectedUsers(new Set());
+
+      let message = `Successfully sent certificate reminder emails to ${successCount} user(s).`;
+      if (skippedCount > 0) {
+        message += ` ${skippedCount} user(s) skipped (no certificate).`;
+      }
+
+      if (failureCount === 0) {
+        toast({
+          title: "Certificate Reminder Emails Sent",
+          description: message,
+          variant: "success"
+        });
+      } else {
+        toast({
+          title: "Partial Success",
+          description: `${message} Failed for ${failureCount} user(s). ${errors.slice(0, 3).join('; ')}${errors.length > 3 ? '...' : ''}`,
+          variant: "warning"
+        });
+      }
+    } catch (error) {
+      console.error('Error sending certificate reminder emails:', error);
+      toast({
+        title: "Error",
+        description: "Failed to send certificate reminder emails. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSendingCertificateReminders(false);
+    }
+  };
+
   const handleAssignPremier = async () => {
     if (selectedUsers.size === 0) {
       toast({
@@ -2706,15 +2856,42 @@ export default function SystemUsers() {
                   System Users ({filteredUsers.length})
                 </CardTitle>
                 <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    className="flex items-center gap-2"
-                    onClick={handleSendReminderEmails}
-                    disabled={isSendingReminders || selectedUsers.size === 0}
-                  >
-                    <Mail className="w-4 h-4" />
-                    {isSendingReminders ? 'Sending...' : `Resend Email (${selectedUsers.size})`}
-                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className="flex items-center gap-2"
+                        disabled={selectedUsers.size === 0 || isSendingReminders || isSendingTrophyReminders || isSendingCertificateReminders}
+                      >
+                        <Mail className="w-4 h-4" />
+                        {(isSendingReminders || isSendingTrophyReminders || isSendingCertificateReminders) ? 'Sending...' : `Resend Email (${selectedUsers.size})`}
+                        <ChevronDown className="w-4 h-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem
+                        onClick={handleSendReminderEmails}
+                        disabled={isSendingReminders || isSendingTrophyReminders || isSendingCertificateReminders}
+                      >
+                        <Mail className="w-4 h-4 mr-2" />
+                        Resend Email ({selectedUsers.size})
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={handleSendTrophyReminders}
+                        disabled={isSendingReminders || isSendingTrophyReminders || isSendingCertificateReminders}
+                      >
+                        <Trophy className="w-4 h-4 mr-2" />
+                        Trophy Reminder ({selectedUsers.size})
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={handleSendCertificateReminders}
+                        disabled={isSendingReminders || isSendingTrophyReminders || isSendingCertificateReminders}
+                      >
+                        <Award className="w-4 h-4 mr-2" />
+                        Certificate Reminder ({selectedUsers.size})
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                   <Button
                     variant="outline"
                     className="flex items-center gap-2"

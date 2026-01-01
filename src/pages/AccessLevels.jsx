@@ -164,11 +164,11 @@ export default function AccessLevels() {
               if (slotNum > newCount) {
                 delete updated[key];
               }
-            }
-          });
-          return updated;
+          }
         });
-      }
+        return updated;
+      });
+    }
     }
   };
 
@@ -204,18 +204,18 @@ export default function AccessLevels() {
         const slotsWithDetails = Object.keys(slotDetails).filter(key => {
           if (!key.startsWith(`${slotType}-`)) return false;
           const detail = slotDetails[key];
-          return detail?.name && detail?.email && detail?.position;
-        });
-        
+        return detail?.name && detail?.email && detail?.position;
+      });
+      
         if (slotsWithDetails.length < count) {
-          toast({ 
-            title: "Error", 
+        toast({ 
+          title: "Error", 
             description: `Please fill in details (name, email, position) for all ${count} ${slotType} slot(s). Click "Add Details" to add ${slotType} slot information.`, 
-            variant: "destructive" 
-          });
-          return;
-        }
+          variant: "destructive" 
+        });
+        return;
       }
+    }
     }
 
     try {
@@ -229,15 +229,15 @@ export default function AccessLevels() {
           for (let i = 1; i <= count; i++) {
             const slotKey = `${slotType}-${i}`;
             const detail = slotDetails[slotKey];
-            if (detail) {
+          if (detail) {
               allDetailedSlots.push({
                 type: slotType,
-                slotNumber: i,
-                name: detail.name,
-                email: detail.email,
-                position: detail.position
-              });
-            }
+              slotNumber: i,
+              name: detail.name,
+              email: detail.email,
+              position: detail.position
+            });
+          }
           }
         }
       }
@@ -245,7 +245,7 @@ export default function AccessLevels() {
       // Format data: All slots with details
       const requestedSlotsData = {
         slots: allDetailedSlots,
-        summary: requestData.slots
+            summary: requestData.slots
       };
 
       const slotRequest = await SlotRequest.create({
@@ -341,34 +341,34 @@ export default function AccessLevels() {
             {Object.entries(currentUser.registration_slots)
               .filter(([type, totalSlots]) => (totalSlots || 0) > 0) // Only show cards for slot types with allocated slots
               .map(([type, totalSlots]) => {
-                const usedSlots = currentUser.used_slots?.[type] || 0;
-                const remainingSlots = totalSlots - usedSlots;
+              const usedSlots = currentUser.used_slots?.[type] || 0;
+              const remainingSlots = totalSlots - usedSlots;
 
-                const config = attendeeTypeConfig[type];
-                const Icon = config?.icon || Users;
-                const progressPercentage = totalSlots > 0 ? (usedSlots / totalSlots) * 100 : 0;
+              const config = attendeeTypeConfig[type];
+              const Icon = config?.icon || Users;
+              const progressPercentage = totalSlots > 0 ? (usedSlots / totalSlots) * 100 : 0;
 
-                return (
-                  <Card key={type} className={`border ${config?.bgColor || 'bg-gray-50 border-gray-200'}`}>
-                    <CardHeader>
-                      <div className="flex items-center gap-3">
-                        <div className={`p-3 rounded-lg ${config?.color || 'bg-gray-500'} text-white`}><Icon className="w-6 h-6" /></div>
-                        <CardTitle className="text-lg font-bold text-gray-900">{type}</CardTitle>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      <Progress value={progressPercentage} className="h-2" />
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-gray-600">Used: {usedSlots}/{totalSlots}</span>
-                        <span className={`text-xl font-bold ${remainingSlots > 0 ? 'text-green-600' : 'text-red-600'}`}>{remainingSlots}</span>
-                      </div>
-                      <p className={`text-right text-sm font-semibold ${remainingSlots > 0 ? 'text-gray-600' : 'text-red-600'}`}>
-                        {remainingSlots > 0 ? 'Available' : 'Unavailable'}
-                      </p>
-                    </CardContent>
-                  </Card>
-                );
-              })}
+              return (
+                <Card key={type} className={`border ${config?.bgColor || 'bg-gray-50 border-gray-200'}`}>
+                  <CardHeader>
+                    <div className="flex items-center gap-3">
+                      <div className={`p-3 rounded-lg ${config?.color || 'bg-gray-500'} text-white`}><Icon className="w-6 h-6" /></div>
+                      <CardTitle className="text-lg font-bold text-gray-900">{type}</CardTitle>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <Progress value={progressPercentage} className="h-2" />
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-600">Used: {usedSlots}/{totalSlots}</span>
+                      <span className={`text-xl font-bold ${remainingSlots > 0 ? 'text-green-600' : 'text-red-600'}`}>{remainingSlots}</span>
+                    </div>
+                    <p className={`text-right text-sm font-semibold ${remainingSlots > 0 ? 'text-gray-600' : 'text-red-600'}`}>
+                      {remainingSlots > 0 ? 'Available' : 'Unavailable'}
+                    </p>
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         )}
       </div>
@@ -412,25 +412,25 @@ export default function AccessLevels() {
               return (
                 <div key={slotType} className={`flex items-center gap-2 p-3 ${config.bgLight} border ${config.borderColor} rounded-lg`}>
                   <Icon className={`w-5 h-5 ${config.iconColor}`} />
-                  <div className="flex-1">
+                <div className="flex-1">
                     <p className={`text-sm font-medium ${config.textColor}`}>
                       {count} {slotType} slot{count > 1 ? 's' : ''} requested
-                    </p>
+                  </p>
                     <p className={`text-xs ${config.textLight}`}>
                       {slotsWithDetails} of {count} slot{count > 1 ? 's' : ''} with details
-                    </p>
-                  </div>
-                  <Button 
-                    type="button"
-                    variant="outline" 
-                    size="sm"
+                  </p>
+                </div>
+                <Button 
+                  type="button"
+                  variant="outline" 
+                  size="sm"
                     onClick={() => openSlotDetailsDialog(slotType)}
                     className={`${config.borderButton} ${config.textButton} ${config.hoverButton}`}
-                  >
-                    <UserPlus className="w-4 h-4 mr-2" />
-                    Add Details
-                  </Button>
-                </div>
+                >
+                  <UserPlus className="w-4 h-4 mr-2" />
+                  Add Details
+                </Button>
+              </div>
               );
             })}
             <div className="space-y-2">
