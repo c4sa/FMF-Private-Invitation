@@ -117,11 +117,13 @@ export default function AnalyticsPage() {
       return {
         name: pt.name,
         users: count,
-        totalSlots: (pt.slots_vip || 0) + (pt.slots_partner || 0) + (pt.slots_exhibitor || 0) + (pt.slots_media || 0),
+        totalSlots: (pt.slots_vip || 0) + (pt.slots_premier || 0) + (pt.slots_partner || 0) + (pt.slots_exhibitor || 0) + (pt.slots_media || 0) + (pt.slots_other || 0),
         vipSlots: pt.slots_vip || 0,
+        premierSlots: pt.slots_premier || 0,
         partnerSlots: pt.slots_partner || 0,
         exhibitorSlots: pt.slots_exhibitor || 0,
-        mediaSlots: pt.slots_media || 0
+        mediaSlots: pt.slots_media || 0,
+        otherSlots: pt.slots_other || 0
       };
     });
 

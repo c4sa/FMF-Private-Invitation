@@ -311,18 +311,22 @@ export default function SystemUsers() {
         if (selectedPartnerType) {
           newFormData.registration_slots = {
             VIP: selectedPartnerType.slots_vip || 0,
+            Premier: selectedPartnerType.slots_premier || 0,
             Partner: selectedPartnerType.slots_partner || 0,
             Exhibitor: selectedPartnerType.slots_exhibitor || 0,
             Media: selectedPartnerType.slots_media || 0,
+            Other: selectedPartnerType.slots_other || 0,
           };
         }
       } else if (field === 'user_type' && value === 'N/A') {
         // Reset slots to 0 when N/A is selected
         newFormData.registration_slots = {
           VIP: 0,
+          Premier: 0,
           Partner: 0,
           Exhibitor: 0,
           Media: 0,
+          Other: 0,
         };
       }
       
@@ -403,9 +407,11 @@ export default function SystemUsers() {
         if (selectedPartnerType) {
           userData.registration_slots = {
             VIP: selectedPartnerType.slots_vip || 0,
+            Premier: selectedPartnerType.slots_premier || 0,
             Partner: selectedPartnerType.slots_partner || 0,
             Exhibitor: selectedPartnerType.slots_exhibitor || 0,
             Media: selectedPartnerType.slots_media || 0,
+            Other: selectedPartnerType.slots_other || 0,
           };
         }
       } else if (formData.system_role === 'Admin' || formData.system_role === 'Super User') {
@@ -2301,9 +2307,11 @@ export default function SystemUsers() {
                                               if (selectedPartnerType) {
                                                 updated[companyIndex].users[userIndex].registrationSlots = {
                                                   VIP: selectedPartnerType.slots_vip || 0,
+                                                  Premier: selectedPartnerType.slots_premier || 0,
                                                   Partner: selectedPartnerType.slots_partner || 0,
                                                   Exhibitor: selectedPartnerType.slots_exhibitor || 0,
                                                   Media: selectedPartnerType.slots_media || 0,
+                                                  Other: selectedPartnerType.slots_other || 0,
                                                 };
                                               }
                                             } else {

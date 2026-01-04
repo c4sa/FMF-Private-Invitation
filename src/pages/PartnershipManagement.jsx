@@ -20,9 +20,11 @@ export default function PartnershipManagementPage() {
   const [formData, setFormData] = useState({
     name: '',
     slots_vip: 0,
+    slots_premier: 0,
     slots_partner: 0,
     slots_exhibitor: 0,
-    slots_media: 0
+    slots_media: 0,
+    slots_other: 0
   });
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [typeToDelete, setTypeToDelete] = useState(null);
@@ -53,16 +55,20 @@ export default function PartnershipManagementPage() {
       filtered = filtered.filter(type => {
         const name = type.name || '';
         const slotsVip = String(type.slots_vip || 0);
+        const slotsPremier = String(type.slots_premier || 0);
         const slotsPartner = String(type.slots_partner || 0);
         const slotsExhibitor = String(type.slots_exhibitor || 0);
         const slotsMedia = String(type.slots_media || 0);
+        const slotsOther = String(type.slots_other || 0);
         
         return (
           name.toLowerCase().includes(lowercasedSearch) ||
           slotsVip.includes(lowercasedSearch) ||
+          slotsPremier.includes(lowercasedSearch) ||
           slotsPartner.includes(lowercasedSearch) ||
           slotsExhibitor.includes(lowercasedSearch) ||
-          slotsMedia.includes(lowercasedSearch)
+          slotsMedia.includes(lowercasedSearch) ||
+          slotsOther.includes(lowercasedSearch)
         );
       });
     }
@@ -76,7 +82,7 @@ export default function PartnershipManagementPage() {
 
   const resetForm = () => {
     setEditingType(null);
-    setFormData({ name: '', slots_vip: 0, slots_partner: 0, slots_exhibitor: 0, slots_media: 0 });
+    setFormData({ name: '', slots_vip: 0, slots_premier: 0, slots_partner: 0, slots_exhibitor: 0, slots_media: 0, slots_other: 0 });
   };
 
   const handleAddNew = () => {
@@ -89,9 +95,11 @@ export default function PartnershipManagementPage() {
     setFormData({
       name: type.name,
       slots_vip: type.slots_vip || 0,
+      slots_premier: type.slots_premier || 0,
       slots_partner: type.slots_partner || 0,
       slots_exhibitor: type.slots_exhibitor || 0,
-      slots_media: type.slots_media || 0
+      slots_media: type.slots_media || 0,
+      slots_other: type.slots_other || 0
     });
     setShowDialog(true);
   };
@@ -183,18 +191,20 @@ export default function PartnershipManagementPage() {
                     <TableRow>
                       <TableHead>Type Name</TableHead>
                       <TableHead className="text-center">VIP Slots</TableHead>
+                      <TableHead className="text-center">Premier Slots</TableHead>
                       <TableHead className="text-center">Partner Slots</TableHead>
                       <TableHead className="text-center">Exhibitor Slots</TableHead>
                       <TableHead className="text-center">Media Slots</TableHead>
+                      <TableHead className="text-center">Other Slots</TableHead>
                       <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {isLoading ? (
-                      <TableRow><TableCell colSpan={6} className="text-center h-24">Loading...</TableCell></TableRow>
+                      <TableRow><TableCell colSpan={8} className="text-center h-24">Loading...</TableCell></TableRow>
                     ) : filteredPartnerTypes.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center h-24 text-gray-500">
+                        <TableCell colSpan={8} className="text-center h-24 text-gray-500">
                           {searchTerm ? 'No partnership types found matching your search.' : 'No partnership types found.'}
                         </TableCell>
                       </TableRow>
@@ -203,9 +213,11 @@ export default function PartnershipManagementPage() {
                         <TableRow key={type.id}>
                           <TableCell className="font-semibold">{type.name}</TableCell>
                           <TableCell className="text-center">{type.slots_vip}</TableCell>
+                          <TableCell className="text-center">{type.slots_premier}</TableCell>
                           <TableCell className="text-center">{type.slots_partner}</TableCell>
                           <TableCell className="text-center">{type.slots_exhibitor}</TableCell>
                           <TableCell className="text-center">{type.slots_media}</TableCell>
+                          <TableCell className="text-center">{type.slots_other}</TableCell>
                           <TableCell className="flex gap-2">
                              <Button size="sm" variant="outline" onClick={() => handleEdit(type)}>
                                 <Edit3 className="w-4 h-4" />
@@ -245,6 +257,10 @@ export default function PartnershipManagementPage() {
                 <Input id="slots_vip" type="number" min="0" value={formData.slots_vip} onChange={(e) => setFormData({...formData, slots_vip: parseInt(e.target.value) || 0})} />
               </div>
               <div>
+                <Label htmlFor="slots_premier">Premier Slots</Label>
+                <Input id="slots_premier" type="number" min="0" value={formData.slots_premier} onChange={(e) => setFormData({...formData, slots_premier: parseInt(e.target.value) || 0})} />
+              </div>
+              <div>
                 <Label htmlFor="slots_partner">Partner Slots</Label>
                 <Input id="slots_partner" type="number" min="0" value={formData.slots_partner} onChange={(e) => setFormData({...formData, slots_partner: parseInt(e.target.value) || 0})} />
               </div>
@@ -255,6 +271,10 @@ export default function PartnershipManagementPage() {
               <div>
                 <Label htmlFor="slots_media">Media Slots</Label>
                 <Input id="slots_media" type="number" min="0" value={formData.slots_media} onChange={(e) => setFormData({...formData, slots_media: parseInt(e.target.value) || 0})} />
+              </div>
+              <div>
+                <Label htmlFor="slots_other">Other Slots</Label>
+                <Input id="slots_other" type="number" min="0" value={formData.slots_other} onChange={(e) => setFormData({...formData, slots_other: parseInt(e.target.value) || 0})} />
               </div>
             </div>
           </div>

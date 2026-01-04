@@ -538,14 +538,16 @@ export class PartnershipTypesAPI extends SupabaseAPI {
     const updatedType = await super.update(id, updates);
     
     // Then update all users with this user_type to sync their registration_slots
-    if (updates.slots_vip !== undefined || updates.slots_partner !== undefined || 
-        updates.slots_exhibitor !== undefined || updates.slots_media !== undefined) {
+    if (updates.slots_vip !== undefined || updates.slots_premier !== undefined || updates.slots_partner !== undefined || 
+        updates.slots_exhibitor !== undefined || updates.slots_media !== undefined || updates.slots_other !== undefined) {
       
       const newSlots = {
         VIP: updates.slots_vip !== undefined ? updates.slots_vip : updatedType.slots_vip,
+        Premier: updates.slots_premier !== undefined ? updates.slots_premier : updatedType.slots_premier,
         Partner: updates.slots_partner !== undefined ? updates.slots_partner : updatedType.slots_partner,
         Exhibitor: updates.slots_exhibitor !== undefined ? updates.slots_exhibitor : updatedType.slots_exhibitor,
-        Media: updates.slots_media !== undefined ? updates.slots_media : updatedType.slots_media
+        Media: updates.slots_media !== undefined ? updates.slots_media : updatedType.slots_media,
+        Other: updates.slots_other !== undefined ? updates.slots_other : updatedType.slots_other
       };
 
       // Update all users with this user_type
@@ -577,9 +579,11 @@ export class PartnershipTypesAPI extends SupabaseAPI {
     if (partnershipType) {
       const defaultSlots = {
         VIP: 0,
+        Premier: 0,
         Partner: 0,
         Exhibitor: 0,
-        Media: 0
+        Media: 0,
+        Other: 0
       };
 
       const { error: userUpdateError } = await supabase
