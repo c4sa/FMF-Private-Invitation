@@ -49,9 +49,11 @@ const statusColors = {
 
 const typeColors = {
   VIP: '#8b5cf6',
+  Premier: '#6366f1',
   Partner: '#ec4899',
   Exhibitor: '#06b6d4',
-  Media: '#f59e0b'
+  Media: '#f59e0b',
+  Other: '#6b7280'
 };
 
 export default function AnalyticsPage() {

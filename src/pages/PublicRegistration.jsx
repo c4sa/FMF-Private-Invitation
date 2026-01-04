@@ -48,6 +48,11 @@ const levels = [
 const idTypes = ["National ID", "Iqama", "Passport"];
 const religions = ["Muslim", "Christian", "Other"];
 
+// Supported attendee types (for reference - attendee type comes from invitation)
+const attendeeTypes = [
+  "VIP", "Premier", "Partner", "Exhibitor", "Media", "Other"
+];
+
 const areasOfInterest = [
   "Analytical products",
   "Decarbonization",

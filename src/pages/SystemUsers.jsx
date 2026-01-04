@@ -52,7 +52,7 @@ import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 
 
-const attendeeTypes = ["VIP", "Partner", "Exhibitor", "Media"];
+const attendeeTypes = ["VIP", "Premier", "Partner", "Exhibitor", "Media", "Other"];
 
 // userTypesForUsersOnly is replaced by dynamic partnerTypes and N/A
 // const userTypesForUsersOnly = [
@@ -3172,12 +3172,14 @@ export default function SystemUsers() {
 function UserSlotEditor({ user, onUpdate, onCancel }) {
   const [slots, setSlots] = useState({
     VIP: user.registration_slots?.VIP || 0,
+    Premier: user.registration_slots?.Premier || 0,
     Partner: user.registration_slots?.Partner || 0,
     Exhibitor: user.registration_slots?.Exhibitor || 0,
-    Media: user.registration_slots?.Media || 0
+    Media: user.registration_slots?.Media || 0,
+    Other: user.registration_slots?.Other || 0
   });
 
-  const attendeeTypes = ["VIP", "Partner", "Exhibitor", "Media"];
+  const attendeeTypes = ["VIP", "Premier", "Partner", "Exhibitor", "Media", "Other"];
 
   const handleSlotChange = (type, value) => {
     setSlots(prev => ({

@@ -34,7 +34,7 @@ import { emailService } from "../lib/resend";
 import * as XLSX from 'xlsx';
 
 const attendeeTypes = [
-  "VIP", "Partner", "Exhibitor", "Media"
+  "VIP", "Premier", "Partner", "Exhibitor", "Media", "Other"
 ];
 
 const titles = ["Mr.", "Ms.", "Miss.", "Mrs.", "Dr.", "H.E.", "Hon.", "H.R.H.", "H.H.", "Prof.", "Eng."];

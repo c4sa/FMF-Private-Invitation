@@ -61,9 +61,11 @@ const statusColors = {
 
 const typeColors = {
   "VIP": "bg-purple-100 text-purple-800",
+  "Premier": "bg-indigo-100 text-indigo-800",
   "Partner": "bg-pink-100 text-pink-800",
   "Exhibitor": "bg-cyan-100 text-cyan-800",
-  "Media": "bg-yellow-100 text-yellow-800"
+  "Media": "bg-yellow-100 text-yellow-800",
+  "Other": "bg-gray-100 text-gray-800"
 };
 
 const exportToCsv = (filename, rows) => {
