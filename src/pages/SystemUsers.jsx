@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useCallback } from "react";
-import { User, PartnershipType, Notification, TrophiesAndCertificates } from "@/api/entities";
+import { User, PartnershipType, TrophiesAndCertificates } from "@/api/entities";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -45,7 +45,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Checkbox } from "@/components/ui/checkbox";
 import ProtectedRoute from "../components/common/ProtectedRoute";
-import { sendNewUserRequestEmail, createUserDirectly, deleteUserCompletely, updateUserAccess, sendUserReminderEmail, sendTrophyAwardEmail, sendCertificateAwardEmail, sendTrophyReminderEmail, sendCertificateReminderEmail } from "@/api/functions";
+import { createUserDirectly, deleteUserCompletely, updateUserAccess, sendUserReminderEmail, sendTrophyAwardEmail, sendCertificateAwardEmail, sendTrophyReminderEmail, sendCertificateReminderEmail } from "@/api/functions";
 import { format } from "date-fns";
 import { useToast } from "../components/common/Toast";
 import { Link } from "react-router-dom";
@@ -2866,12 +2866,12 @@ export default function SystemUsers() {
                 <div className="flex items-center gap-2">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className="flex items-center gap-2"
+                  <Button
+                    variant="outline"
+                    className="flex items-center gap-2"
                         disabled={selectedUsers.size === 0 || isSendingReminders || isSendingTrophyReminders || isSendingCertificateReminders}
-                      >
-                        <Mail className="w-4 h-4" />
+                  >
+                    <Mail className="w-4 h-4" />
                         {(isSendingReminders || isSendingTrophyReminders || isSendingCertificateReminders) ? 'Sending...' : `Resend Email (${selectedUsers.size})`}
                         <ChevronDown className="w-4 h-4" />
                       </Button>

@@ -1096,7 +1096,8 @@ export default function Attendees() {
                           </CardContent>
                         </Card>
                         
-                        {selectedAttendee.status === 'approved' && (
+                        {/* QR Code section - Hidden as per requirement */}
+                        {/* {selectedAttendee.status === 'approved' && (
                           <Card>
                             <CardHeader>
                               <CardTitle className="text-lg">Badge QR Code</CardTitle>
@@ -1115,7 +1116,7 @@ export default function Attendees() {
                               </div>
                             </CardContent>
                           </Card>
-                        )}
+                        )} */}
                       </div>
                     </div>
                   </div>

@@ -355,7 +355,7 @@ export default function PrivateInvitations() {
           <DialogHeader>
             <DialogTitle>Send Invitation Email</DialogTitle>
             <DialogDescription>
-              Enter the recipient's email address to send the invitation link.
+              Enter the recipient&apos;s email address to send the invitation link.
             </DialogDescription>
           </DialogHeader>
           <div className="py-4 space-y-2">
@@ -651,7 +651,8 @@ export default function PrivateInvitations() {
                       </CardContent>
                     </Card>
                     
-                    {selectedAttendee.status === 'approved' && (
+                    {/* QR Code section - Hidden as per requirement */}
+                    {/* {selectedAttendee.status === 'approved' && (
                       <Card>
                         <CardHeader>
                           <CardTitle className="text-lg">Badge QR Code</CardTitle>
@@ -670,7 +671,7 @@ export default function PrivateInvitations() {
                           </div>
                         </CardContent>
                       </Card>
-                    )}
+                    )} */}
                   </div>
                 </div>
             </div>
